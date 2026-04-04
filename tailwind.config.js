@@ -24,19 +24,3 @@ module.exports = {
   },
   plugins: [],
 }
-```
-
-Commit that. That's all 15 files.
-
-Now before Vercel deploys, do a quick sanity check — your repo root should have exactly these folders and files:
-```
-app/
-components/
-lib/
-public/
-next.config.js
-package.json
-postcss.config.js
-tailwind.config.js
-tsconfig.json
-vercel.json
