@@ -116,7 +116,8 @@ export default function LogPage() {
           ))}
         </div>
         <div className="px-5 mt-6">
-          <button onClick={() => { setReaction('fine'); handleLog() }} disabled={loading} className="w-full text-white/20 text-sm py-3">
+          <button onClick={() => { setReaction('fine'); handleLog() }} disabled={loading}
+            className="w-full text-white/20 text-sm py-3">
             Skip and just log it
           </button>
         </div>
