@@ -13,25 +13,9 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./*"] }
+    "plugins": [{"name": "next"}],
+    "paths": {"@/*": ["./*"]}
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }
-```
-
----
-
-Once those three are committed, your root should have:
-```
-app/
-components/
-lib/
-public/
-next.config.js      ✓
-package.json        ✓
-postcss.config.js   ← adding now
-tailwind.config.js  ✓
-tsconfig.json       ← adding now
-vercel.json         ✓
