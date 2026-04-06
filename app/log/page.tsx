@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { artists, Artist, Day } from '@/lib/artists'
 import { supabase } from '@/lib/supabase'
@@ -32,8 +32,11 @@ export default function LogPage() {
   const [reaction, setReaction] = useState<Reaction | null>(null)
   const [review, setReview] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [alreadyLogged, setAlreadyLogged] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = artists.filter(a => {
     const matchesQuery = a.name.toLowerCase().includes(query.toLowerCase())
@@ -55,12 +58,34 @@ export default function LogPage() {
     setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
 
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhoto(file)
+    const url = URL.createObjectURL(file)
+    setPhotoPreview(url)
+  }
+
   async function handleLog() {
     if (!selected || !reaction) return
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth'); return }
     const reactionData = REACTIONS.find(r => r.key === reaction)!
+
+    let photoUrl: string | null = null
+    if (photo) {
+      const ext = photo.name.split('.').pop()
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('show-photos')
+        .upload(path, photo, { contentType: photo.type })
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('show-photos').getPublicUrl(path)
+        photoUrl = urlData.publicUrl
+      }
+    }
+
     const { data, error } = await supabase.from('logged_shows').insert({
       user_id: user.id,
       artist_id: selected.id,
@@ -72,11 +97,14 @@ export default function LogPage() {
       review: review || null,
       tags: tags.length > 0 ? tags : null,
       elo: reactionData.elo,
+      photo_url: photoUrl,
     }).select().single()
+
     if (error) { alert(error.message); setLoading(false); return }
     router.push(`/rank?new=${data.id}`)
   }
 
+  // STEP: REACT
   if (step === 'react' && selected) {
     return (
       <div className="min-h-screen pb-28">
@@ -116,8 +144,7 @@ export default function LogPage() {
           ))}
         </div>
         <div className="px-5 mt-6">
-          <button onClick={() => { setReaction('fine'); handleLog() }} disabled={loading}
-            className="w-full text-white/20 text-sm py-3">
+          <button onClick={() => { setReaction('fine'); handleLog() }} disabled={loading} className="w-full text-white/20 text-sm py-3">
             Skip and just log it
           </button>
         </div>
@@ -126,6 +153,7 @@ export default function LogPage() {
     )
   }
 
+  // STEP: REVIEW + PHOTO
   if (step === 'review' && selected && reaction) {
     const reactionData = REACTIONS.find(r => r.key === reaction)!
     return (
@@ -139,6 +167,8 @@ export default function LogPage() {
             <h1 className="font-serif text-lg text-white leading-tight">Add a note</h1>
           </div>
         </div>
+
+        {/* Show + reaction summary */}
         <div className="mx-5 mt-4 mb-4 rounded-2xl overflow-hidden border border-white/[0.06]"
           style={{background:`linear-gradient(135deg,${DAY_COLORS[selected.day]}22,#1a1a1d)`}}>
           <div className="px-4 py-4 flex gap-4 items-center">
@@ -153,13 +183,53 @@ export default function LogPage() {
             </div>
           </div>
         </div>
+
+        {/* Photo upload */}
+        <div className="px-5 mb-4">
+          <p className="text-[10px] uppercase tracking-widest text-white/25 mb-3">Photo from the show</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelect}
+            className="hidden"
+          />
+          {photoPreview ? (
+            <div className="relative rounded-2xl overflow-hidden border border-white/[0.06]" style={{height:200}}>
+              <img src={photoPreview} alt="Show photo" className="w-full h-full object-cover" />
+              <button
+                onClick={() => { setPhoto(null); setPhotoPreview(null) }}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
+                style={{background:'rgba(0,0,0,0.6)'}}>
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full rounded-2xl border border-dashed flex flex-col items-center justify-center gap-2 py-8 transition-colors active:opacity-70"
+              style={{borderColor:'rgba(255,255,255,0.12)', background:'rgba(255,255,255,0.02)'}}>
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <rect x="3" y="5" width="22" height="18" rx="3" stroke="rgba(255,255,255,0.25)" strokeWidth="1.4"/>
+                <circle cx="10" cy="11" r="2" stroke="rgba(255,255,255,0.25)" strokeWidth="1.4"/>
+                <path d="M3 19l6-5 4 4 4-3 8 7" stroke="rgba(255,255,255,0.25)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <p className="text-white/35 text-sm">Add a photo</p>
+              <p className="text-white/20 text-xs">tap to open camera roll</p>
+            </button>
+          )}
+        </div>
+
+        {/* Review */}
         <div className="mx-5 mb-4 bg-card rounded-2xl border border-white/[0.06] overflow-hidden">
           <textarea value={review} onChange={e => setReview(e.target.value)}
             placeholder="What made it unforgettable? Transcendent, chaotic, mid? Be honest."
-            rows={4} maxLength={280}
+            rows={3} maxLength={280}
             className="w-full bg-transparent px-4 pt-4 pb-2 text-white/80 text-sm placeholder:text-white/20 outline-none resize-none leading-relaxed" />
           <p className="px-4 pb-3 text-white/15 text-xs text-right">{review.length} / 280</p>
         </div>
+
+        {/* Tags */}
         <div className="px-5 mb-6">
           <p className="text-[10px] uppercase tracking-widest text-white/25 mb-3">Vibe tags</p>
           <div className="flex flex-wrap gap-2">
@@ -172,6 +242,7 @@ export default function LogPage() {
             ))}
           </div>
         </div>
+
         <div className="px-5">
           <button onClick={handleLog} disabled={loading}
             className="w-full text-white rounded-2xl py-4 text-sm font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
@@ -179,7 +250,7 @@ export default function LogPage() {
             {loading ? 'Saving…' : 'Save & rank it →'}
           </button>
           <button onClick={handleLog} disabled={loading} className="w-full mt-2 text-white/20 text-sm py-3">
-            Skip note, just save
+            Skip, just save
           </button>
         </div>
         <BottomNav />
@@ -187,6 +258,7 @@ export default function LogPage() {
     )
   }
 
+  // STEP: SEARCH
   return (
     <div className="min-h-screen pb-28">
       <div className="sticky top-0 z-40 bg-[#0c0c0e]/90 backdrop-blur-xl border-b border-white/[0.05] px-5 pt-12 pb-4">
