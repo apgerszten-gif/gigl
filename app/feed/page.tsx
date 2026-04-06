@@ -59,15 +59,23 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen pb-28">
+      {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0c0c0e]/90 backdrop-blur-xl border-b border-white/[0.05] px-5 pt-12 pb-4">
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-brand/70 font-medium mb-1">Coachella 2026</p>
             <h1 className="font-serif text-2xl text-white">What they thought</h1>
           </div>
+          <div className="w-8 h-8 rounded-full bg-card border border-white/10 flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2"/>
+              <path d="M7 4v3.5l2 2" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          </div>
         </div>
       </div>
 
+      {/* Weekend banner */}
       <div className="mx-5 mt-4 mb-2 rounded-2xl overflow-hidden border border-white/[0.06]" style={{background:'linear-gradient(135deg,#2a0e1a,#1a1008)'}}>
         <div className="px-4 py-3 flex items-center justify-between">
           <div>
@@ -81,10 +89,13 @@ export default function FeedPage() {
         </div>
       </div>
 
+      {/* Feed */}
       <div className="px-5 pt-3 flex flex-col gap-3">
-        {loading && Array.from({length: 3}).map((_, i) => (
-          <div key={i} className="shimmer rounded-2xl h-40" />
-        ))}
+        {loading && (
+          Array.from({length: 3}).map((_, i) => (
+            <div key={i} className="shimmer rounded-2xl h-40" />
+          ))
+        )}
 
         {!loading && feed.length === 0 && (
           <div className="text-center py-20 fade-up">
@@ -101,6 +112,8 @@ export default function FeedPage() {
           const score = eloToDisplay(item.elo)
           return (
             <div key={item.id} className="fade-up rounded-2xl overflow-hidden border border-white/[0.05]" style={{background:'#161618', animationDelay:`${idx*60}ms`}}>
+
+              {/* Post header */}
               <div className="px-4 pt-4 pb-2 flex items-center gap-3">
                 <Link href={`/u/${item.profiles?.username}`}>
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
@@ -118,11 +131,17 @@ export default function FeedPage() {
                 </div>
               </div>
 
-              <div className="mx-4 mb-3 rounded-xl px-4 py-3 flex gap-4 items-center" style={{background:'linear-gradient(135deg,#220f18,#1a1008)'}}>
+              {/* Show card */}
+              {item.photo_url && (
+              <div className="mx-4 mb-3 rounded-xl overflow-hidden" style={{height:200}}>
+                <img src={item.photo_url} alt={item.artist_name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+              </div>
+            )}
+              <div className="mx-4 mb-3 rounded-xl px-4 py-3 flex gap-4 items-center" style={{background:"linear-gradient(135deg,#220f18,#1a1008)"}}>
                 <span className="text-4xl leading-none">{item.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium text-base leading-tight truncate">{item.artist_name}</p>
-                  <p className="text-white/35 text-xs mt-0.5">{item.stage} · {item.day}</p>
+                  <p className="text-white/35 text-xs mt-0.5">{item.stage} Stage · {item.day}</p>
                   <div className="flex items-baseline gap-1 mt-2">
                     <span className={`font-serif text-3xl ${scoreColor(score)}`}>{score}</span>
                     <span className="text-white/20 text-xs">/10</span>
@@ -130,10 +149,14 @@ export default function FeedPage() {
                 </div>
               </div>
 
+              {/* Review */}
               {item.review && (
-                <p className="px-4 pb-3 text-white/45 text-[13px] italic leading-relaxed">"{item.review}"</p>
+                <p className="px-4 pb-3 text-white/45 text-[13px] italic leading-relaxed">
+                  "{item.review}"
+                </p>
               )}
 
+              {/* Tags */}
               {item.tags && item.tags.length > 0 && (
                 <div className="px-4 pb-4 flex flex-wrap gap-1.5">
                   {item.tags.map(tag => (
@@ -148,7 +171,6 @@ export default function FeedPage() {
           )
         })}
       </div>
-      <BottomNav />
     </div>
   )
 }
