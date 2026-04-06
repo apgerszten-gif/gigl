@@ -171,7 +171,8 @@ export default function FeedPage() {
             </div>
           )
         })}
-      </div>
+     </div>
+      <BottomNav />
     </div>
   )
 }
