@@ -2,9 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap');
+
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
-body { background: #0c0c0e; color: white; font-family: 'DM Sans', sans-serif; }
+body {
+  background: #0c0c0e;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
 
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -15,20 +22,20 @@ body { background: #0c0c0e; color: white; font-family: 'DM Sans', sans-serif; }
   100% { background-position: 200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, #1a1a1d 25%, #2a2020 50%, #1a1a1d 75%);
+  background: linear-gradient(90deg, #1a1a1d 25%, #242020 50%, #1a1a1d 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fade-up { animation: fadeUp 0.4s ease forwards; }
+.fade-up { animation: fadeUp 0.35s ease forwards; }
 
 @keyframes scorePop {
-  0% { transform: scale(0.8); opacity: 0; }
-  60% { transform: scale(1.1); }
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.05); }
   100% { transform: scale(1); opacity: 1; }
 }
-.score-pop { animation: scorePop 0.5s ease forwards; }
+.score-pop { animation: scorePop 0.4s ease forwards; }
