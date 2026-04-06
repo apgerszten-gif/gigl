@@ -20,6 +20,13 @@ interface FeedItem {
   profiles: { username: string; display_name: string }
 }
 
+const DAY_COLORS: Record<string, string> = {
+  Friday: '#7B5EA7',
+  Saturday: '#D4537E',
+  Sunday: '#C4651A',
+  TBA: 'rgba(255,255,255,0.25)',
+}
+
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
@@ -32,10 +39,10 @@ function timeAgo(dateStr: string) {
 
 function scoreColor(score: string) {
   const n = parseFloat(score)
-  if (n >= 9) return 'text-[#F5A623]'
-  if (n >= 7.5) return 'text-brand'
-  if (n >= 6) return 'text-[#E8832A]'
-  return 'text-white/40'
+  if (n >= 9) return '#F5A623'
+  if (n >= 7.5) return '#D4537E'
+  if (n >= 6) return '#E8832A'
+  return 'rgba(255,255,255,0.4)'
 }
 
 export default function FeedPage() {
@@ -60,118 +67,108 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen pb-28">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#0c0c0e]/90 backdrop-blur-xl border-b border-white/[0.05] px-5 pt-12 pb-4">
+      <div className="sticky top-0 z-40 bg-[#0c0c0e]/95 backdrop-blur-xl border-b border-white/[0.06] px-5 pt-12 pb-4">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-brand/70 font-medium mb-1">Coachella 2026</p>
-            <h1 className="font-serif text-2xl text-white">What they thought</h1>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-card border border-white/10 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2"/>
-              <path d="M7 4v3.5l2 2" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeLinecap="round"/>
-            </svg>
+            <p className="text-[10px] uppercase tracking-[0.25em] font-semibold mb-1" style={{color:'rgba(212,83,126,0.7)'}}>Coachella 2026</p>
+            <h1 className="font-serif text-[26px] text-white font-normal">What they thought</h1>
           </div>
         </div>
       </div>
 
-      {/* Weekend banner */}
-      <div className="mx-5 mt-4 mb-2 rounded-2xl overflow-hidden border border-white/[0.06]" style={{background:'linear-gradient(135deg,#2a0e1a,#1a1008)'}}>
+      <div className="mx-5 mt-4 mb-3 rounded-xl overflow-hidden border border-white/[0.06]" style={{background:'linear-gradient(135deg,#1e0a14,#140a06)'}}>
         <div className="px-4 py-3 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-white/50 mb-0.5">Weekend 1</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-white/40 mb-0.5">Weekend 1</p>
             <p className="text-sm font-medium text-white">Apr 17–19, 2026 · Indio, CA</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-white/30 mb-0.5">logging</p>
-            <p className="font-serif text-xl text-brand">{feed.length}</p>
+            <p className="font-serif text-2xl" style={{color:'#D4537E'}}>{feed.length}</p>
+            <p className="text-[10px] uppercase tracking-wider text-white/30">sets logged</p>
           </div>
         </div>
       </div>
 
-      {/* Feed */}
-      <div className="px-5 pt-3 flex flex-col gap-3">
-        {loading && (
-          Array.from({length: 3}).map((_, i) => (
-            <div key={i} className="shimmer rounded-2xl h-40" />
-          ))
-        )}
+      <div className="px-5 pt-1 flex flex-col gap-3">
+        {loading && Array.from({length: 3}).map((_, i) => (
+          <div key={i} className="shimmer rounded-xl h-36" />
+        ))}
 
         {!loading && feed.length === 0 && (
           <div className="text-center py-20 fade-up">
-            <p className="text-5xl mb-4">🎪</p>
-            <p className="text-white/30 text-sm mb-2">No sets logged yet</p>
-            <p className="text-white/15 text-xs mb-6">Be the first to rate a Coachella set</p>
-            <Link href="/log" className="inline-block bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium">
-              Log a set →
+            <p className="text-white/20 text-sm mb-2">No sets logged yet</p>
+            <p className="text-white/12 text-xs mb-6">Be the first to rate a Coachella set</p>
+            <Link href="/log" className="inline-block bg-brand text-white rounded-lg px-6 py-3 text-sm font-medium tracking-wide">
+              Log a set
             </Link>
           </div>
         )}
 
         {feed.map((item, idx) => {
           const score = eloToDisplay(item.elo)
+          const dayColor = DAY_COLORS[item.day] || 'rgba(255,255,255,0.25)'
           return (
-            <div key={item.id} className="fade-up rounded-2xl overflow-hidden border border-white/[0.05]" style={{background:'#161618', animationDelay:`${idx*60}ms`}}>
+            <div key={item.id} className="fade-up rounded-xl overflow-hidden border border-white/[0.06]"
+              style={{background:'#141416', animationDelay:`${idx*50}ms`}}>
 
-              {/* Post header */}
-              <div className="px-4 pt-4 pb-2 flex items-center gap-3">
-                <Link href={`/u/${item.profiles?.username}`}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
-                    style={{background:'linear-gradient(135deg,#D4537E,#C4651A)'}}>
-                    {item.profiles?.display_name?.[0]?.toUpperCase() || '?'}
-                  </div>
-                </Link>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-white text-sm font-medium">{item.profiles?.display_name}</p>
-                    <span className="text-white/20 text-xs">·</span>
-                    <p className="text-white/25 text-xs">{timeAgo(item.created_at)}</p>
-                  </div>
-                  <p className="text-white/30 text-xs">logged a set</p>
-                </div>
-              </div>
-
-              {/* Show card */}
+              {/* Photo */}
               {item.photo_url && (
-              <div className="mx-4 mb-3 rounded-xl overflow-hidden" style={{height:200}}>
-                <img src={item.photo_url} alt={item.artist_name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
-              </div>
-            )}
-              <div className="mx-4 mb-3 rounded-xl px-4 py-3 flex gap-4 items-center" style={{background:"linear-gradient(135deg,#220f18,#1a1008)"}}>
-                <span className="text-4xl leading-none">{item.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium text-base leading-tight truncate">{item.artist_name}</p>
-                  <p className="text-white/35 text-xs mt-0.5">{item.stage} Stage · {item.day}</p>
-                  <div className="flex items-baseline gap-1 mt-2">
-                    <span className={`font-serif text-3xl ${scoreColor(score)}`}>{score}</span>
-                    <span className="text-white/20 text-xs">/10</span>
+                <div style={{height:200,overflow:'hidden'}}>
+                  <img src={item.photo_url} alt={item.artist_name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                </div>
+              )}
+
+              {/* Show info */}
+              <div className="px-4 pt-4 pb-3">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{background: dayColor}} />
+                      <span className="text-[10px] uppercase tracking-[0.18em] font-semibold" style={{color: dayColor}}>{item.day}</span>
+                      <span className="text-white/20 text-[10px]">·</span>
+                      <span className="text-white/35 text-[10px] uppercase tracking-wider">{item.stage}</span>
+                    </div>
+                    <h3 className="font-serif text-lg text-white leading-tight">{item.artist_name}</h3>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <div className="font-serif text-3xl leading-none" style={{color: scoreColor(score)}}>{score}</div>
+                    <div className="text-[10px] text-white/25 mt-0.5">/10</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Review */}
-              {item.review && (
-                <p className="px-4 pb-3 text-white/45 text-[13px] italic leading-relaxed">
-                  "{item.review}"
-                </p>
-              )}
+                {item.review && (
+                  <p className="text-white/50 text-[13px] leading-relaxed italic mb-3 border-l-2 border-white/10 pl-3">
+                    {item.review}
+                  </p>
+                )}
 
-              {/* Tags */}
-              {item.tags && item.tags.length > 0 && (
-                <div className="px-4 pb-4 flex flex-wrap gap-1.5">
-                  {item.tags.map(tag => (
-                    <span key={tag} className="text-xs px-2.5 py-1 rounded-full border"
-                      style={{background:'rgba(212,83,126,0.08)', borderColor:'rgba(212,83,126,0.2)', color:'rgba(212,83,126,0.8)'}}>
-                      {tag}
-                    </span>
-                  ))}
+                {item.tags && item.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {item.tags.map(tag => (
+                      <span key={tag} className="text-[11px] px-2.5 py-1 rounded border font-medium tracking-wide"
+                        style={{background:'rgba(212,83,126,0.07)', borderColor:'rgba(212,83,126,0.18)', color:'rgba(212,83,126,0.75)'}}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
+                  <Link href={`/u/${item.profiles?.username}`}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0"
+                      style={{background:'linear-gradient(135deg,#D4537E,#C4651A)'}}>
+                      {item.profiles?.display_name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                  </Link>
+                  <span className="text-white/40 text-xs font-medium">{item.profiles?.display_name}</span>
+                  <span className="text-white/20 text-xs">·</span>
+                  <span className="text-white/25 text-xs">{timeAgo(item.created_at)}</span>
                 </div>
-              )}
+              </div>
             </div>
           )
         })}
-     </div>
+      </div>
       <BottomNav />
     </div>
   )
