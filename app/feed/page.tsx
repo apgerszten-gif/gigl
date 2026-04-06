@@ -15,6 +15,7 @@ interface FeedItem {
   elo: number
   review: string | null
   tags: string[] | null
+  photo_url: string | null
   created_at: string
   profiles: { username: string; display_name: string }
 }
