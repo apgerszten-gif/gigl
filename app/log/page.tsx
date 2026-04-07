@@ -1,327 +1,218 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { artists, Artist, Day } from '@/lib/artists'
-import { supabase } from '@/lib/supabase'
-import BottomNav from '@/components/BottomNav'
+import { ARTISTS, DAY_DATES, type Artist } from '@/lib/artists'
+import { createClient } from '@/lib/supabase/client'
 
-const DAYS: Day[] = ['Friday', 'Saturday', 'Sunday', 'TBA']
-const TAGS = ['transcendent','intimate','chaotic energy','best live band','mid setlist','crowd was everything','underrated','life-changing','genre-defying','raw energy','surprised me','worth the clash']
+// ── Reaction step ────────────────────────────────────────────────────────────
 
-const DAY_COLORS: Record<string, string> = {
-  Friday: '#7B5EA7',
-  Saturday: '#D4537E',
-  Sunday: '#C4651A',
-  TBA: 'rgba(255,255,255,0.3)',
-}
-
-type Reaction = 'liked' | 'fine' | 'disliked'
-
-const REACTIONS: { key: Reaction; emoji: string; label: string; sublabel: string; elo: number; color: string }[] = [
-  { key: 'liked',    emoji: '👍', label: 'Liked it',     sublabel: 'Worth the hype',    elo: 1600, color: '#1D9E75' },
-  { key: 'fine',     emoji: '🤷', label: 'It was fine',  sublabel: 'Solid, not special', elo: 1500, color: '#BA7517' },
-  { key: 'disliked', emoji: '👎', label: "Didn't do it", sublabel: 'Not for me',         elo: 1400, color: '#D4537E' },
+const REACTIONS = [
+  { value: 'loved' as const, emoji: '👍', label: 'Loved it' },
+  { value: 'ok'    as const, emoji: '🤷', label: 'It was ok' },
+  { value: 'skip'  as const, emoji: '👎', label: 'Didn\'t go' },
 ]
 
-export default function LogPage() {
+// Elo seeds are applied internally; NOT shown to user per product decision
+const ELO_SEEDS = { loved: 1600, ok: 1500, skip: 1400 }
+
+interface LogShowPageProps {
+  params: { artistId: string }
+}
+
+export default function LogShowPage({ params }: LogShowPageProps) {
   const router = useRouter()
-  const [step, setStep] = useState<'search' | 'react' | 'review'>('search')
-  const [query, setQuery] = useState('')
-  const [dayFilter, setDayFilter] = useState<Day | 'All'>('All')
-  const [selected, setSelected] = useState<Artist | null>(null)
-  const [reaction, setReaction] = useState<Reaction | null>(null)
-  const [review, setReview] = useState('')
-  const [tags, setTags] = useState<string[]>([])
-  const [photo, setPhoto] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [alreadyLogged, setAlreadyLogged] = useState<string[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const supabase = createClient()
 
-  const filtered = artists.filter(a => {
-    const matchesQuery = a.name.toLowerCase().includes(query.toLowerCase())
-    const matchesDay = dayFilter === 'All' || a.day === dayFilter
-    return matchesQuery && matchesDay
-  })
+  const artist = ARTISTS.find(a => a.id === params.artistId)
+  const [reaction, setReaction] = useState<'loved' | 'ok' | 'skip' | null>(null)
+  const [note, setNote]         = useState('')
+  const [saving, setSaving]     = useState(false)
 
-  useEffect(() => {
-    async function fetchLogged() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase.from('logged_shows').select('artist_id').eq('user_id', user.id)
-      if (data) setAlreadyLogged(data.map(d => d.artist_id))
-    }
-    fetchLogged()
-  }, [])
+  if (!artist) return null
 
-  function toggleTag(tag: string) {
-    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  }
-
-  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setPhoto(file)
-    const url = URL.createObjectURL(file)
-    setPhotoPreview(url)
-  }
+  const dayDate = DAY_DATES[artist.day]
 
   async function handleLog() {
-    if (!selected || !reaction) return
-    setLoading(true)
+    if (!reaction || !artist) return
+    setSaving(true)
+
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/auth'); return }
-    const reactionData = REACTIONS.find(r => r.key === reaction)!
+    if (!user) { router.push('/login'); return }
 
-    let photoUrl: string | null = null
-    if (photo) {
-      const ext = photo.name.split('.').pop()
-      const path = `${user.id}/${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('show-photos')
-        .upload(path, photo, { contentType: photo.type })
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from('show-photos').getPublicUrl(path)
-        photoUrl = urlData.publicUrl
-      }
-    }
+    const initialElo = ELO_SEEDS[reaction]
 
-    const { data, error } = await supabase.from('logged_shows').insert({
-      user_id: user.id,
-      artist_id: selected.id,
-      artist_name: selected.name,
-      stage: selected.stage,
-      day: selected.day,
-      genre: selected.genre,
-      emoji: selected.emoji,
-      review: review || null,
-      tags: tags.length > 0 ? tags : null,
-      elo: reactionData.elo,
-      photo_url: photoUrl,
-    }).select().single()
+    await supabase.from('show_logs').upsert({
+      user_id:    user.id,
+      artist_id:  artist.id,
+      reaction,
+      note:       note.trim() || null,
+      elo:        initialElo,
+      logged_at:  new Date().toISOString(),
+    }, { onConflict: 'user_id,artist_id' })
 
-    if (error) { alert(error.message); setLoading(false); return }
-    router.push(`/rank?new=${data.id}`)
+    setSaving(false)
+    router.push('/feed')
   }
 
-  // STEP: REACT
-  if (step === 'react' && selected) {
-    return (
-      <div className="min-h-screen pb-28">
-        <div className="sticky top-0 z-40 bg-[#0c0c0e]/90 backdrop-blur-xl border-b border-white/[0.05] px-5 pt-12 pb-4 flex items-center gap-3">
-          <button onClick={() => setStep('search')} className="w-9 h-9 rounded-full bg-card flex items-center justify-center text-white/40 flex-shrink-0">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-white/30">Step 1 of 2</p>
-            <h1 className="font-serif text-lg text-white leading-tight">How was it?</h1>
-          </div>
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#131313',
+      fontFamily: "'Manrope', sans-serif",
+      color: '#f5ebe3',
+    }}>
+      {/* Top bar */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '20px 24px',
+      }}>
+        <button
+          onClick={() => router.back()}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="#e0c0b2" strokeWidth="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 15, fontWeight: 700, color: '#D35400',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>Gigl</span>
+        <div style={{ width: 18 }} />
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '0 24px 40px' }}>
+        {/* Step label */}
+        <div style={{
+          fontSize: 10, color: '#D35400', letterSpacing: '0.12em',
+          textTransform: 'uppercase', marginBottom: 8,
+        }}>
+          Log a Show
         </div>
-        <div className="mx-5 mt-5 mb-6 rounded-2xl overflow-hidden border border-white/[0.06]"
-          style={{background:`linear-gradient(135deg,${DAY_COLORS[selected.day]}22,#1a1a1d)`}}>
-          <div className="px-4 py-4 flex gap-4 items-center">
-            <span className="text-4xl">{selected.emoji}</span>
-            <div>
-              <p className="font-medium text-white text-base">{selected.name}</p>
-              <p className="text-white/40 text-xs mt-0.5">{selected.stage !== 'TBA' ? `${selected.stage} Stage · ` : ''}{selected.day}</p>
-            </div>
-          </div>
+
+        {/* Headline */}
+        <div style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 34, fontWeight: 700, lineHeight: 1.1,
+          letterSpacing: '-0.02em', marginBottom: 6,
+        }}>
+          How was<br />
+          <span style={{ color: '#D35400', fontStyle: 'italic' }}>{artist.name}?</span>
         </div>
-        <div className="px-5 flex flex-col gap-3">
+
+        {/* Meta */}
+        <div style={{
+          fontSize: 10, color: '#594238', letterSpacing: '0.08em',
+          textTransform: 'uppercase', marginBottom: 36,
+        }}>
+          {artist.stage} · {dayDate}
+        </div>
+
+        {/* Reaction cards — no Elo seeds shown */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 10, marginBottom: 36,
+        }}>
           {REACTIONS.map(r => (
-            <button key={r.key} onClick={() => { setReaction(r.key); setStep('review') }}
-              className="flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all active:scale-[0.98] text-left"
-              style={{background:'#161618', borderColor:'rgba(255,255,255,0.06)'}}>
-              <span style={{fontSize:36}}>{r.emoji}</span>
-              <div className="flex-1">
-                <p className="text-white font-medium text-base">{r.label}</p>
-                <p className="text-white/35 text-xs mt-0.5">{r.sublabel}</p>
+            <button
+              key={r.value}
+              onClick={() => setReaction(r.value)}
+              style={{
+                background: reaction === r.value ? '#2a1a00' : '#1a1a1a',
+                border: reaction === r.value
+                  ? '1.5px solid #D35400'
+                  : '1.5px solid transparent',
+                borderRadius: 16,
+                padding: '20px 12px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ fontSize: 24, marginBottom: 8 }}>{r.emoji}</div>
+              <div style={{
+                fontSize: 11, fontWeight: 700,
+                color: reaction === r.value ? '#D35400' : '#e0c0b2',
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                fontFamily: "'Manrope', sans-serif",
+              }}>
+                {r.label}
               </div>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M6 4l4 4-4 4" stroke="rgba(255,255,255,0.2)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
             </button>
           ))}
         </div>
-        <div className="px-5 mt-6">
-          <button onClick={() => { setReaction('fine'); handleLog() }} disabled={loading} className="w-full text-white/20 text-sm py-3">
-            Skip and just log it
-          </button>
-        </div>
-        <BottomNav />
-      </div>
-    )
-  }
 
-  // STEP: REVIEW + PHOTO
-  if (step === 'review' && selected && reaction) {
-    const reactionData = REACTIONS.find(r => r.key === reaction)!
-    return (
-      <div className="min-h-screen pb-28">
-        <div className="sticky top-0 z-40 bg-[#0c0c0e]/90 backdrop-blur-xl border-b border-white/[0.05] px-5 pt-12 pb-4 flex items-center gap-3">
-          <button onClick={() => setStep('react')} className="w-9 h-9 rounded-full bg-card flex items-center justify-center text-white/40 flex-shrink-0">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-white/30">Step 2 of 2 · Optional</p>
-            <h1 className="font-serif text-lg text-white leading-tight">Add a note</h1>
-          </div>
+        {/* Note field */}
+        <div style={{
+          fontSize: 10, color: '#594238', letterSpacing: '0.1em',
+          textTransform: 'uppercase', marginBottom: 10,
+        }}>
+          Add a note <span style={{ color: '#353534' }}>(optional)</span>
         </div>
 
-        {/* Show + reaction summary */}
-        <div className="mx-5 mt-4 mb-4 rounded-2xl overflow-hidden border border-white/[0.06]"
-          style={{background:`linear-gradient(135deg,${DAY_COLORS[selected.day]}22,#1a1a1d)`}}>
-          <div className="px-4 py-4 flex gap-4 items-center">
-            <span className="text-4xl">{selected.emoji}</span>
-            <div className="flex-1">
-              <p className="font-medium text-white text-base">{selected.name}</p>
-              <p className="text-white/40 text-xs mt-0.5">{selected.stage !== 'TBA' ? `${selected.stage} Stage · ` : ''}{selected.day}</p>
-            </div>
-            <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-              <span style={{fontSize:24}}>{reactionData.emoji}</span>
-              <span className="text-[10px] text-white/30">{reactionData.label}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Photo upload */}
-        <div className="px-5 mb-4">
-          <p className="text-[10px] uppercase tracking-widest text-white/25 mb-3">Photo from the show</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoSelect}
-            className="hidden"
+        <div style={{
+          background: '#1a1a1a', borderRadius: 12, padding: '14px 16px',
+          marginBottom: 8,
+        }}>
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="The energy when they opened with..."
+            rows={3}
+            style={{
+              width: '100%', background: 'none', border: 'none', outline: 'none',
+              resize: 'none', fontSize: 13, color: note ? '#e0c0b2' : '#353534',
+              fontFamily: "'Manrope', sans-serif", lineHeight: 1.6,
+              fontStyle: note ? 'normal' : 'italic',
+            }}
           />
-          {photoPreview ? (
-            <div className="relative rounded-2xl overflow-hidden border border-white/[0.06]" style={{height:200}}>
-              <img src={photoPreview} alt="Show photo" className="w-full h-full object-cover" />
-              <button
-                onClick={() => { setPhoto(null); setPhotoPreview(null) }}
-                className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
-                style={{background:'rgba(0,0,0,0.6)'}}>
-                ✕
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full rounded-2xl border border-dashed flex flex-col items-center justify-center gap-2 py-8 transition-colors active:opacity-70"
-              style={{borderColor:'rgba(255,255,255,0.12)', background:'rgba(255,255,255,0.02)'}}>
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <rect x="3" y="5" width="22" height="18" rx="3" stroke="rgba(255,255,255,0.25)" strokeWidth="1.4"/>
-                <circle cx="10" cy="11" r="2" stroke="rgba(255,255,255,0.25)" strokeWidth="1.4"/>
-                <path d="M3 19l6-5 4 4 4-3 8 7" stroke="rgba(255,255,255,0.25)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <p className="text-white/35 text-sm">Add a photo</p>
-              <p className="text-white/20 text-xs">tap to open camera roll</p>
-            </button>
-          )}
         </div>
 
-        {/* Review */}
-        <div className="mx-5 mb-4 bg-card rounded-2xl border border-white/[0.06] overflow-hidden">
-          <textarea value={review} onChange={e => setReview(e.target.value)}
-            placeholder="What made it unforgettable? Transcendent, chaotic, mid? Be honest."
-            rows={3} maxLength={280}
-            className="w-full bg-transparent px-4 pt-4 pb-2 text-white/80 text-sm placeholder:text-white/20 outline-none resize-none leading-relaxed" />
-          <p className="px-4 pb-3 text-white/15 text-xs text-right">{review.length} / 280</p>
-        </div>
+        {/* Orange underline focus accent */}
+        <div style={{
+          height: 2, background: '#D35400', borderRadius: 1,
+          width: '60%', marginBottom: 36,
+        }} />
 
-        {/* Tags */}
-        <div className="px-5 mb-6">
-          <p className="text-[10px] uppercase tracking-widest text-white/25 mb-3">Vibe tags</p>
-          <div className="flex flex-wrap gap-2">
-            {TAGS.map(tag => (
-              <button key={tag} onClick={() => toggleTag(tag)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${tags.includes(tag) ? 'border-brand text-brand' : 'border-white/10 text-white/35'}`}
-                style={tags.includes(tag) ? {background:'rgba(212,83,126,0.1)'} : {}}>
-                {tag}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="px-5">
-          <button onClick={handleLog} disabled={loading}
-            className="w-full text-white rounded-2xl py-4 text-sm font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
-            style={{background:'#D4537E'}}>
-            {loading ? 'Saving…' : 'Save & rank it →'}
-          </button>
-          <button onClick={handleLog} disabled={loading} className="w-full mt-2 text-white/20 text-sm py-3">
-            Skip, just save
-          </button>
-        </div>
-        <BottomNav />
-      </div>
-    )
-  }
-
-  // STEP: SEARCH
-  return (
-    <div className="min-h-screen pb-28">
-      <div className="sticky top-0 z-40 bg-[#0c0c0e]/90 backdrop-blur-xl border-b border-white/[0.05] px-5 pt-12 pb-4">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-brand/70 mb-1">Coachella 2026</p>
-        <h1 className="font-serif text-2xl text-white mb-3">Log a set</h1>
-        <div className="bg-card border border-white/10 rounded-xl flex items-center gap-3 px-4 py-3">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="6" cy="6" r="4.5" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2"/>
-            <path d="M10 10l2.5 2.5" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round"/>
-          </svg>
-          <input type="text" value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Search artist…"
-            className="flex-1 bg-transparent text-white text-sm placeholder:text-white/25 outline-none" autoFocus />
-          {query && <button onClick={() => setQuery('')} className="text-white/25 text-xs">✕</button>}
-        </div>
-      </div>
-
-      <div className="px-5 pt-3 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
-        <button onClick={() => setDayFilter('All')}
-          className={`flex-shrink-0 text-xs px-4 py-2 rounded-full border transition-all ${dayFilter === 'All' ? 'border-white/20 text-white bg-white/[0.08]' : 'border-white/[0.08] text-white/35'}`}>
-          All days
+        {/* CTA */}
+        <button
+          onClick={handleLog}
+          disabled={!reaction || saving}
+          style={{
+            width: '100%', background: reaction ? '#D35400' : '#252220',
+            border: 'none', borderRadius: 12, padding: 14,
+            textAlign: 'center', cursor: reaction ? 'pointer' : 'not-allowed',
+            transition: 'background 0.2s ease',
+          }}
+        >
+          <span style={{
+            fontSize: 12, fontWeight: 700, color: reaction ? '#fff' : '#594238',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            fontFamily: "'Manrope', sans-serif",
+          }}>
+            {saving ? 'Saving...' : 'Log this show'}
+          </span>
         </button>
-        {DAYS.map(day => (
-          <button key={day} onClick={() => setDayFilter(day)}
-            className="flex-shrink-0 text-xs px-4 py-2 rounded-full border transition-all"
-            style={dayFilter === day
-              ? {background:`${DAY_COLORS[day]}25`, borderColor:`${DAY_COLORS[day]}60`, color:DAY_COLORS[day]}
-              : {borderColor:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.35)'}}>
-            {day}
+
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <button
+            onClick={() => router.back()}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 11, color: '#353534', letterSpacing: '0.06em',
+              textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+            }}
+          >
+            Cancel
           </button>
-        ))}
+        </div>
       </div>
-
-      <div className="px-5 pb-2">
-        <p className="text-xs text-white/20">{filtered.length} artists</p>
-      </div>
-
-      <div className="px-5 flex flex-col gap-2">
-        {filtered.map(artist => {
-          const logged = alreadyLogged.includes(artist.id)
-          return (
-            <button key={artist.id}
-              onClick={() => { if (!logged) { setSelected(artist); setReaction(null); setStep('react') } }}
-              className="flex items-center gap-3 w-full text-left rounded-xl border px-4 py-3 transition-all"
-              style={{background:'#161618', borderColor: logged ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)', opacity: logged ? 0.45 : 1}}>
-              <span className="text-2xl flex-shrink-0">{artist.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{artist.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] font-medium" style={{color: DAY_COLORS[artist.day]}}>{artist.day}</span>
-                  <span className="text-white/20 text-[10px]">·</span>
-                  <span className="text-white/30 text-[10px]">{artist.stage}</span>
-                </div>
-              </div>
-              {logged
-                ? <span className="text-xs font-medium flex-shrink-0" style={{color:'rgba(212,83,126,0.5)'}}>logged ✓</span>
-                : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0"><path d="M6 4l4 4-4 4" stroke="rgba(255,255,255,0.2)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              }
-            </button>
-          )
-        })}
-      </div>
-      <BottomNav />
     </div>
   )
 }
