@@ -1,195 +1,287 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ARTISTS } from '@/lib/artists'
+import { createClient } from '@/lib/supabase/client'
 import { newRatings, eloToDisplay } from '@/lib/elo'
 
-interface Show {
-  id: string
-  artist_name: string
-  stage: string
-  day: string
-  emoji: string
+interface LoggedArtist {
+  artist_id: string
   elo: number
-  review: string | null
-  tags: string[] | null
+  reaction: string
 }
 
-function RankContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const newShowId = searchParams.get('new')
-  const [shows, setShows] = useState<Show[]>([])
-  const [matchups, setMatchups] = useState<[Show, Show][]>([])
-  const [currentIdx, setCurrentIdx] = useState(0)
-  const [picked, setPicked] = useState<'a' | 'b' | null>(null)
-  const [done, setDone] = useState(false)
-  const [loading, setLoading] = useState(true)
+export default function RankingsPage() {
+  const router   = useRouter()
+  const supabase = createClient()
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth'); return }
-      const { data } = await supabase
-        .from('logged_shows')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-      if (!data || data.length < 2) { router.replace('/profile'); return }
-      const newS = data.find(s => s.id === newShowId) || data[0]
-      const others = data.filter(s => s.id !== newS.id)
-      const opponents = others.slice(0, Math.min(4, others.length))
-      setMatchups(opponents.map(o => [newS, o] as [Show, Show]))
-      setShows(data)
-      setLoading(false)
+  const [logs, setLogs]           = useState<LoggedArtist[]>([])
+  const [pair, setPair]           = useState<[LoggedArtist, LoggedArtist] | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [battlesLeft, setBattlesLeft] = useState(0)
+
+  useEffect(() => { fetchLogs() }, [])
+
+  async function fetchLogs() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return }
+
+    const { data } = await supabase
+      .from('show_logs')
+      .select('artist_id, elo, reaction')
+      .eq('user_id', user.id)
+      .neq('reaction', 'skip')
+      .order('elo', { ascending: false })
+
+    if (data && data.length >= 2) {
+      setLogs(data)
+      setBattlesLeft(Math.max(0, 10 - data.length))
+      pickPair(data)
     }
-    load()
-  }, [newShowId, router])
+    setLoading(false)
+  }
 
-  async function pick(winner: Show, loser: Show) {
-    if (picked) return
-    setPicked(matchups[currentIdx][0].id === winner.id ? 'a' : 'b')
-    const { winner: wElo, loser: lElo } = newRatings(winner.elo, loser.elo)
-    winner.elo = wElo
-    loser.elo = lElo
+  function pickPair(data: LoggedArtist[]) {
+    // Pick two random logged artists that are close in Elo
+    const shuffled = [...data].sort(() => Math.random() - 0.5)
+    setPair([shuffled[0], shuffled[1]])
+  }
+
+  async function handlePick(winnerId: string) {
+    if (!pair) return
+    const [a, b] = pair
+    const isAWinner = winnerId === a.artist_id
+    const winner = isAWinner ? a : b
+    const loser  = isAWinner ? b : a
+
+    const { winner: newW, loser: newL } = newRatings(winner.elo, loser.elo)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
     await Promise.all([
-      supabase.from('logged_shows').update({ elo: wElo }).eq('id', winner.id),
-      supabase.from('logged_shows').update({ elo: lElo }).eq('id', loser.id),
+      supabase.from('show_logs')
+        .update({ elo: newW })
+        .match({ user_id: user.id, artist_id: winner.artist_id }),
+      supabase.from('show_logs')
+        .update({ elo: newL })
+        .match({ user_id: user.id, artist_id: loser.artist_id }),
     ])
-    setTimeout(() => {
-      setPicked(null)
-      if (currentIdx + 1 >= matchups.length) setDone(true)
-      else setCurrentIdx(i => i + 1)
-    }, 700)
+
+    await fetchLogs()
   }
 
-  function skip() {
-    if (currentIdx + 1 >= matchups.length) setDone(true)
-    else setCurrentIdx(i => i + 1)
+  function getArtist(id: string) {
+    return ARTISTS.find(a => a.id === id)
   }
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin" />
-    </div>
-  )
+  const topFive = logs.slice(0, 5)
 
-  if (done) {
-    const sorted = [...shows].sort((a, b) => b.elo - a.elo)
-    return (
-      <div className="min-h-screen px-5 pt-10 pb-10 flex flex-col items-center text-center">
-        <div className="w-16 h-16 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center mb-5">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <path d="M14 3l2.5 7.5H24l-6.4 4.6 2.5 7.5L14 18.1l-6.1 4.5 2.5-7.5L4 10.5h7.5z"
-              stroke="#D4537E" strokeWidth="1.4" fill="rgba(212,83,126,0.1)" strokeLinejoin="round"/>
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#131313',
+      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      maxWidth: 430, margin: '0 auto',
+    }}>
+      {/* Top bar */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', padding: '20px 24px',
+      }}>
+        <button onClick={() => router.push('/feed')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="#e0c0b2" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+        </button>
+        <span style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 15, fontWeight: 700, color: '#D35400',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>Gigl</span>
+        <div style={{ width: 18 }} />
+      </div>
+
+      <div style={{ padding: '0 24px 100px' }}>
+        <div style={{
+          fontSize: 10, color: '#D35400', letterSpacing: '0.12em',
+          textTransform: 'uppercase', marginBottom: 8,
+        }}>Head to Head</div>
+        <div style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 34, fontWeight: 700, lineHeight: 1.1,
+          letterSpacing: '-0.02em', marginBottom: 6,
+        }}>
+          Which set hit<br />
+          <span style={{ color: '#D35400', fontStyle: 'italic' }}>harder?</span>
+        </div>
+        <div style={{
+          fontSize: 10, color: '#594238', letterSpacing: '0.08em',
+          textTransform: 'uppercase', marginBottom: 28,
+        }}>
+          {logs.length} logged · {battlesLeft > 0 ? `${battlesLeft} battles to unlock scores` : 'Scores unlocked'}
+        </div>
+
+        {/* Battle cards */}
+        {pair && logs.length >= 2 ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+              {pair.map(log => {
+                const artist = getArtist(log.artist_id)
+                if (!artist) return null
+                return (
+                  <button
+                    key={log.artist_id}
+                    onClick={() => handlePick(log.artist_id)}
+                    style={{
+                      background: '#1a1a1a', border: 'none',
+                      borderRadius: 16, overflow: 'hidden', cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div style={{
+                      background: artist.day === 'friday' ? '#2a1f0f'
+                        : artist.day === 'saturday' ? '#0f1a1a' : '#1a0f1a',
+                      height: 130, display: 'flex', alignItems: 'flex-end',
+                      padding: 12, position: 'relative',
+                    }}>
+                      {logs.length >= 5 && (
+                        <div style={{
+                          position: 'absolute', top: 10, right: 10,
+                          fontFamily: "'Noto Serif', Georgia, serif",
+                          fontSize: 28, fontWeight: 700,
+                          color: 'rgba(211,84,0,0.2)', lineHeight: 1,
+                        }}>
+                          {eloToDisplay(log.elo)}
+                        </div>
+                      )}
+                      <div>
+                        <div style={{
+                          fontFamily: "'Noto Serif', Georgia, serif",
+                          fontSize: 15, fontWeight: 600, color: '#f5ebe3',
+                        }}>{artist.name}</div>
+                        <div style={{
+                          fontSize: 9, color: '#594238', letterSpacing: '0.06em',
+                          textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                          marginTop: 2,
+                        }}>{artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}</div>
+                      </div>
+                    </div>
+                    <div style={{ padding: 12 }}>
+                      <div style={{
+                        background: '#D35400', borderRadius: 8, padding: 8,
+                        textAlign: 'center',
+                        fontSize: 11, fontWeight: 700, color: '#fff',
+                        letterSpacing: '0.08em', textTransform: 'uppercase',
+                        fontFamily: "'Manrope', sans-serif",
+                      }}>Pick this</div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <button
+                onClick={() => pickPair(logs)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 11, color: '#353534', letterSpacing: '0.06em',
+                  textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                }}
+              >
+                Skip this match
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{
+            background: '#1a1a1a', borderRadius: 16, padding: 24,
+            textAlign: 'center', marginBottom: 28,
+          }}>
+            <div style={{
+              fontSize: 13, color: '#594238', fontFamily: "'Manrope', sans-serif",
+              lineHeight: 1.6,
+            }}>
+              Log at least 2 shows to start battling
+            </div>
+          </div>
+        )}
+
+        {/* Top 5 */}
+        {topFive.length > 0 && (
+          <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{
+              fontSize: 10, color: '#594238', letterSpacing: '0.1em',
+              textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+              marginBottom: 12,
+            }}>Your current ranking</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {topFive.map((log, i) => {
+                const artist = getArtist(log.artist_id)
+                if (!artist) return null
+                return (
+                  <div key={log.artist_id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                  }}>
+                    <span style={{
+                      fontFamily: "'Noto Serif', Georgia, serif",
+                      fontSize: 12, color: '#594238', width: 16,
+                    }}>{i + 1}</span>
+                    <div style={{ flex: 1 }}>
+                      <span style={{
+                        fontFamily: "'Noto Serif', Georgia, serif",
+                        fontSize: 13, color: '#f5ebe3',
+                      }}>{artist.name}</span>
+                    </div>
+                    <span style={{
+                      fontFamily: "'Noto Serif', Georgia, serif",
+                      fontSize: 14, fontWeight: 700,
+                      color: logs.length >= 5 ? '#D35400' : '#353534',
+                    }}>
+                      {logs.length >= 5 ? eloToDisplay(log.elo) : '—'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 430,
+        background: '#0e0e0e', padding: '16px 24px',
+        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+      }}>
+        <button onClick={() => router.push('/feed')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#594238" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
-        </div>
-        <h1 className="font-serif text-2xl text-white mb-2">Rankings updated.</h1>
-        <p className="text-white/35 text-sm mb-8">Every new show you log triggers fresh matchups.</p>
-        <div className="w-full flex flex-col gap-2 mb-8">
-          {sorted.map((s, i) => {
-            const medals = ['🥇','🥈','🥉']
-            return (
-              <div key={s.id} className="flex items-center gap-3 rounded-xl border border-white/[0.06] px-4 py-3"
-                style={{background:'#161618'}}>
-                <span className="text-base w-6 text-center">{medals[i] || `${i+1}`}</span>
-                <span className="text-xl">{s.emoji}</span>
-                <div className="flex-1 text-left">
-                  <p className="text-white text-sm font-medium">{s.artist_name}</p>
-                  <p className="text-white/35 text-xs">{s.stage} · {s.day}</p>
-                </div>
-                <span className="font-serif text-lg text-brand">{eloToDisplay(s.elo)}</span>
-              </div>
-            )
-          })}
-        </div>
-        <button onClick={() => router.push('/profile')}
-          className="w-full bg-brand text-white rounded-2xl py-4 text-sm font-medium active:opacity-80 mb-2">
-          See my profile →
+          <span style={{ fontSize: 9, color: '#594238', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Home</span>
         </button>
-        <button onClick={() => router.push('/log')} className="w-full text-white/25 text-sm py-3">
-          Log another set
-        </button>
-      </div>
-    )
-  }
-
-  const [showA, showB] = matchups[currentIdx]
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <div className="px-5 pt-6 pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div className="bg-brand/10 border border-brand/20 rounded-full px-3 py-1 text-xs font-medium text-brand">
-            Round {currentIdx + 1} of {matchups.length}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          <div style={{
+            width: 36, height: 36, background: '#D35400', borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -18, cursor: 'pointer',
+          }} onClick={() => router.push('/feed')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
           </div>
-          <div className="flex gap-1.5">
-            {matchups.map((_, i) => (
-              <div key={i} className={`h-[3px] w-6 rounded-full transition-colors ${i < currentIdx ? 'bg-brand' : i === currentIdx ? 'bg-brand/40' : 'bg-white/10'}`} />
-            ))}
-          </div>
+          <span style={{ fontSize: 9, color: '#e0c0b2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
         </div>
-        <h1 className="font-serif text-2xl text-white">Which was better?</h1>
-        <p className="text-white/30 text-xs mt-1">Tap to pick · no overthinking</p>
-      </div>
-
-      <div className="flex-1 px-5 flex flex-col gap-3 pb-6">
-        <button onClick={() => pick(showA, showB)} disabled={!!picked}
-          className={`flex-1 rounded-2xl border text-left p-5 transition-all flex flex-col gap-3 ${
-            picked === 'a' ? 'border-brand' : picked === 'b' ? 'border-white/[0.03] opacity-30' : 'border-white/[0.06] active:border-brand/40'
-          }`}
-          style={{background: picked === 'a' ? 'rgba(212,83,126,0.07)' : '#1a1a1d'}}>
-          <div className="flex gap-3 items-start">
-            <span className="text-4xl leading-none">{showA.emoji}</span>
-            <div className="flex-1">
-              <p className="text-white font-medium text-lg leading-tight">{showA.artist_name}</p>
-              <p className="text-white/35 text-xs mt-1">{showA.stage} · {showA.day}</p>
-            </div>
-          </div>
-          {showA.review && (
-            <p className="text-white/40 text-xs italic leading-relaxed line-clamp-2">"{showA.review}"</p>
-          )}
-        </button>
-
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="flex-1 h-px bg-white/[0.06]" />
-          <span className="font-serif text-white/20 italic text-sm">vs</span>
-          <div className="flex-1 h-px bg-white/[0.06]" />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D35400" strokeWidth="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+          <span style={{ fontSize: 9, color: '#D35400', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Rankings</span>
         </div>
-
-        <button onClick={() => pick(showB, showA)} disabled={!!picked}
-          className={`flex-1 rounded-2xl border text-left p-5 transition-all flex flex-col gap-3 ${
-            picked === 'b' ? 'border-brand' : picked === 'a' ? 'border-white/[0.03] opacity-30' : 'border-white/[0.06] active:border-brand/40'
-          }`}
-          style={{background: picked === 'b' ? 'rgba(212,83,126,0.07)' : '#1a1a1d'}}>
-          <div className="flex gap-3 items-start">
-            <span className="text-4xl leading-none">{showB.emoji}</span>
-            <div className="flex-1">
-              <p className="text-white font-medium text-lg leading-tight">{showB.artist_name}</p>
-              <p className="text-white/35 text-xs mt-1">{showB.stage} · {showB.day}</p>
-            </div>
-          </div>
-          {showB.review && (
-            <p className="text-white/40 text-xs italic leading-relaxed line-clamp-2">"{showB.review}"</p>
-          )}
-        </button>
-      </div>
-
-      <div className="px-5 pb-8 flex-shrink-0 text-center">
-        <button onClick={skip} className="text-white/20 text-sm">skip this matchup</button>
       </div>
     </div>
-  )
-}
-
-export default function RankPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin" />
-      </div>
-    }>
-      <RankContent />
-    </Suspense>
   )
 }
