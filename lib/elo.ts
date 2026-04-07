@@ -17,8 +17,3 @@ export function newRatings(
     delta,
   }
 }
-
-export function eloToDisplay(elo: number): string {
-  const score = Math.min(10, Math.max(1, (elo - 1200) / 400 * 3 + 7))
-  return score.toFixed(1)
-}
