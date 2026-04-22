@@ -225,12 +225,15 @@ function FeedInner() {
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontFamily: "'Noto Serif', Georgia, serif",
-                      fontSize: 15, fontWeight: 600, color: '#f5ebe3',
-                      marginBottom: 2,
-                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    }}>{name}</div>
+                    <div
+                      onClick={() => router.push(`/artist/${item.artist_id}`)}
+                      style={{
+                        fontFamily: "'Noto Serif', Georgia, serif",
+                        fontSize: 15, fontWeight: 600, color: '#f5ebe3',
+                        marginBottom: 2,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        cursor: 'pointer',
+                      }}>{name}</div>
                     <div style={{
                       fontSize: 10, color: '#594238',
                       letterSpacing: '0.06em', textTransform: 'uppercase',
