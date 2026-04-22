@@ -12,9 +12,6 @@ interface LoggedArtist {
   emoji: string
 }
 
-// Max battles per session
-const MAX_BATTLES = 4
-
 // Map reaction → bucket label (matches ELO_SEEDS in log page)
 const BUCKET_LABEL: Record<string, string> = {
   loved: 'loved',
@@ -76,10 +73,9 @@ function BattleInner() {
         return
       }
 
-      // Opponents = bucket shows excluding the new artist
+      // Battle all other shows in the same bucket
       const possibleOpponents = sameBucket.filter(a => a.artist_id !== newArtistId).length
-      // Battles = min(possibleOpponents, MAX_BATTLES)
-      const limit = Math.min(MAX_BATTLES, possibleOpponents)
+      const limit = possibleOpponents
       setSessionLimit(limit)
       pickPair(sameBucket, new Set(), newArtistId)
     }

@@ -8,6 +8,8 @@ import Link from 'next/link'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
+const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
+
 function resolvePhotoUrl(url: string | null): string | null {
   if (!url) return null
   if (url.startsWith('http')) return url
@@ -139,6 +141,10 @@ export default function ProfilePage() {
   const [shows, setShows] = useState<Show[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editReview, setEditReview] = useState('')
+  const [editTags, setEditTags] = useState<string[]>([])
+  const [editSaving, setEditSaving] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -166,6 +172,27 @@ export default function ProfilePage() {
   async function signOut() {
     await supabase.auth.signOut()
     router.push('/auth')
+  }
+
+  function startEdit(show: Show) {
+    setEditingId(show.id)
+    setEditReview(show.review || '')
+    setEditTags(show.tags || [])
+  }
+
+  async function saveEdit(showId: string) {
+    setEditSaving(true)
+    const review = editReview.trim() || null
+    const tags = editTags.length > 0 ? editTags : null
+    const { error } = await supabase
+      .from('logged_shows')
+      .update({ review, tags })
+      .eq('id', showId)
+    if (!error) {
+      setShows(prev => prev.map(s => s.id === showId ? { ...s, review, tags } : s))
+      setEditingId(null)
+    }
+    setEditSaving(false)
   }
 
   if (loading) return (
@@ -226,25 +253,84 @@ export default function ProfilePage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-white text-sm font-medium truncate">{show.artist_name}</p>
                       <p className="text-white/30 text-xs mt-0.5">{show.stage} · {show.day}</p>
-                      </div>
-                    <span className="font-serif text-xl flex-shrink-0" style={{color: scoreColor(score)}}>{score}</span>
-                  </div>
-                  {show.review && (
-                    <p style={{ padding: '4px 16px 8px', fontSize: 12, color: 'rgba(245,235,227,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                      "{show.review}"
-                    </p>
-                  )}
-                  {show.tags && show.tags.length > 0 && (
-                    <div style={{ padding: '0 16px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {show.tags.map(tag => (
-                        <span key={tag} style={{
-                          fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                          background: 'rgba(211,84,0,0.12)', color: 'rgba(211,84,0,0.7)',
-                          border: '1px solid rgba(211,84,0,0.2)',
-                          fontFamily: "'Manrope', sans-serif", letterSpacing: '0.04em',
-                        }}>{tag}</span>
-                      ))}
                     </div>
+                    <span className="font-serif text-xl flex-shrink-0" style={{color: scoreColor(score)}}>{score}</span>
+                    <button
+                      onClick={() => editingId === show.id ? setEditingId(null) : startEdit(show)}
+                      style={{background:'none', border:'none', cursor:'pointer', padding:'2px 4px', flexShrink:0, opacity: editingId === show.id ? 1 : 0.4}}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={editingId === show.id ? '#D35400' : '#f5ebe3'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {editingId === show.id ? (
+                    <div style={{padding: '0 16px 16px'}}>
+                      <textarea
+                        value={editReview}
+                        onChange={e => setEditReview(e.target.value)}
+                        maxLength={280}
+                        placeholder="Add a review..."
+                        rows={3}
+                        style={{
+                          width: '100%', background: '#0f0f11', border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 10, padding: '10px 12px', color: '#f5ebe3', fontSize: 13,
+                          fontFamily: "'Manrope', sans-serif", resize: 'none', outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <div style={{display:'flex', flexWrap:'wrap', gap:6, margin:'10px 0'}}>
+                        {TAGS.map(tag => {
+                          const active = editTags.includes(tag)
+                          return (
+                            <button key={tag} onClick={() => setEditTags(prev =>
+                              active ? prev.filter(t => t !== tag) : [...prev, tag]
+                            )} style={{
+                              fontSize: 10, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
+                              background: active ? 'rgba(211,84,0,0.2)' : 'rgba(255,255,255,0.04)',
+                              color: active ? '#D35400' : 'rgba(255,255,255,0.35)',
+                              border: active ? '1px solid rgba(211,84,0,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                              fontFamily: "'Manrope', sans-serif",
+                            }}>{tag}</button>
+                          )
+                        })}
+                      </div>
+                      <div style={{display:'flex', gap:8, marginTop:4}}>
+                        <button onClick={() => setEditingId(null)} style={{
+                          flex:1, padding:'9px 0', borderRadius:10, background:'rgba(255,255,255,0.05)',
+                          border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.4)',
+                          fontSize:12, cursor:'pointer', fontFamily:"'Manrope', sans-serif",
+                        }}>Cancel</button>
+                        <button onClick={() => saveEdit(show.id)} disabled={editSaving} style={{
+                          flex:2, padding:'9px 0', borderRadius:10, background:'#D35400',
+                          border:'none', color:'#fff', fontSize:12, fontWeight:700,
+                          cursor: editSaving ? 'default' : 'pointer', opacity: editSaving ? 0.7 : 1,
+                          fontFamily:"'Manrope', sans-serif", letterSpacing:'0.06em', textTransform:'uppercase',
+                        }}>{editSaving ? 'Saving...' : 'Save'}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {show.review && (
+                        <p style={{ padding: '4px 16px 8px', fontSize: 12, color: 'rgba(245,235,227,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                          "{show.review}"
+                        </p>
+                      )}
+                      {show.tags && show.tags.length > 0 && (
+                        <div style={{ padding: '0 16px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {show.tags.map(tag => (
+                            <span key={tag} style={{
+                              fontSize: 10, padding: '3px 10px', borderRadius: 20,
+                              background: 'rgba(211,84,0,0.12)', color: 'rgba(211,84,0,0.7)',
+                              border: '1px solid rgba(211,84,0,0.2)',
+                              fontFamily: "'Manrope', sans-serif", letterSpacing: '0.04em',
+                            }}>{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )
