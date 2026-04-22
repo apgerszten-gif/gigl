@@ -238,12 +238,16 @@ function FeedInner() {
                     }}>
                       {stageName}{day ? ` · ${dayLabel(day)}` : ''}
                     </div>
-                    <div style={{
-                      fontSize: 11,
-                      color: isMe ? '#D35400' : '#6b5248',
-                      fontFamily: "'Manrope', sans-serif",
-                      fontWeight: isMe ? 600 : 400,
-                    }}>
+                    <div
+                      onClick={() => router.push(isMe ? '/profile' : `/u/${username}`)}
+                      style={{
+                        fontSize: 11,
+                        color: isMe ? '#D35400' : '#6b5248',
+                        fontFamily: "'Manrope', sans-serif",
+                        fontWeight: isMe ? 600 : 400,
+                        cursor: 'pointer',
+                      }}
+                    >
                       @{username}
                     </div>
                   </div>
