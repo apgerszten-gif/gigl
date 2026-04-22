@@ -23,6 +23,7 @@ function scoreColor(score: string) {
 
 interface Show {
   id: string
+  artist_id: string
   artist_name: string
   stage: string
   day: string
