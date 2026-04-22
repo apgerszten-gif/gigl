@@ -48,6 +48,7 @@ export default function ProfilePage() {
   const [editReview, setEditReview] = useState('')
   const [editTags, setEditTags] = useState<string[]>([])
   const [editSaving, setEditSaving] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -92,6 +93,15 @@ export default function ProfilePage() {
       setEditingId(null)
     }
     setEditSaving(false)
+  }
+
+  async function deleteShow(showId: string) {
+    const { error } = await supabase.from('logged_shows').delete().eq('id', showId)
+    if (!error) {
+      setShows(prev => prev.filter(s => s.id !== showId))
+      setEditingId(null)
+      setConfirmDeleteId(null)
+    }
   }
 
   const avgScore = shows.length > 0
@@ -253,6 +263,38 @@ export default function ProfilePage() {
                           cursor: editSaving ? 'default' : 'pointer', opacity: editSaving ? 0.7 : 1,
                           fontFamily: "'Manrope', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase',
                         }}>{editSaving ? 'Saving...' : 'Save'}</button>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button onClick={() => router.push(`/battle?newArtistId=${show.artist_id}`)} style={{
+                          flex: 1, padding: '10px 0', borderRadius: 10,
+                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                          color: 'rgba(245,235,227,0.45)', fontSize: 11, cursor: 'pointer',
+                          fontFamily: "'Manrope', sans-serif",
+                        }}>↺ Rerun battles</button>
+                        {confirmDeleteId === show.id ? (
+                          <>
+                            <button onClick={() => setConfirmDeleteId(null)} style={{
+                              flex: 1, padding: '10px 0', borderRadius: 10,
+                              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                              color: 'rgba(245,235,227,0.35)', fontSize: 11, cursor: 'pointer',
+                              fontFamily: "'Manrope', sans-serif",
+                            }}>Keep it</button>
+                            <button onClick={() => deleteShow(show.id)} style={{
+                              flex: 1, padding: '10px 0', borderRadius: 10,
+                              background: 'rgba(180,30,30,0.2)', border: '1px solid rgba(180,30,30,0.35)',
+                              color: '#e05050', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                              fontFamily: "'Manrope', sans-serif",
+                            }}>Delete</button>
+                          </>
+                        ) : (
+                          <button onClick={() => setConfirmDeleteId(show.id)} style={{
+                            flex: 1, padding: '10px 0', borderRadius: 10,
+                            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                            color: 'rgba(224,80,80,0.5)', fontSize: 11, cursor: 'pointer',
+                            fontFamily: "'Manrope', sans-serif",
+                          }}>Remove rating</button>
+                        )}
                       </div>
                     </div>
                   ) : (
