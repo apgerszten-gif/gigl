@@ -73,9 +73,9 @@ function BattleInner() {
         return
       }
 
-      // Battle all other shows in the same bucket
+      // Battle up to 4 other shows in the same bucket
       const possibleOpponents = sameBucket.filter(a => a.artist_id !== newArtistId).length
-      const limit = possibleOpponents
+      const limit = Math.min(4, possibleOpponents)
       setSessionLimit(limit)
       pickPair(sameBucket, new Set(), newArtistId)
     }
