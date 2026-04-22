@@ -24,6 +24,7 @@ const DAY_LABELS: Record<Day, string> = {
 interface ExistingLog {
   emoji: string
   photo_url: string | null
+  review: string | null
 }
 
 function LogInner() {
@@ -43,6 +44,7 @@ function LogInner() {
   const [reaction, setReaction]             = useState<'loved' | 'ok' | 'skip' | null>(null)
   const [photo, setPhoto]                   = useState<File | null>(null)
   const [photoPreview, setPhotoPreview]     = useState<string | null>(null)
+  const [review, setReview]                 = useState('')
   const [saving, setSaving]                 = useState(false)
   // Maps artist_id → existing log data (emoji + photo_url)
   const [loggedMap, setLoggedMap]           = useState<Map<string, ExistingLog>>(new Map())
@@ -55,12 +57,12 @@ function LogInner() {
 
       const { data } = await supabase
         .from('logged_shows')
-        .select('artist_id, emoji, photo_url')
+        .select('artist_id, emoji, photo_url, review')
         .eq('user_id', user.id)
 
       if (data) {
         const map = new Map<string, ExistingLog>()
-        data.forEach(r => map.set(r.artist_id, { emoji: r.emoji, photo_url: r.photo_url }))
+        data.forEach(r => map.set(r.artist_id, { emoji: r.emoji, photo_url: r.photo_url, review: r.review }))
         setLoggedMap(map)
 
         // If arriving via re-rate deep link, pre-select artist and seed its existing reaction
@@ -69,6 +71,7 @@ function LogInner() {
           if (existing) {
             setReaction(existing.emoji as 'loved' | 'ok' | 'skip')
             if (existing.photo_url) setPhotoPreview(existing.photo_url)
+            if (existing.review) setReview(existing.review)
           }
         }
       }
@@ -131,9 +134,9 @@ function LogInner() {
       stage:        artist.stage,
       day:          artist.day,
       emoji:        reaction,
-      // note field intentionally omitted — comments are not shown in UI
       elo:          initialElo,
       photo_url:    photoUrl,
+      review:       review.trim() || null,
     }, { onConflict: 'user_id,artist_id' })
 
     if (error) {
@@ -433,6 +436,28 @@ function LogInner() {
             }}>Upload a photo</span>
           </button>
         )}
+
+        {/* Review */}
+        <div style={{
+          fontSize: 10, color: '#594238', letterSpacing: '0.1em',
+          textTransform: 'uppercase', marginBottom: 10,
+        }}>Your thoughts <span style={{ color: '#353534' }}>(optional)</span></div>
+        <textarea
+          value={review}
+          onChange={e => setReview(e.target.value)}
+          maxLength={280}
+          placeholder="What made this set special..."
+          rows={3}
+          style={{
+            width: '100%', background: '#1a1a1a',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 12, padding: '12px 14px',
+            color: '#f5ebe3', fontSize: 13,
+            fontFamily: "'Manrope', sans-serif",
+            resize: 'none', outline: 'none',
+            boxSizing: 'border-box', marginBottom: 28,
+          }}
+        />
 
         <div style={{
           height: 2, background: '#D35400', borderRadius: 1,
