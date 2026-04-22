@@ -1,0 +1,16 @@
+{
+  "name": "Gigl",
+  "short_name": "Gigl",
+  "description": "Rate your Coachella sets",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0e",
+  "theme_color": "#0c0c0e",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
