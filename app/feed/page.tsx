@@ -53,7 +53,7 @@ function FeedInner() {
       .from('logged_shows')
       .select('artist_id, artist_name, emoji, elo, created_at, user_id, stage, day, photo_url, review, tags')
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(200)
 
     if (!logs) { setLoading(false); return }
 
@@ -76,7 +76,6 @@ function FeedInner() {
       username: usernameMap[l.user_id] ?? null,
     }))
 
-    console.log('feed photo_urls:', enriched.map(e => e.photo_url))
     setGlobalFeed(enriched)
     setLoading(false)
   }
