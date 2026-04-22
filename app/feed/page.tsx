@@ -110,12 +110,17 @@ function FeedInner() {
         padding: '20px 24px 16px',
         position: 'sticky', top: 0, background: '#131313', zIndex: 10,
         borderBottom: '1px solid rgba(255,255,255,0.04)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{
           fontFamily: "'Noto Serif', Georgia, serif",
           fontSize: 22, fontWeight: 700, color: '#D35400',
           letterSpacing: '0.04em',
         }}>Gigl</div>
+        <button
+          onClick={async () => { await supabase.auth.signOut(); router.push('/auth') }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(245,235,227,0.25)', fontSize: 11, fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em' }}
+        >sign out</button>
       </div>
 
       {/* Feed header */}

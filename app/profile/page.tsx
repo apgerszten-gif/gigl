@@ -120,7 +120,7 @@ export default function ProfilePage() {
             {profile?.display_name}&apos;s<br />
             <span style={{ color: '#D35400', fontStyle: 'italic' }}>rankings.</span>
           </div>
-          <button onClick={signOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#353534', fontFamily: "'Manrope', sans-serif", paddingTop: 6 }}>sign out</button>
+          <button onClick={signOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'rgba(245,235,227,0.25)', fontFamily: "'Manrope', sans-serif", paddingTop: 6, letterSpacing: '0.06em' }}>sign out</button>
         </div>
         <div style={{ fontSize: 11, color: '#594238', marginBottom: 16 }}>@{profile?.username}</div>
       </div>
