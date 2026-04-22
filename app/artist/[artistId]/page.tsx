@@ -36,7 +36,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   if (!logs || logs.length === 0) notFound()
 
-  const userIds = [...new Set(logs.map(l => l.user_id))]
+  const userIds = Array.from(new Set(logs.map(l => l.user_id)))
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, username')
