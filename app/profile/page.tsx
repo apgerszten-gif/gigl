@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { eloToDisplay } from '@/lib/elo'
@@ -49,7 +49,10 @@ export default function ProfilePage() {
   const [editReview, setEditReview] = useState('')
   const [editTags, setEditTags] = useState<string[]>([])
   const [editSaving, setEditSaving] = useState(false)
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     async function load() {
@@ -82,16 +85,48 @@ export default function ProfilePage() {
     setEditingId(show.id)
     setEditReview(show.review || '')
     setEditTags(show.tags || [])
+    setEditPhotoFile(null)
+    setEditPhotoPreview(resolvePhotoUrl(show.photo_url))
+    setConfirmDeleteId(null)
   }
 
-  async function saveEdit(showId: string) {
+  async function saveEdit(showId: string, artistId: string) {
     setEditSaving(true)
     const review = editReview.trim() || null
     const tags = editTags.length > 0 ? editTags : null
-    const { error } = await supabase.from('logged_shows').update({ review, tags }).eq('id', showId)
+
+    let photoUrl: string | null | undefined = undefined // undefined = no change
+
+    if (editPhotoFile) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const ext = editPhotoFile.name.split('.').pop()
+        const path = `${user.id}/${artistId}-${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('show-photos')
+          .upload(path, editPhotoFile, { upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('show-photos').getPublicUrl(path)
+          photoUrl = urlData.publicUrl
+        }
+      }
+    } else if (editPhotoPreview === null) {
+      // user explicitly removed the photo
+      photoUrl = null
+    }
+
+    const update: Record<string, unknown> = { review, tags }
+    if (photoUrl !== undefined) update.photo_url = photoUrl
+
+    const { error } = await supabase.from('logged_shows').update(update).eq('id', showId)
     if (!error) {
-      setShows(prev => prev.map(s => s.id === showId ? { ...s, review, tags } : s))
+      setShows(prev => prev.map(s =>
+        s.id === showId
+          ? { ...s, review, tags, ...(photoUrl !== undefined ? { photo_url: photoUrl as string | null } : {}) }
+          : s
+      ))
       setEditingId(null)
+      setEditPhotoFile(null)
     }
     setEditSaving(false)
   }
@@ -222,6 +257,51 @@ export default function ProfilePage() {
                   {/* Edit form */}
                   {isEditing ? (
                     <div style={{ padding: '0 16px 16px' }}>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          setEditPhotoFile(file)
+                          setEditPhotoPreview(URL.createObjectURL(file))
+                        }}
+                      />
+                      {editPhotoPreview ? (
+                        <div style={{ position: 'relative', marginBottom: 12 }}>
+                          <img src={editPhotoPreview} alt=""
+                            style={{ width: '100%', borderRadius: 10, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
+                            <button onClick={() => fileInputRef.current?.click()} style={{
+                              background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20,
+                              padding: '4px 10px', color: '#f5ebe3', fontSize: 10, cursor: 'pointer',
+                              fontFamily: "'Manrope', sans-serif", letterSpacing: '0.04em',
+                            }}>Replace</button>
+                            <button onClick={() => { setEditPhotoPreview(null); setEditPhotoFile(null) }} style={{
+                              background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+                              width: 26, height: 26, color: '#f5ebe3', fontSize: 15, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>×</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => fileInputRef.current?.click()} style={{
+                          width: '100%', background: '#252220',
+                          border: '1.5px dashed rgba(255,255,255,0.08)',
+                          borderRadius: 10, padding: '14px 16px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          gap: 8, cursor: 'pointer', marginBottom: 12,
+                        }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#353534" strokeWidth="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                          <span style={{ fontSize: 11, color: '#353534', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Add a photo</span>
+                        </button>
+                      )}
                       <textarea
                         value={editReview}
                         onChange={e => setEditReview(e.target.value)}
@@ -258,7 +338,7 @@ export default function ProfilePage() {
                           color: 'rgba(245,235,227,0.35)', fontSize: 11, cursor: 'pointer',
                           fontFamily: "'Manrope', sans-serif",
                         }}>Cancel</button>
-                        <button onClick={() => saveEdit(show.id)} disabled={editSaving} style={{
+                        <button onClick={() => saveEdit(show.id, show.artist_id)} disabled={editSaving} style={{
                           flex: 2, padding: '10px 0', borderRadius: 10, background: '#D35400',
                           border: 'none', color: '#fff', fontSize: 11, fontWeight: 700,
                           cursor: editSaving ? 'default' : 'pointer', opacity: editSaving ? 0.7 : 1,
