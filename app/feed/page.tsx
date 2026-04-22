@@ -7,6 +7,13 @@ import { createClient } from '@/lib/supabase/client'
 import { eloToDisplay } from '@/lib/elo'
 
 const SCORE_THRESHOLD = 4
+const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
+
+function resolvePhotoUrl(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('http')) return url
+  return `${SUPABASE_STORAGE}/${url}`
+}
 
 interface GlobalLog {
   artist_id: string
@@ -174,9 +181,9 @@ function FeedInner() {
                 }}
               >
                 {/* Photo */}
-                {item.photo_url && (
+                {resolvePhotoUrl(item.photo_url) && (
                   <img
-                    src={item.photo_url}
+                    src={resolvePhotoUrl(item.photo_url)!}
                     alt={name}
                     style={{
                       width: '100%', maxHeight: 220,

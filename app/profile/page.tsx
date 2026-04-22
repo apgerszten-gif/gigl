@@ -6,6 +6,14 @@ import { eloToDisplay } from '@/lib/elo'
 import BottomNav from '@/components/BottomNav'
 import Link from 'next/link'
 
+const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
+
+function resolvePhotoUrl(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('http')) return url
+  return `${SUPABASE_STORAGE}/${url}`
+}
+
 interface Show {
   id: string
   artist_name: string
@@ -204,9 +212,9 @@ export default function ProfilePage() {
               return (
                 <div key={show.id} className="rounded-xl border border-white/[0.05] overflow-hidden fade-up"
                   style={{background:'#161618', animationDelay:`${i*40}ms`}}>
-                  {show.photo_url && (
+                  {resolvePhotoUrl(show.photo_url) && (
                     <div style={{height:180,overflow:'hidden'}}>
-                      <img src={show.photo_url} alt={show.artist_name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                      <img src={resolvePhotoUrl(show.photo_url)!} alt={show.artist_name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
                     </div>
                   )}
                   <div className="flex items-center gap-3 px-4 py-3">
