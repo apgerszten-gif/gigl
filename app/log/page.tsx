@@ -1,222 +1,473 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { artists, Artist, Day } from '@/lib/artists'
-import { supabase } from '@/lib/supabase'
-import BottomNav from '@/components/BottomNav'
 
-const DAYS: Day[] = ['Friday', 'Saturday', 'Sunday']
-const TAGS = ['transcendent', 'intimate', 'chaotic', 'best live band', 'mid setlist', 'crowd was everything', 'underrated', 'life-changing', 'genre-defying', 'raw energy']
+import { useState, Suspense, useRef, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ARTISTS, ARTISTS_BY_DAY } from '@/lib/artists'
+import { createClient } from '@/lib/supabase/client'
 
-export default function LogPage() {
+const REACTIONS = [
+  { value: 'loved' as const, emoji: '👍', label: 'Loved it' },
+  { value: 'ok'    as const, emoji: '🤷', label: 'It was ok' },
+  { value: 'skip'  as const, emoji: '👎', label: 'Kinda Wack' },
+]
+
+const ELO_SEEDS = { loved: 1600, ok: 1500, skip: 1400 }
+
+type Day = 'friday' | 'saturday' | 'sunday'
+
+const DAY_LABELS: Record<Day, string> = {
+  friday: 'Fri Apr 17',
+  saturday: 'Sat Apr 18',
+  sunday: 'Sun Apr 19',
+}
+
+interface ExistingLog {
+  emoji: string
+  photo_url: string | null
+}
+
+function LogInner() {
   const router = useRouter()
-  const [step, setStep] = useState<'search' | 'review'>('search')
-  const [query, setQuery] = useState('')
-  const [dayFilter, setDayFilter] = useState<Day | 'All'>('All')
-  const [selected, setSelected] = useState<Artist | null>(null)
-  const [review, setReview] = useState('')
-  const [tags, setTags] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [alreadyLogged, setAlreadyLogged] = useState<string[]>([])
+  const supabase = createClient()
+  const searchParams = useSearchParams()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const filtered = artists.filter(a => {
-    const matchesQuery = a.name.toLowerCase().includes(query.toLowerCase())
-    const matchesDay = dayFilter === 'All' || a.day === dayFilter
-    return matchesQuery && matchesDay
-  })
+  const artistIdParam = searchParams.get('artistId')
+  // rerate=1 signals we're re-rating an already-logged show
+  const isRerate = searchParams.get('rerate') === '1'
+  const artistFromParam = artistIdParam ? ARTISTS.find(a => a.id === artistIdParam) : null
+
+  const [activeDay, setActiveDay]           = useState<Day>('friday')
+  const [search, setSearch]                 = useState('')
+  const [selectedArtist, setSelectedArtist] = useState(artistFromParam ?? null)
+  const [reaction, setReaction]             = useState<'loved' | 'ok' | 'skip' | null>(null)
+  const [photo, setPhoto]                   = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview]     = useState<string | null>(null)
+  const [saving, setSaving]                 = useState(false)
+  // Maps artist_id → existing log data (emoji + photo_url)
+  const [loggedMap, setLoggedMap]           = useState<Map<string, ExistingLog>>(new Map())
+  const [loadingLogged, setLoadingLogged]   = useState(true)
 
   useEffect(() => {
     async function fetchLogged() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) { router.push('/auth'); return }
+
       const { data } = await supabase
         .from('logged_shows')
-        .select('artist_id')
+        .select('artist_id, emoji, photo_url')
         .eq('user_id', user.id)
-      if (data) setAlreadyLogged(data.map(d => d.artist_id))
+
+      if (data) {
+        const map = new Map<string, ExistingLog>()
+        data.forEach(r => map.set(r.artist_id, { emoji: r.emoji, photo_url: r.photo_url }))
+        setLoggedMap(map)
+
+        // If arriving via re-rate deep link, pre-select artist and seed its existing reaction
+        if (isRerate && artistIdParam) {
+          const existing = map.get(artistIdParam)
+          if (existing) {
+            setReaction(existing.emoji as 'loved' | 'ok' | 'skip')
+            if (existing.photo_url) setPhotoPreview(existing.photo_url)
+          }
+        }
+      }
+      setLoadingLogged(false)
     }
     fetchLogged()
   }, [])
 
-  function toggleTag(tag: string) {
-    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+  const artist = selectedArtist
+
+  // In normal log mode: hide already-logged artists.
+  // In re-rate mode (arriving from feed): show all so user can pick (but
+  // typically they arrive with artistId pre-set so the picker is skipped).
+  const loggedIds = new Set(loggedMap.keys())
+
+  const allArtists = (search
+    ? ARTISTS.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
+    : ARTISTS_BY_DAY[activeDay]
+  ).filter(a => isRerate ? loggedIds.has(a.id) : !loggedIds.has(a.id))
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhoto(file)
+    setPhotoPreview(URL.createObjectURL(file))
   }
 
   async function handleLog() {
-    if (!selected) return
-    setLoading(true)
+    if (!reaction || !artist) return
+    setSaving(true)
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth'); return }
 
-    const { data, error } = await supabase.from('logged_shows').insert({
-      user_id: user.id,
-      artist_id: selected.id,
-      artist_name: selected.name,
-      stage: selected.stage,
-      day: selected.day,
-      genre: selected.genre,
-      emoji: selected.emoji,
-      review: review || null,
-      tags: tags.length > 0 ? tags : null,
-      elo: 1500,
-    }).select().single()
+    const initialElo = ELO_SEEDS[reaction]
+    let photoUrl: string | null = loggedMap.get(artist.id)?.photo_url ?? null
+
+    // Only upload if user selected a new photo file
+    if (photo) {
+      const ext = photo.name.split('.').pop()
+      const path = `${user.id}/${artist.id}-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('show-photos')
+        .upload(path, photo, { upsert: true })
+
+      if (uploadError) {
+        alert('Photo upload error: ' + uploadError.message)
+      } else {
+        const { data: urlData } = supabase.storage
+          .from('show-photos')
+          .getPublicUrl(path)
+        photoUrl = urlData.publicUrl
+      }
+    }
+
+    const { error } = await supabase.from('logged_shows').upsert({
+      user_id:      user.id,
+      artist_id:    artist.id,
+      artist_name:  artist.name,
+      stage:        artist.stage,
+      day:          artist.day,
+      emoji:        reaction,
+      // note field intentionally omitted — comments are not shown in UI
+      elo:          initialElo,
+      photo_url:    photoUrl,
+    }, { onConflict: 'user_id,artist_id' })
 
     if (error) {
-      alert(error.message)
-      setLoading(false)
+      alert('Error saving: ' + error.message)
+      setSaving(false)
       return
     }
 
-    // Redirect to H2H ranking
-    router.push(`/rank?new=${data.id}`)
+    setSaving(false)
+    // Send to battle with the new artist id regardless of new vs re-rate
+    router.push(`/battle?newArtistId=${artist.id}`)
   }
 
-  if (step === 'review' && selected) {
+  // ── Artist picker ─────────────────────────────────────────────────────────
+  if (!artist) {
     return (
-      <div className="min-h-screen pb-24">
-        <div className="px-5 pt-6 pb-4 flex items-center gap-3">
-          <button onClick={() => setStep('search')} className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center text-white/50">
-            ←
+      <div style={{
+        minHeight: '100vh', background: '#131313',
+        fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+        maxWidth: 430, margin: '0 auto',
+      }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', padding: '20px 24px 16px',
+          position: 'sticky', top: 0, background: '#131313', zIndex: 10,
+          borderBottom: '1px solid rgba(255,255,255,0.04)',
+        }}>
+          <button onClick={() => router.push('/feed')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="#e0c0b2" strokeWidth="2">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
           </button>
-          <h1 className="font-serif text-xl text-white">How was it?</h1>
+          <span style={{
+            fontFamily: "'Noto Serif', Georgia, serif",
+            fontSize: 15, fontWeight: 700, color: '#D35400',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+          }}>{isRerate ? 'Re-rate a Show' : 'Log a Show'}</span>
+          <div style={{ width: 18 }} />
         </div>
 
-        {/* Selected show card */}
-        <div className="mx-5 mb-4 bg-card rounded-2xl border border-white/[0.06] p-4 flex gap-3 items-center">
-          <span className="text-3xl">{selected.emoji}</span>
-          <div>
-            <p className="font-medium text-white text-[15px]">{selected.name}</p>
-            <p className="text-white/40 text-xs mt-0.5">{selected.stage} Stage · {selected.day}</p>
+        <div style={{ padding: '16px 24px 100px' }}>
+          <div style={{
+            background: '#1a1a1a', borderRadius: 12,
+            padding: '12px 16px', marginBottom: 16,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="#594238" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search artists..."
+              style={{
+                background: 'none', border: 'none', outline: 'none',
+                color: '#f5ebe3', fontSize: 14, fontFamily: "'Manrope', sans-serif",
+                width: '100%',
+              }}
+            />
           </div>
-        </div>
 
-        {/* Review */}
-        <div className="mx-5 mb-4 bg-card rounded-2xl border border-white/[0.06] overflow-hidden">
-          <textarea
-            value={review}
-            onChange={e => setReview(e.target.value)}
-            placeholder="What made it unforgettable? Or didn't…"
-            rows={4}
-            maxLength={280}
-            className="w-full bg-transparent px-4 pt-4 pb-2 text-white/80 text-sm placeholder:text-white/20 outline-none resize-none leading-relaxed"
-          />
-          <p className="px-4 pb-3 text-white/20 text-xs text-right">{review.length} / 280</p>
-        </div>
+          {!search && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {(['friday', 'saturday', 'sunday'] as Day[]).map(day => (
+                <button
+                  key={day}
+                  onClick={() => setActiveDay(day)}
+                  style={{
+                    flex: 1,
+                    background: activeDay === day ? '#D35400' : '#1a1a1a',
+                    border: 'none', borderRadius: 10, padding: '8px 4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    fontSize: 9, fontWeight: 700,
+                    color: activeDay === day ? '#fff' : '#594238',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                    fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
+                  }}>
+                    {DAY_LABELS[day].split(' ').map((w, i) => (
+                      <span key={i} style={{ display: 'block' }}>{w}</span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* Tags */}
-        <div className="px-5 mb-6">
-          <p className="text-xs uppercase tracking-widest text-white/25 mb-3">Vibe tags</p>
-          <div className="flex flex-wrap gap-2">
-            {TAGS.map(tag => (
-              <button
-                key={tag}
-                onClick={() => toggleTag(tag)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  tags.includes(tag)
-                    ? 'bg-brand/15 border-brand text-brand'
-                    : 'bg-white/[0.04] border-white/10 text-white/40'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+          {loadingLogged ? (
+            <div style={{
+              textAlign: 'center', padding: 40,
+              fontSize: 12, color: '#353534', letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}>Loading...</div>
+          ) : allArtists.length === 0 ? (
+            <div style={{
+              background: '#1a1a1a', borderRadius: 16, padding: 32,
+              textAlign: 'center',
+            }}>
+              <div style={{
+                fontSize: 13, color: '#594238',
+                fontFamily: "'Manrope', sans-serif", lineHeight: 1.6,
+              }}>
+                {search
+                  ? 'No artists match your search'
+                  : isRerate
+                  ? 'No rated shows on this day yet'
+                  : "You've reviewed everyone on this day!"}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {allArtists.map((a, i) => {
+                const existing = loggedMap.get(a.id)
+                const reactionEmoji = existing?.emoji === 'loved' ? '👍'
+                  : existing?.emoji === 'ok' ? '🤷'
+                  : existing?.emoji === 'skip' ? '👎'
+                  : null
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => {
+                      setSelectedArtist(a)
+                      if (existing) {
+                        setReaction(existing.emoji as 'loved' | 'ok' | 'skip')
+                        if (existing.photo_url) setPhotoPreview(existing.photo_url)
+                      }
+                    }}
+                    style={{
+                      background: i % 2 === 0 ? '#1a1a1a' : '#1e1e1e',
+                      border: 'none',
+                      borderRadius: i === 0 ? '12px 12px 2px 2px'
+                        : i === allArtists.length - 1 ? '2px 2px 12px 12px' : 2,
+                      padding: '14px 16px',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      cursor: 'pointer', width: '100%', textAlign: 'left',
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontFamily: "'Noto Serif', Georgia, serif",
+                        fontSize: 14, fontWeight: 600, color: '#f5ebe3', marginBottom: 2,
+                      }}>{a.name}</div>
+                      <div style={{
+                        fontSize: 9, color: '#594238', letterSpacing: '0.06em',
+                        textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                      }}>{a.stage}</div>
+                    </div>
+                    {reactionEmoji && (
+                      <span style={{ fontSize: 16 }}>{reactionEmoji}</span>
+                    )}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="#353534" strokeWidth="2">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
-
-        <div className="px-5">
-          <button
-            onClick={handleLog}
-            disabled={loading}
-            className="w-full bg-brand text-white rounded-2xl py-4 text-sm font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
-          >
-            {loading ? 'Saving…' : 'Save & rank it →'}
-          </button>
-          <button
-            onClick={handleLog}
-            disabled={loading}
-            className="w-full mt-2 text-white/25 text-sm py-3"
-          >
-            Skip review, just rank
-          </button>
-        </div>
-        <BottomNav />
       </div>
     )
   }
 
+  // ── Reaction + photo view ─────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-24">
-      <div className="px-5 pt-6 pb-2">
-        <h1 className="font-serif text-2xl text-white mb-1">Log a set</h1>
-        <p className="text-white/35 text-sm">Which Coachella show did you just see?</p>
+    <div style={{
+      minHeight: '100vh', background: '#131313',
+      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      maxWidth: 430, margin: '0 auto',
+    }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', padding: '20px 24px',
+      }}>
+        <button onClick={() => setSelectedArtist(null)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="#e0c0b2" strokeWidth="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 15, fontWeight: 700, color: '#D35400',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>Gigl</span>
+        <div style={{ width: 18 }} />
       </div>
 
-      {/* Search */}
-      <div className="px-5 py-3">
-        <div className="bg-card border border-white/10 rounded-xl flex items-center gap-3 px-4 py-3">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="6" cy="6" r="4.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2"/>
-            <path d="M10 10l2.5 2.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeLinecap="round"/>
-          </svg>
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search artist…"
-            className="flex-1 bg-transparent text-white text-sm placeholder:text-white/25 outline-none"
-            autoFocus
-          />
+      <div style={{ padding: '0 24px 40px' }}>
+        <div style={{
+          fontSize: 10, color: '#D35400', letterSpacing: '0.12em',
+          textTransform: 'uppercase', marginBottom: 8,
+        }}>{isRerate ? 'Re-rate' : 'Log a Show'}</div>
+
+        <div style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 34, fontWeight: 700, lineHeight: 1.1,
+          letterSpacing: '-0.02em', marginBottom: 6,
+        }}>
+          How was<br />
+          <span style={{ color: '#D35400', fontStyle: 'italic' }}>{artist.name}?</span>
+        </div>
+
+        <div style={{
+          fontSize: 10, color: '#594238', letterSpacing: '0.08em',
+          textTransform: 'uppercase', marginBottom: 36,
+        }}>
+          {artist.stage} · {artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}
+        </div>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 10, marginBottom: 36,
+        }}>
+          {REACTIONS.map(r => (
+            <button key={r.value} onClick={() => setReaction(r.value)} style={{
+              background: reaction === r.value ? '#2a1a00' : '#1a1a1a',
+              border: reaction === r.value ? '1.5px solid #D35400' : '1.5px solid transparent',
+              borderRadius: 16, padding: '20px 12px',
+              textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s ease',
+            }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>{r.emoji}</div>
+              <div style={{
+                fontSize: 11, fontWeight: 700,
+                color: reaction === r.value ? '#D35400' : '#e0c0b2',
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                fontFamily: "'Manrope', sans-serif",
+              }}>{r.label}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Photo section — visible, comments section removed */}
+        <div style={{
+          fontSize: 10, color: '#594238', letterSpacing: '0.1em',
+          textTransform: 'uppercase', marginBottom: 10,
+        }}>Add a photo <span style={{ color: '#353534' }}>(optional)</span></div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoChange}
+          style={{ display: 'none' }}
+        />
+
+        {photoPreview ? (
+          <div style={{ position: 'relative', marginBottom: 28 }}>
+            <img
+              src={photoPreview}
+              alt="Preview"
+              style={{
+                width: '100%', borderRadius: 12,
+                maxHeight: 220, objectFit: 'cover', display: 'block',
+              }}
+            />
+            <button
+              onClick={() => { setPhoto(null); setPhotoPreview(null) }}
+              style={{
+                position: 'absolute', top: 10, right: 10,
+                background: 'rgba(0,0,0,0.6)', border: 'none',
+                borderRadius: '50%', width: 28, height: 28,
+                color: '#f5ebe3', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16, lineHeight: 1,
+              }}
+            >×</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              width: '100%', background: '#1a1a1a',
+              border: '1.5px dashed rgba(255,255,255,0.08)',
+              borderRadius: 12, padding: '20px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 10, cursor: 'pointer', marginBottom: 28,
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="#353534" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span style={{
+              fontSize: 12, color: '#353534', letterSpacing: '0.06em',
+              textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+            }}>Upload a photo</span>
+          </button>
+        )}
+
+        <div style={{
+          height: 2, background: '#D35400', borderRadius: 1,
+          width: '60%', marginBottom: 28,
+        }} />
+
+        <button onClick={handleLog} disabled={!reaction || saving} style={{
+          width: '100%', background: reaction ? '#D35400' : '#252220',
+          border: 'none', borderRadius: 12, padding: 14,
+          textAlign: 'center', cursor: reaction ? 'pointer' : 'not-allowed',
+          transition: 'background 0.2s ease',
+        }}>
+          <span style={{
+            fontSize: 12, fontWeight: 700, color: reaction ? '#fff' : '#594238',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            fontFamily: "'Manrope', sans-serif",
+          }}>{saving ? 'Saving...' : isRerate ? 'Update rating' : 'Log this show'}</span>
+        </button>
+
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <button onClick={() => setSelectedArtist(null)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 11, color: '#353534', letterSpacing: '0.06em',
+            textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+          }}>Cancel</button>
         </div>
       </div>
-
-      {/* Day filter */}
-      <div className="px-5 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-        {(['All', ...DAYS] as const).map(day => (
-          <button
-            key={day}
-            onClick={() => setDayFilter(day as Day | 'All')}
-            className={`flex-shrink-0 text-xs px-4 py-2 rounded-full border transition-colors ${
-              dayFilter === day
-                ? 'bg-brand/15 border-brand text-brand'
-                : 'border-white/10 text-white/40'
-            }`}
-          >
-            {day}
-          </button>
-        ))}
-      </div>
-
-      {/* Results */}
-      <div className="px-5 flex flex-col gap-2">
-        {filtered.length === 0 && (
-          <p className="text-white/25 text-sm text-center py-8">No artists found</p>
-        )}
-        {filtered.map(artist => {
-          const logged = alreadyLogged.includes(artist.id)
-          return (
-            <button
-              key={artist.id}
-              onClick={() => { if (!logged) { setSelected(artist); setStep('review') } }}
-              className={`flex items-center gap-3 w-full text-left bg-card border rounded-xl px-4 py-3 transition-colors ${
-                logged ? 'border-brand/20 opacity-50' : 'border-white/[0.06] active:border-brand/40'
-              }`}
-            >
-              <span className="text-2xl">{artist.emoji}</span>
-              <div className="flex-1">
-                <p className="text-white text-sm font-medium">{artist.name}</p>
-                <p className="text-white/35 text-xs mt-0.5">{artist.stage} · {artist.day}</p>
-              </div>
-              {logged ? (
-                <span className="text-xs text-brand/60 font-medium">logged ✓</span>
-              ) : (
-                <span className="text-white/20 text-lg">›</span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      <BottomNav />
     </div>
+  )
+}
+
+export default function LogShowPage() {
+  return (
+    <Suspense fallback={null}>
+      <LogInner />
+    </Suspense>
   )
 }

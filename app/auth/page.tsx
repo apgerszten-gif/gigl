@@ -1,116 +1,199 @@
 'use client'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 export default function AuthPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'signin' | 'signup'>('signup')
-  const [email, setEmail] = useState('')
+  const supabase = createClient()
+
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup')
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]       = useState<string | null>(null)
+  const [loading, setLoading]   = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit() {
+    setError(null)
     setLoading(true)
-    setError('')
 
     if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) { setError(error.message); setLoading(false); return }
-      // Update username
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('profiles').update({ username, display_name: username }).eq('id', user.id)
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      if (signUpError) { setError(signUpError.message); setLoading(false); return }
+
+      // Create profile with username
+      if (data.user) {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          username: username.trim().toLowerCase().replace(/\s+/g, '_'),
+        })
       }
-      router.replace('/feed')
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { setError(error.message); setLoading(false); return }
-      router.replace('/feed')
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) { setError(signInError.message); setLoading(false); return }
     }
+
+    setLoading(false)
+    router.push('/feed')
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-6 pt-16 pb-8">
-      <div className="mb-10">
-        <div className="w-12 h-12 rounded-2xl bg-brand flex items-center justify-center mb-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="9" r="5" stroke="white" strokeWidth="1.5" fill="none"/>
-            <path d="M6 18 Q12 13 18 18" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-            <circle cx="12" cy="9" r="2" fill="white"/>
-          </svg>
-        </div>
-        <h1 className="font-serif text-3xl text-white mb-2">
-          {mode === 'signup' ? 'Create your account' : 'Welcome back'}
-        </h1>
-        <p className="text-white/40 text-sm">
-          {mode === 'signup' ? 'Rate every Coachella set. See what your friends thought.' : 'Sign in to see your rankings.'}
-        </p>
+    <div style={{
+      minHeight: '100vh',
+      background: '#131313',
+      fontFamily: "'Manrope', sans-serif",
+      color: '#f5ebe3',
+      maxWidth: 430,
+      margin: '0 auto',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '0 24px',
+    }}>
+
+      {/* Top wordmark */}
+      <div style={{ paddingTop: 60, marginBottom: 48 }}>
+        <div style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 32, fontWeight: 700, color: '#D35400',
+          letterSpacing: '0.04em', marginBottom: 8,
+        }}>Gigl</div>
+        <div style={{
+          fontSize: 10, color: '#594238', letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+        }}>Coachella 2026 · Weekend 2</div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 flex-1">
+      {/* Headline */}
+      <div style={{ marginBottom: 40 }}>
+        <div style={{
+          fontSize: 10, color: '#D35400', letterSpacing: '0.12em',
+          textTransform: 'uppercase', marginBottom: 10,
+        }}>
+          {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+        </div>
+        <div style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontSize: 34, fontWeight: 700, lineHeight: 1.1,
+          letterSpacing: '-0.02em',
+        }}>
+          {mode === 'signup' ? (
+            <>Rate the sets.<br /><span style={{ color: '#D35400', fontStyle: 'italic' }}>Own the moment.</span></>
+          ) : (
+            <>Good to have<br /><span style={{ color: '#D35400', fontStyle: 'italic' }}>you back.</span></>
+          )}
+        </div>
+      </div>
+
+      {/* Form */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
         {mode === 'signup' && (
-          <div>
-            <label className="text-xs uppercase tracking-widest text-white/30 mb-2 block">Username</label>
+          <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{
+              fontSize: 9, color: '#594238', letterSpacing: '0.1em',
+              textTransform: 'uppercase', marginBottom: 6,
+            }}>Username</div>
             <input
-              type="text"
               value={username}
-              onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g,''))}
-              placeholder="yourname"
-              required
-              className="w-full bg-card border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm outline-none focus:border-brand transition-colors"
+              onChange={e => setUsername(e.target.value)}
+              placeholder="how you'll appear in the feed"
+              style={{
+                width: '100%', background: 'none', border: 'none', outline: 'none',
+                color: '#f5ebe3', fontSize: 15, fontFamily: "'Manrope', sans-serif",
+              }}
             />
           </div>
         )}
-        <div>
-          <label className="text-xs uppercase tracking-widest text-white/30 mb-2 block">Email</label>
+
+        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+          <div style={{
+            fontSize: 9, color: '#594238', letterSpacing: '0.1em',
+            textTransform: 'uppercase', marginBottom: 6,
+          }}>Email</div>
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="you@email.com"
-            required
-            className="w-full bg-card border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm outline-none focus:border-brand transition-colors"
+            placeholder="your@email.com"
+            style={{
+              width: '100%', background: 'none', border: 'none', outline: 'none',
+              color: '#f5ebe3', fontSize: 15, fontFamily: "'Manrope', sans-serif",
+            }}
           />
         </div>
-        <div>
-          <label className="text-xs uppercase tracking-widest text-white/30 mb-2 block">Password</label>
+
+        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+          <div style={{
+            fontSize: 9, color: '#594238', letterSpacing: '0.1em',
+            textTransform: 'uppercase', marginBottom: 6,
+          }}>Password</div>
           <input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="••••••••"
-            required
-            minLength={6}
-            className="w-full bg-card border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm outline-none focus:border-brand transition-colors"
+            style={{
+              width: '100%', background: 'none', border: 'none', outline: 'none',
+              color: '#f5ebe3', fontSize: 15, fontFamily: "'Manrope', sans-serif",
+            }}
           />
         </div>
 
         {error && (
-          <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>
+          <div style={{
+            fontSize: 12, color: '#e05555', fontFamily: "'Manrope', sans-serif",
+            padding: '10px 14px', background: 'rgba(224,85,85,0.08)',
+            borderRadius: 8, lineHeight: 1.5,
+          }}>{error}</div>
         )}
 
-        <div className="flex-1" />
-
         <button
-          type="submit"
+          onClick={handleSubmit}
           disabled={loading}
-          className="w-full bg-brand text-white rounded-2xl py-4 text-sm font-medium disabled:opacity-40 transition-opacity active:opacity-80"
+          style={{
+            width: '100%', background: '#D35400',
+            border: 'none', borderRadius: 12, padding: 16,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.7 : 1,
+            transition: 'opacity 0.2s',
+            marginTop: 4,
+          }}
         >
-          {loading ? 'Just a sec…' : mode === 'signup' ? 'Create account →' : 'Sign in →'}
+          <span style={{
+            fontSize: 12, fontWeight: 700, color: '#fff',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            fontFamily: "'Manrope', sans-serif",
+          }}>
+            {loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}
+          </span>
         </button>
+      </div>
 
-        <button
-          type="button"
-          onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError('') }}
-          className="text-white/30 text-sm py-2"
+      {/* Switch mode */}
+      <div style={{
+        textAlign: 'center',
+        fontSize: 13, color: '#594238',
+        fontFamily: "'Manrope', sans-serif",
+      }}>
+        {mode === 'signup' ? 'Already have an account? ' : 'New here? '}
+        <span
+          onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(null) }}
+          style={{ color: '#D35400', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
         >
-          {mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-        </button>
-      </form>
+          {mode === 'signup' ? 'Sign in' : 'Sign up'}
+        </span>
+      </div>
+
+      {/* Bottom accent */}
+      <div style={{ flex: 1 }} />
+      <div style={{
+        paddingBottom: 48, textAlign: 'center',
+        fontSize: 10, color: '#2a1a10', letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+      }}>
+        Apr 17–19 · Empire Polo Club · Indio
+      </div>
     </div>
   )
 }
