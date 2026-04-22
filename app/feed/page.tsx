@@ -322,7 +322,7 @@ function FeedInner() {
         </div>
 
         <button
-          onClick={() => router.push('/rank')}
+          onClick={() => router.push('/profile')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
