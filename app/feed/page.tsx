@@ -132,10 +132,26 @@ function FeedInner() {
         <div style={{
           fontFamily: "'Noto Serif', Georgia, serif",
           fontSize: 28, fontWeight: 700, lineHeight: 1.1,
-          letterSpacing: '-0.02em', marginBottom: 20,
+          letterSpacing: '-0.02em', marginBottom: 16,
         }}>
           What everyone's<br />
           <span style={{ color: '#D35400', fontStyle: 'italic' }}>ranking.</span>
+        </div>
+        {/* Activity / Rankings tabs */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+          <button style={{
+            flex: 1, padding: '8px 0', borderRadius: 10,
+            background: '#D35400', border: 'none',
+            color: '#fff', fontSize: 11, cursor: 'default',
+            fontFamily: "'Manrope', sans-serif", fontWeight: 700,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+          }}>Activity</button>
+          <button onClick={() => router.push('/rankings')} style={{
+            flex: 1, padding: '8px 0', borderRadius: 10,
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+            color: 'rgba(245,235,227,0.35)', fontSize: 11, cursor: 'pointer',
+            fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase',
+          }}>Rankings</button>
         </div>
       </div>
 
