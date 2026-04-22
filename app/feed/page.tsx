@@ -9,6 +9,11 @@ import { eloToDisplay } from '@/lib/elo'
 const SCORE_THRESHOLD = 4
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
+function isVideoUrl(url: string): boolean {
+  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
+  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
+}
+
 function resolvePhotoUrl(url: string | null): string | null {
   if (!url) return null
   if (url.startsWith('http')) return url
@@ -201,16 +206,21 @@ function FeedInner() {
                   border: isPending ? '1.5px solid rgba(211,84,0,0.3)' : 'none',
                 }}
               >
-                {/* Photo */}
+                {/* Photo / Video */}
                 {resolvePhotoUrl(item.photo_url) && (
-                  <img
-                    src={resolvePhotoUrl(item.photo_url)!}
-                    alt={name}
-                    style={{
-                      width: '100%', maxHeight: 220,
-                      objectFit: 'cover', display: 'block',
-                    }}
-                  />
+                  isVideoUrl(resolvePhotoUrl(item.photo_url)!) ? (
+                    <video
+                      src={resolvePhotoUrl(item.photo_url)!}
+                      autoPlay muted loop playsInline
+                      style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : (
+                    <img
+                      src={resolvePhotoUrl(item.photo_url)!}
+                      alt={name}
+                      style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }}
+                    />
+                  )
                 )}
 
                 {/* Info row */}

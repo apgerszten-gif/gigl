@@ -7,6 +7,21 @@ import { eloToDisplay } from '@/lib/elo'
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
 
+function getVideoDuration(file: File): Promise<number> {
+  return new Promise(resolve => {
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => { URL.revokeObjectURL(video.src); resolve(video.duration) }
+    video.onerror = () => resolve(0)
+    video.src = URL.createObjectURL(file)
+  })
+}
+
+function isVideoUrl(url: string): boolean {
+  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
+  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
+}
+
 function resolvePhotoUrl(url: string | null): string | null {
   if (!url) return null
   if (url.startsWith('http')) return url
@@ -228,8 +243,13 @@ export default function ProfilePage() {
               return (
                 <div key={show.id} style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
                   {resolvePhotoUrl(show.photo_url) && (
-                    <img src={resolvePhotoUrl(show.photo_url)!} alt={show.artist_name}
-                      style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    isVideoUrl(resolvePhotoUrl(show.photo_url)!) ? (
+                      <video src={resolvePhotoUrl(show.photo_url)!} autoPlay muted loop playsInline
+                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <img src={resolvePhotoUrl(show.photo_url)!} alt={show.artist_name}
+                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    )
                   )}
 
                   {/* Info row */}
@@ -260,19 +280,28 @@ export default function ProfilePage() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/*"
                         style={{ display: 'none' }}
-                        onChange={e => {
+                        onChange={async e => {
                           const file = e.target.files?.[0]
                           if (!file) return
+                          if (file.type.startsWith('video/')) {
+                            const dur = await getVideoDuration(file)
+                            if (dur > 20) { alert('Video must be 20 seconds or less.'); e.target.value = ''; return }
+                          }
                           setEditPhotoFile(file)
                           setEditPhotoPreview(URL.createObjectURL(file))
                         }}
                       />
                       {editPhotoPreview ? (
                         <div style={{ position: 'relative', marginBottom: 12 }}>
-                          <img src={editPhotoPreview} alt=""
-                            style={{ width: '100%', borderRadius: 10, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                          {(editPhotoFile?.type.startsWith('video/') || isVideoUrl(editPhotoPreview)) ? (
+                            <video src={editPhotoPreview} autoPlay muted loop playsInline
+                              style={{ width: '100%', borderRadius: 10, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                          ) : (
+                            <img src={editPhotoPreview} alt=""
+                              style={{ width: '100%', borderRadius: 10, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                          )}
                           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
                             <button onClick={() => fileInputRef.current?.click()} style={{
                               background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20,

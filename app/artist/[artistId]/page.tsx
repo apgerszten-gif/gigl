@@ -11,6 +11,11 @@ function resolvePhotoUrl(url: string | null): string | null {
   return `${SUPABASE_STORAGE}/${url}`
 }
 
+function isVideoUrl(url: string): boolean {
+  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
+  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
+}
+
 function dayLabel(d: string) {
   if (d === 'friday') return 'Fri Apr 17'
   if (d === 'saturday') return 'Sat Apr 18'
@@ -61,10 +66,10 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   // Reviews with text, best-ranked first
   const reviews = logs.filter(l => l.review)
 
-  // All photos, deduplicated
+  // Images only for strip (videos don't work well in a 3-up thumbnail)
   const photos = logs
     .map(l => resolvePhotoUrl(l.photo_url))
-    .filter((u): u is string => !!u)
+    .filter((u): u is string => !!u && !isVideoUrl(u))
     .filter((u, i, arr) => arr.indexOf(u) === i)
     .slice(0, 3)
 

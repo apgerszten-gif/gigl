@@ -5,6 +5,21 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ARTISTS, ARTISTS_BY_DAY } from '@/lib/artists'
 import { createClient } from '@/lib/supabase/client'
 
+function getVideoDuration(file: File): Promise<number> {
+  return new Promise(resolve => {
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => { URL.revokeObjectURL(video.src); resolve(video.duration) }
+    video.onerror = () => resolve(0)
+    video.src = URL.createObjectURL(file)
+  })
+}
+
+function isVideoUrl(url: string): boolean {
+  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
+  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
+}
+
 const REACTIONS = [
   { value: 'loved' as const, emoji: '👍', label: 'Loved it' },
   { value: 'ok'    as const, emoji: '🤷', label: 'It was ok' },
@@ -92,9 +107,17 @@ function LogInner() {
     : ARTISTS_BY_DAY[activeDay]
   ).filter(a => isRerate ? loggedIds.has(a.id) : !loggedIds.has(a.id))
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleMediaChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.type.startsWith('video/')) {
+      const duration = await getVideoDuration(file)
+      if (duration > 20) {
+        alert('Video must be 20 seconds or less.')
+        e.target.value = ''
+        return
+      }
+    }
     setPhoto(file)
     setPhotoPreview(URL.createObjectURL(file))
   }
@@ -386,21 +409,26 @@ function LogInner() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
-          onChange={handlePhotoChange}
+          accept="image/*,video/*"
+          onChange={handleMediaChange}
           style={{ display: 'none' }}
         />
 
         {photoPreview ? (
           <div style={{ position: 'relative', marginBottom: 28 }}>
-            <img
-              src={photoPreview}
-              alt="Preview"
-              style={{
-                width: '100%', borderRadius: 12,
-                maxHeight: 220, objectFit: 'cover', display: 'block',
-              }}
-            />
+            {photo?.type.startsWith('video/') ? (
+              <video
+                src={photoPreview}
+                autoPlay muted loop playsInline
+                style={{ width: '100%', borderRadius: 12, maxHeight: 220, objectFit: 'cover', display: 'block' }}
+              />
+            ) : (
+              <img
+                src={photoPreview}
+                alt="Preview"
+                style={{ width: '100%', borderRadius: 12, maxHeight: 220, objectFit: 'cover', display: 'block' }}
+              />
+            )}
             <button
               onClick={() => { setPhoto(null); setPhotoPreview(null) }}
               style={{
@@ -433,7 +461,7 @@ function LogInner() {
             <span style={{
               fontSize: 12, color: '#353534', letterSpacing: '0.06em',
               textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
-            }}>Upload a photo</span>
+            }}>Photo or video (≤20s)</span>
           </button>
         )}
 

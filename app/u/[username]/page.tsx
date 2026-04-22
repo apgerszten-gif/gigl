@@ -10,6 +10,11 @@ function resolvePhotoUrl(url: string | null): string | null {
   return `${SUPABASE_STORAGE}/${url}`
 }
 
+function isVideoUrl(url: string): boolean {
+  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
+  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
+}
+
 function scoreColor(score: string) {
   const n = parseFloat(score)
   if (n >= 9) return '#F5A623'
@@ -131,8 +136,13 @@ export default async function PublicProfile({ params }: { params: { username: st
               return (
                 <div key={show.id} style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
                   {photoUrl && (
-                    <img src={photoUrl} alt={show.artist_name}
-                      style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    isVideoUrl(photoUrl) ? (
+                      <video src={photoUrl} autoPlay muted loop playsInline
+                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <img src={photoUrl} alt={show.artist_name}
+                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    )
                   )}
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{
