@@ -76,6 +76,7 @@ function FeedInner() {
       username: usernameMap[l.user_id] ?? null,
     }))
 
+    console.log('feed photo_urls:', enriched.map(e => e.photo_url))
     setGlobalFeed(enriched)
     setLoading(false)
   }
