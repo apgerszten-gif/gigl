@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { eloToDisplay } from '@/lib/elo'
+import { VideoPlayer } from '@/components/VideoPlayer'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
@@ -244,8 +245,7 @@ export default function ProfilePage() {
                 <div key={show.id} style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
                   {resolvePhotoUrl(show.photo_url) && (
                     isVideoUrl(resolvePhotoUrl(show.photo_url)!) ? (
-                      <video src={resolvePhotoUrl(show.photo_url)!} autoPlay muted loop playsInline
-                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                      <VideoPlayer src={resolvePhotoUrl(show.photo_url)!} style={{ maxHeight: 220, objectFit: 'cover' }} />
                     ) : (
                       <img src={resolvePhotoUrl(show.photo_url)!} alt={show.artist_name}
                         style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
@@ -296,8 +296,7 @@ export default function ProfilePage() {
                       {editPhotoPreview ? (
                         <div style={{ position: 'relative', marginBottom: 12 }}>
                           {(editPhotoFile?.type.startsWith('video/') || isVideoUrl(editPhotoPreview)) ? (
-                            <video src={editPhotoPreview} autoPlay muted loop playsInline
-                              style={{ width: '100%', borderRadius: 10, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                            <VideoPlayer src={editPhotoPreview} style={{ borderRadius: 10, maxHeight: 180, objectFit: 'cover' }} />
                           ) : (
                             <img src={editPhotoPreview} alt=""
                               style={{ width: '100%', borderRadius: 10, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
@@ -328,7 +327,7 @@ export default function ProfilePage() {
                             <circle cx="8.5" cy="8.5" r="1.5" />
                             <polyline points="21 15 16 10 5 21" />
                           </svg>
-                          <span style={{ fontSize: 11, color: '#353534', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Add a photo</span>
+                          <span style={{ fontSize: 11, color: '#353534', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Add a photo / video</span>
                         </button>
                       )}
                       <textarea

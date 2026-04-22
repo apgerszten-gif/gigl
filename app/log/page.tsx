@@ -4,6 +4,7 @@ import { useState, Suspense, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ARTISTS, ARTISTS_BY_DAY } from '@/lib/artists'
 import { createClient } from '@/lib/supabase/client'
+import { VideoPlayer } from '@/components/VideoPlayer'
 
 function getVideoDuration(file: File): Promise<number> {
   return new Promise(resolve => {
@@ -417,11 +418,7 @@ function LogInner() {
         {photoPreview ? (
           <div style={{ position: 'relative', marginBottom: 28 }}>
             {photo?.type.startsWith('video/') ? (
-              <video
-                src={photoPreview}
-                autoPlay muted loop playsInline
-                style={{ width: '100%', borderRadius: 12, maxHeight: 220, objectFit: 'cover', display: 'block' }}
-              />
+              <VideoPlayer src={photoPreview!} style={{ borderRadius: 12, maxHeight: 220, objectFit: 'cover' }} />
             ) : (
               <img
                 src={photoPreview}

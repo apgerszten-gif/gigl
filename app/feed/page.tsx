@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ARTISTS } from '@/lib/artists'
 import { createClient } from '@/lib/supabase/client'
 import { eloToDisplay } from '@/lib/elo'
+import { VideoPlayer } from '@/components/VideoPlayer'
 
 const SCORE_THRESHOLD = 4
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
@@ -209,11 +210,7 @@ function FeedInner() {
                 {/* Photo / Video */}
                 {resolvePhotoUrl(item.photo_url) && (
                   isVideoUrl(resolvePhotoUrl(item.photo_url)!) ? (
-                    <video
-                      src={resolvePhotoUrl(item.photo_url)!}
-                      autoPlay muted loop playsInline
-                      style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }}
-                    />
+                    <VideoPlayer src={resolvePhotoUrl(item.photo_url)!} style={{ maxHeight: 220, objectFit: 'cover' }} />
                   ) : (
                     <img
                       src={resolvePhotoUrl(item.photo_url)!}

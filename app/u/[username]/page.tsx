@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { eloToDisplay } from '@/lib/elo'
 import { notFound } from 'next/navigation'
+import { VideoPlayer } from '@/components/VideoPlayer'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -137,8 +138,7 @@ export default async function PublicProfile({ params }: { params: { username: st
                 <div key={show.id} style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
                   {photoUrl && (
                     isVideoUrl(photoUrl) ? (
-                      <video src={photoUrl} autoPlay muted loop playsInline
-                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                      <VideoPlayer src={photoUrl} style={{ maxHeight: 220, objectFit: 'cover' }} />
                     ) : (
                       <img src={photoUrl} alt={show.artist_name}
                         style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
