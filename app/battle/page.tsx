@@ -30,7 +30,7 @@ function BattleInner() {
   const [pair, setPair]                   = useState<[LoggedArtist, LoggedArtist] | null>(null)
   const [loading, setLoading]             = useState(true)
   const [battles, setBattles]             = useState(0)
-  const [sessionLimit, setSessionLimit]   = useState(MAX_BATTLES)
+  const [sessionLimit, setSessionLimit]   = useState(4)
   const [picked, setPicked]               = useState<string | null>(null)
 
   const usedOpponents = useRef<Set<string>>(new Set())
