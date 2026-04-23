@@ -105,16 +105,16 @@ function FeedInner() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#131313',
+      background: '#000000',
       fontFamily: "'Manrope', sans-serif",
-      color: '#f5ebe3',
+      color: '#ffffff',
       maxWidth: 430,
       margin: '0 auto',
     }}>
       {/* Top bar */}
       <div style={{
         padding: '20px 24px 16px',
-        position: 'sticky', top: 0, background: '#131313', zIndex: 10,
+        position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -125,14 +125,14 @@ function FeedInner() {
         }}>Gigl</div>
         <button
           onClick={async () => { await supabase.auth.signOut(); router.push('/auth') }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(245,235,227,0.25)', fontSize: 11, fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(255,255,255,0.25)', fontSize: 11, fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em' }}
         >sign out</button>
       </div>
 
       {/* Feed header */}
       <div style={{ padding: '20px 24px 8px' }}>
         <div style={{
-          fontSize: 10, color: '#594238', letterSpacing: '0.12em',
+          fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 4,
         }}>Coachella 2026 · Weekend 2</div>
         <div style={{
@@ -146,16 +146,16 @@ function FeedInner() {
         {/* Activity / Rankings tabs */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           <button style={{
-            flex: 1, padding: '8px 0', borderRadius: 10,
+            flex: 1, padding: '8px 0', borderRadius: 4,
             background: '#D35400', border: 'none',
             color: '#fff', fontSize: 11, cursor: 'default',
             fontFamily: "'Manrope', sans-serif", fontWeight: 700,
             letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>Activity</button>
           <button onClick={() => router.push('/rankings')} style={{
-            flex: 1, padding: '8px 0', borderRadius: 10,
+            flex: 1, padding: '8px 0', borderRadius: 4,
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-            color: 'rgba(245,235,227,0.35)', fontSize: 11, cursor: 'pointer',
+            color: 'rgba(255,255,255,0.35)', fontSize: 11, cursor: 'pointer',
             fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>Rankings</button>
         </div>
@@ -166,18 +166,18 @@ function FeedInner() {
         {loading && (
           <div style={{
             textAlign: 'center', padding: 40,
-            fontSize: 12, color: '#353534', letterSpacing: '0.08em',
+            fontSize: 12, color: '#555555', letterSpacing: '0.08em',
             textTransform: 'uppercase',
           }}>Loading...</div>
         )}
 
         {!loading && globalFeed.length === 0 && (
           <div style={{
-            background: '#1a1a1a', borderRadius: 16, padding: 32,
+            background: '#131313', borderRadius: 4, padding: 32,
             textAlign: 'center',
           }}>
             <div style={{
-              fontSize: 13, color: '#594238',
+              fontSize: 13, color: '#A8A29E',
               fontFamily: "'Manrope', sans-serif", lineHeight: 1.6,
             }}>
               No ratings yet — be the first to log a show
@@ -201,8 +201,8 @@ function FeedInner() {
               <div
                 key={`${item.user_id}-${item.artist_id}-${i}`}
                 style={{
-                  background: '#1a1a1a',
-                  borderRadius: 12,
+                  background: '#131313',
+                  borderRadius: 4,
                   overflow: 'hidden',
                   border: isPending ? '1.5px solid rgba(211,84,0,0.3)' : 'none',
                 }}
@@ -227,9 +227,9 @@ function FeedInner() {
                 }}>
                   {/* Score tile */}
                   <div style={{
-                    width: 48, height: 48, background: '#252220',
+                    width: 48, height: 48, background: '#1a1a1a',
                     flexShrink: 0, display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', borderRadius: 10,
+                    justifyContent: 'center', borderRadius: 4,
                   }}>
                     {isPending ? (
                       <span style={{ fontSize: 18 }}>🔒</span>
@@ -252,13 +252,13 @@ function FeedInner() {
                       onClick={() => router.push(`/artist/${item.artist_id}`)}
                       style={{
                         fontFamily: "'Noto Serif', Georgia, serif",
-                        fontSize: 15, fontWeight: 600, color: '#f5ebe3',
+                        fontSize: 15, fontWeight: 600, color: '#ffffff',
                         marginBottom: 2,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         cursor: 'pointer',
                       }}>{name}</div>
                     <div style={{
-                      fontSize: 10, color: '#594238',
+                      fontSize: 10, color: '#A8A29E',
                       letterSpacing: '0.06em', textTransform: 'uppercase',
                       fontFamily: "'Manrope', sans-serif", marginBottom: 2,
                     }}>
@@ -268,7 +268,7 @@ function FeedInner() {
                       onClick={() => router.push(isMe ? '/profile' : `/u/${username}`)}
                       style={{
                         fontSize: 11,
-                        color: isMe ? '#D35400' : '#6b5248',
+                        color: isMe ? '#D35400' : '#A8A29E',
                         fontFamily: "'Manrope', sans-serif",
                         fontWeight: isMe ? 600 : 400,
                         cursor: 'pointer',
@@ -280,7 +280,7 @@ function FeedInner() {
 
                   {/* Time */}
                   <div style={{
-                    fontSize: 10, color: '#353534', letterSpacing: '0.06em',
+                    fontSize: 10, color: '#555555', letterSpacing: '0.06em',
                     textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
                     flexShrink: 0,
                   }}>
@@ -290,7 +290,7 @@ function FeedInner() {
 
                 {/* Review */}
                 {item.review && (
-                  <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(245,235,227,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                  <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
                     "{item.review}"
                   </div>
                 )}
@@ -318,7 +318,7 @@ function FeedInner() {
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430,
-        background: '#0e0e0e', padding: '16px 32px',
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 32px',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         <button style={{
@@ -351,7 +351,7 @@ function FeedInner() {
             </svg>
           </div>
           <span style={{
-            fontSize: 9, color: '#e0c0b2', letterSpacing: '0.08em',
+            fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
           }}>Log</span>
         </div>
@@ -364,11 +364,11 @@ function FeedInner() {
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#594238" strokeWidth="2">
+            stroke="#A8A29E" strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <span style={{
-            fontSize: 9, color: '#594238', letterSpacing: '0.08em',
+            fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
           }}>You</span>
         </button>

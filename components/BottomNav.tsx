@@ -10,7 +10,7 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="max-w-md mx-auto">
-        <div className="bg-[#0f0f11]/95 backdrop-blur-xl border-t border-white/[0.06] flex safe-bottom">
+        <div className="bg-[#000000]/95 backdrop-blur-xl border-t border-white/[0.06] flex safe-bottom">
 
           <Link href="/feed" className="flex-1 flex flex-col items-center gap-1 pt-3 pb-1">
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none">

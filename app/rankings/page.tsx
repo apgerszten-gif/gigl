@@ -25,7 +25,7 @@ function scoreColor(n: number) {
   if (n >= 9) return '#F5A623'
   if (n >= 7.5) return '#D35400'
   if (n >= 6) return '#e0a060'
-  return 'rgba(245,235,227,0.3)'
+  return 'rgba(255,255,255,0.3)'
 }
 
 export default function RankingsPage() {
@@ -82,14 +82,14 @@ export default function RankingsPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#131313',
-      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      minHeight: '100vh', background: '#000000',
+      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
       <div style={{
         padding: '20px 24px 16px',
-        position: 'sticky', top: 0, background: '#131313', zIndex: 10,
+        position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -99,13 +99,13 @@ export default function RankingsPage() {
         }}>Gigl</div>
         <button
           onClick={async () => { await supabase.auth.signOut(); router.push('/auth') }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(245,235,227,0.25)', fontSize: 11, fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(255,255,255,0.25)', fontSize: 11, fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em' }}
         >sign out</button>
       </div>
 
       {/* Header */}
       <div style={{ padding: '20px 24px 8px' }}>
-        <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
           Coachella 2026 · Weekend 2
         </div>
         <div style={{
@@ -120,13 +120,13 @@ export default function RankingsPage() {
         {/* Activity / Rankings tabs */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
           <button onClick={() => router.push('/feed')} style={{
-            flex: 1, padding: '8px 0', borderRadius: 10,
+            flex: 1, padding: '8px 0', borderRadius: 4,
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-            color: 'rgba(245,235,227,0.35)', fontSize: 11, cursor: 'pointer',
+            color: 'rgba(255,255,255,0.35)', fontSize: 11, cursor: 'pointer',
             fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>Activity</button>
           <button style={{
-            flex: 1, padding: '8px 0', borderRadius: 10,
+            flex: 1, padding: '8px 0', borderRadius: 4,
             background: '#D35400', border: 'none',
             color: '#fff', fontSize: 11, cursor: 'default',
             fontFamily: "'Manrope', sans-serif", fontWeight: 700,
@@ -138,10 +138,10 @@ export default function RankingsPage() {
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           {(['all', 'friday', 'saturday', 'sunday'] as const).map(d => (
             <button key={d} onClick={() => setFilter(d)} style={{
-              flex: 1, padding: '6px 0', borderRadius: 8,
+              flex: 1, padding: '6px 0', borderRadius: 4,
               background: filter === d ? 'rgba(211,84,0,0.15)' : 'transparent',
               border: filter === d ? '1px solid rgba(211,84,0,0.35)' : '1px solid rgba(255,255,255,0.06)',
-              color: filter === d ? '#D35400' : '#594238',
+              color: filter === d ? '#D35400' : '#A8A29E',
               fontSize: 9, cursor: 'pointer',
               fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase',
             }}>
@@ -154,12 +154,12 @@ export default function RankingsPage() {
       {/* List */}
       <div style={{ padding: '0 24px 100px' }}>
         {loading && (
-          <div style={{ textAlign: 'center', padding: 40, fontSize: 12, color: '#353534', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div style={{ textAlign: 'center', padding: 40, fontSize: 12, color: '#555555', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Loading...
           </div>
         )}
         {!loading && visible.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 40, fontSize: 13, color: '#353534' }}>
+          <div style={{ textAlign: 'center', padding: 40, fontSize: 13, color: '#555555' }}>
             No ratings yet
           </div>
         )}
@@ -169,9 +169,9 @@ export default function RankingsPage() {
               key={row.artist_id}
               onClick={() => router.push(`/artist/${row.artist_id}`)}
               style={{
-                background: i % 2 === 0 ? '#1a1a1a' : '#1e1e1e',
-                borderRadius: i === 0 ? '12px 12px 2px 2px'
-                  : i === visible.length - 1 ? '2px 2px 12px 12px' : 2,
+                background: i % 2 === 0 ? '#131313' : '#0d0d0d',
+                borderRadius: i === 0 ? '4px 4px 2px 2px'
+                  : i === visible.length - 1 ? '2px 2px 4px 4px' : 2,
                 padding: '13px 16px',
                 display: 'flex', alignItems: 'center', gap: 12,
                 cursor: 'pointer',
@@ -182,7 +182,7 @@ export default function RankingsPage() {
                 width: 24, flexShrink: 0, textAlign: 'center',
                 fontFamily: "'Noto Serif', Georgia, serif",
                 fontSize: i < 3 ? 18 : 12,
-                color: i < 3 ? '#f5ebe3' : '#353534',
+                color: i < 3 ? '#ffffff' : '#555555',
               }}>
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
               </div>
@@ -191,18 +191,18 @@ export default function RankingsPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontFamily: "'Noto Serif', Georgia, serif",
-                  fontSize: 14, fontWeight: 600, color: '#f5ebe3',
+                  fontSize: 14, fontWeight: 600, color: '#ffffff',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>{row.name}</div>
-                <div style={{ fontSize: 9, color: '#594238', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>
+                <div style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>
                   {row.stage}{row.day ? ` · ${dayLabel(row.day)}` : ''} · {row.count} {row.count === 1 ? 'rating' : 'ratings'}
                 </div>
               </div>
 
               {/* Score */}
               <div style={{
-                width: 40, height: 40, background: '#252220', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10,
+                width: 40, height: 40, background: '#1a1a1a', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4,
               }}>
                 <span style={{
                   fontFamily: "'Noto Serif', Georgia, serif",
@@ -219,7 +219,7 @@ export default function RankingsPage() {
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430,
-        background: '#0e0e0e', padding: '16px 32px',
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 32px',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         <button onClick={() => router.push('/feed')} style={{
@@ -246,17 +246,17 @@ export default function RankingsPage() {
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
-          <span style={{ fontSize: 9, color: '#e0c0b2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
+          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
         </div>
 
         <button onClick={() => router.push('/profile')} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#594238" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
-          <span style={{ fontSize: 9, color: '#594238', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>You</span>
+          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>You</span>
         </button>
       </div>
     </div>

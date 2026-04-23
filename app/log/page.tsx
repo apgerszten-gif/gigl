@@ -178,20 +178,20 @@ function LogInner() {
   if (!artist) {
     return (
       <div style={{
-        minHeight: '100vh', background: '#131313',
-        fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+        minHeight: '100vh', background: '#000000',
+        fontFamily: "'Manrope', sans-serif", color: '#ffffff',
         maxWidth: 430, margin: '0 auto',
       }}>
         <div style={{
           display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', padding: '20px 24px 16px',
-          position: 'sticky', top: 0, background: '#131313', zIndex: 10,
+          position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
           borderBottom: '1px solid rgba(255,255,255,0.04)',
         }}>
           <button onClick={() => router.push('/feed')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="#e0c0b2" strokeWidth="2">
+              stroke="#A8A29E" strokeWidth="2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
@@ -205,12 +205,12 @@ function LogInner() {
 
         <div style={{ padding: '16px 24px 100px' }}>
           <div style={{
-            background: '#1a1a1a', borderRadius: 12,
+            background: '#131313', borderRadius: 4,
             padding: '12px 16px', marginBottom: 16,
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="#594238" strokeWidth="2">
+              stroke="#A8A29E" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -220,7 +220,7 @@ function LogInner() {
               placeholder="Search artists..."
               style={{
                 background: 'none', border: 'none', outline: 'none',
-                color: '#f5ebe3', fontSize: 14, fontFamily: "'Manrope', sans-serif",
+                color: '#ffffff', fontSize: 14, fontFamily: "'Manrope', sans-serif",
                 width: '100%',
               }}
             />
@@ -234,14 +234,14 @@ function LogInner() {
                   onClick={() => setActiveDay(day)}
                   style={{
                     flex: 1,
-                    background: activeDay === day ? '#D35400' : '#1a1a1a',
-                    border: 'none', borderRadius: 10, padding: '8px 4px',
+                    background: activeDay === day ? '#D35400' : '#131313',
+                    border: 'none', borderRadius: 4, padding: '8px 4px',
                     cursor: 'pointer',
                   }}
                 >
                   <div style={{
                     fontSize: 9, fontWeight: 700,
-                    color: activeDay === day ? '#fff' : '#594238',
+                    color: activeDay === day ? '#fff' : '#A8A29E',
                     letterSpacing: '0.08em', textTransform: 'uppercase',
                     fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
                   }}>
@@ -257,16 +257,16 @@ function LogInner() {
           {loadingLogged ? (
             <div style={{
               textAlign: 'center', padding: 40,
-              fontSize: 12, color: '#353534', letterSpacing: '0.08em',
+              fontSize: 12, color: '#555555', letterSpacing: '0.08em',
               textTransform: 'uppercase',
             }}>Loading...</div>
           ) : allArtists.length === 0 ? (
             <div style={{
-              background: '#1a1a1a', borderRadius: 16, padding: 32,
+              background: '#131313', borderRadius: 4, padding: 32,
               textAlign: 'center',
             }}>
               <div style={{
-                fontSize: 13, color: '#594238',
+                fontSize: 13, color: '#A8A29E',
                 fontFamily: "'Manrope', sans-serif", lineHeight: 1.6,
               }}>
                 {search
@@ -295,10 +295,10 @@ function LogInner() {
                       }
                     }}
                     style={{
-                      background: i % 2 === 0 ? '#1a1a1a' : '#1e1e1e',
+                      background: i % 2 === 0 ? '#131313' : '#0d0d0d',
                       border: 'none',
-                      borderRadius: i === 0 ? '12px 12px 2px 2px'
-                        : i === allArtists.length - 1 ? '2px 2px 12px 12px' : 2,
+                      borderRadius: i === 0 ? '4px 4px 2px 2px'
+                        : i === allArtists.length - 1 ? '2px 2px 4px 4px' : 2,
                       padding: '14px 16px',
                       display: 'flex', alignItems: 'center', gap: 12,
                       cursor: 'pointer', width: '100%', textAlign: 'left',
@@ -307,10 +307,10 @@ function LogInner() {
                     <div style={{ flex: 1 }}>
                       <div style={{
                         fontFamily: "'Noto Serif', Georgia, serif",
-                        fontSize: 14, fontWeight: 600, color: '#f5ebe3', marginBottom: 2,
+                        fontSize: 14, fontWeight: 600, color: '#ffffff', marginBottom: 2,
                       }}>{a.name}</div>
                       <div style={{
-                        fontSize: 9, color: '#594238', letterSpacing: '0.06em',
+                        fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
                         textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
                       }}>{a.stage}</div>
                     </div>
@@ -318,7 +318,7 @@ function LogInner() {
                       <span style={{ fontSize: 16 }}>{reactionEmoji}</span>
                     )}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="#353534" strokeWidth="2">
+                      stroke="#555555" strokeWidth="2">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
                   </button>
@@ -334,8 +334,8 @@ function LogInner() {
   // ── Reaction + photo view ─────────────────────────────────────────────────
   return (
     <div style={{
-      minHeight: '100vh', background: '#131313',
-      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      minHeight: '100vh', background: '#000000',
+      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       <div style={{
@@ -345,7 +345,7 @@ function LogInner() {
         <button onClick={() => setSelectedArtist(null)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#e0c0b2" strokeWidth="2">
+            stroke="#A8A29E" strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -373,7 +373,7 @@ function LogInner() {
         </div>
 
         <div style={{
-          fontSize: 10, color: '#594238', letterSpacing: '0.08em',
+          fontSize: 10, color: '#A8A29E', letterSpacing: '0.08em',
           textTransform: 'uppercase', marginBottom: 36,
         }}>
           {artist.stage} · {artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}
@@ -385,15 +385,15 @@ function LogInner() {
         }}>
           {REACTIONS.map(r => (
             <button key={r.value} onClick={() => setReaction(r.value)} style={{
-              background: reaction === r.value ? '#2a1a00' : '#1a1a1a',
+              background: reaction === r.value ? '#2a1a00' : '#131313',
               border: reaction === r.value ? '1.5px solid #D35400' : '1.5px solid transparent',
-              borderRadius: 16, padding: '20px 12px',
+              borderRadius: 4, padding: '20px 12px',
               textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s ease',
             }}>
               <div style={{ fontSize: 24, marginBottom: 8 }}>{r.emoji}</div>
               <div style={{
                 fontSize: 11, fontWeight: 700,
-                color: reaction === r.value ? '#D35400' : '#e0c0b2',
+                color: reaction === r.value ? '#D35400' : '#A8A29E',
                 letterSpacing: '0.06em', textTransform: 'uppercase',
                 fontFamily: "'Manrope', sans-serif",
               }}>{r.label}</div>
@@ -403,9 +403,9 @@ function LogInner() {
 
         {/* Photo section — visible, comments section removed */}
         <div style={{
-          fontSize: 10, color: '#594238', letterSpacing: '0.1em',
+          fontSize: 10, color: '#A8A29E', letterSpacing: '0.1em',
           textTransform: 'uppercase', marginBottom: 10,
-        }}>Add a photo <span style={{ color: '#353534' }}>(optional)</span></div>
+        }}>Add a photo <span style={{ color: '#555555' }}>(optional)</span></div>
 
         <input
           ref={fileInputRef}
@@ -418,12 +418,12 @@ function LogInner() {
         {photoPreview ? (
           <div style={{ position: 'relative', marginBottom: 28 }}>
             {photo?.type.startsWith('video/') ? (
-              <VideoPlayer src={photoPreview!} style={{ borderRadius: 12, maxHeight: 220, objectFit: 'cover' }} />
+              <VideoPlayer src={photoPreview!} style={{ borderRadius: 4, maxHeight: 220, objectFit: 'cover' }} />
             ) : (
               <img
                 src={photoPreview}
                 alt="Preview"
-                style={{ width: '100%', borderRadius: 12, maxHeight: 220, objectFit: 'cover', display: 'block' }}
+                style={{ width: '100%', borderRadius: 4, maxHeight: 220, objectFit: 'cover', display: 'block' }}
               />
             )}
             <button
@@ -432,7 +432,7 @@ function LogInner() {
                 position: 'absolute', top: 10, right: 10,
                 background: 'rgba(0,0,0,0.6)', border: 'none',
                 borderRadius: '50%', width: 28, height: 28,
-                color: '#f5ebe3', cursor: 'pointer',
+                color: '#ffffff', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16, lineHeight: 1,
               }}
@@ -442,21 +442,21 @@ function LogInner() {
           <button
             onClick={() => fileInputRef.current?.click()}
             style={{
-              width: '100%', background: '#1a1a1a',
+              width: '100%', background: '#131313',
               border: '1.5px dashed rgba(255,255,255,0.08)',
-              borderRadius: 12, padding: '20px 16px',
+              borderRadius: 4, padding: '20px 16px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               gap: 10, cursor: 'pointer', marginBottom: 28,
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="#353534" strokeWidth="1.5">
+              stroke="#555555" strokeWidth="1.5">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
             <span style={{
-              fontSize: 12, color: '#353534', letterSpacing: '0.06em',
+              fontSize: 12, color: '#555555', letterSpacing: '0.06em',
               textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
             }}>Photo or video (≤20s)</span>
           </button>
@@ -464,9 +464,9 @@ function LogInner() {
 
         {/* Review */}
         <div style={{
-          fontSize: 10, color: '#594238', letterSpacing: '0.1em',
+          fontSize: 10, color: '#A8A29E', letterSpacing: '0.1em',
           textTransform: 'uppercase', marginBottom: 10,
-        }}>Your thoughts <span style={{ color: '#353534' }}>(optional)</span></div>
+        }}>Your thoughts <span style={{ color: '#555555' }}>(optional)</span></div>
         <textarea
           value={review}
           onChange={e => setReview(e.target.value)}
@@ -474,10 +474,10 @@ function LogInner() {
           placeholder="What made this set special..."
           rows={3}
           style={{
-            width: '100%', background: '#1a1a1a',
+            width: '100%', background: '#131313',
             border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 12, padding: '12px 14px',
-            color: '#f5ebe3', fontSize: 13,
+            borderRadius: 4, padding: '12px 14px',
+            color: '#ffffff', fontSize: 13,
             fontFamily: "'Manrope', sans-serif",
             resize: 'none', outline: 'none',
             boxSizing: 'border-box', marginBottom: 28,
@@ -490,13 +490,13 @@ function LogInner() {
         }} />
 
         <button onClick={handleLog} disabled={!reaction || saving} style={{
-          width: '100%', background: reaction ? '#D35400' : '#252220',
-          border: 'none', borderRadius: 12, padding: 14,
+          width: '100%', background: reaction ? '#D35400' : '#1a1a1a',
+          border: 'none', borderRadius: 4, padding: 14,
           textAlign: 'center', cursor: reaction ? 'pointer' : 'not-allowed',
           transition: 'background 0.2s ease',
         }}>
           <span style={{
-            fontSize: 12, fontWeight: 700, color: reaction ? '#fff' : '#594238',
+            fontSize: 12, fontWeight: 700, color: reaction ? '#fff' : '#A8A29E',
             letterSpacing: '0.1em', textTransform: 'uppercase',
             fontFamily: "'Manrope', sans-serif",
           }}>{saving ? 'Saving...' : isRerate ? 'Update rating' : 'Log this show'}</span>
@@ -505,7 +505,7 @@ function LogInner() {
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <button onClick={() => setSelectedArtist(null)} style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 11, color: '#353534', letterSpacing: '0.06em',
+            fontSize: 11, color: '#555555', letterSpacing: '0.06em',
             textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
           }}>Cancel</button>
         </div>

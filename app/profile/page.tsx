@@ -34,7 +34,7 @@ function scoreColor(score: string) {
   if (n >= 9) return '#F5A623'
   if (n >= 7.5) return '#D35400'
   if (n >= 6) return '#e0a060'
-  return 'rgba(245,235,227,0.3)'
+  return 'rgba(255,255,255,0.3)'
 }
 
 interface Show {
@@ -161,42 +161,42 @@ export default function ProfilePage() {
     : '—'
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#131313', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid #D35400', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#131313', fontFamily: "'Manrope', sans-serif", color: '#f5ebe3', maxWidth: 430, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: '#000000', fontFamily: "'Manrope', sans-serif", color: '#ffffff', maxWidth: 430, margin: '0 auto' }}>
 
       {/* Top bar */}
-      <div style={{ padding: '20px 24px 16px', position: 'sticky', top: 0, background: '#131313', zIndex: 10, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <div style={{ padding: '20px 24px 16px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         <div style={{ fontFamily: "'Noto Serif', Georgia, serif", fontSize: 22, fontWeight: 700, color: '#D35400', letterSpacing: '0.04em' }}>Gigl</div>
       </div>
 
       {/* Profile header */}
       <div style={{ padding: '20px 24px 0' }}>
-        <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Coachella 2026 · Weekend 2</div>
+        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Coachella 2026 · Weekend 2</div>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ fontFamily: "'Noto Serif', Georgia, serif", fontSize: 28, fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
             {profile?.display_name}&apos;s<br />
             <span style={{ color: '#D35400', fontStyle: 'italic' }}>rankings.</span>
           </div>
-          <button onClick={signOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'rgba(245,235,227,0.25)', fontFamily: "'Manrope', sans-serif", paddingTop: 6, letterSpacing: '0.06em' }}>sign out</button>
+          <button onClick={signOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: "'Manrope', sans-serif", paddingTop: 6, letterSpacing: '0.06em' }}>sign out</button>
         </div>
-        <div style={{ fontSize: 11, color: '#594238', marginBottom: 16 }}>@{profile?.username}</div>
+        <div style={{ fontSize: 11, color: '#A8A29E', marginBottom: 16 }}>@{profile?.username}</div>
       </div>
 
       {/* Stats bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)', background: '#0f0f11' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)', background: '#000000' }}>
         {[
           { label: 'Sets logged', value: shows.length.toString() },
           { label: 'Avg score', value: avgScore },
           { label: 'Weekend', value: 'W2' },
         ].map((stat, i) => (
           <div key={i} style={{ padding: '14px 0', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-            <div style={{ fontFamily: "'Noto Serif', Georgia, serif", fontSize: 18, fontWeight: 700, color: i === 1 ? '#D35400' : '#f5ebe3' }}>{stat.value}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#594238', marginTop: 3 }}>{stat.label}</div>
+            <div style={{ fontFamily: "'Noto Serif', Georgia, serif", fontSize: 18, fontWeight: 700, color: i === 1 ? '#D35400' : '#ffffff' }}>{stat.value}</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#A8A29E', marginTop: 3 }}>{stat.label}</div>
           </div>
         ))}
       </div>
@@ -204,8 +204,8 @@ export default function ProfilePage() {
       {/* Share button */}
       <div style={{ padding: '16px 24px 8px' }}>
         <button onClick={copyLink} style={{
-          width: '100%', background: copied ? 'rgba(211,84,0,0.12)' : '#1a1a1a',
-          border: '1px solid rgba(211,84,0,0.2)', borderRadius: 12,
+          width: '100%', background: copied ? 'rgba(211,84,0,0.12)' : '#131313',
+          border: '1px solid rgba(211,84,0,0.2)', borderRadius: 4,
           padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
           cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
         }}>
@@ -215,21 +215,21 @@ export default function ProfilePage() {
             </svg>
           </div>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#f5ebe3' }}>{copied ? 'Link copied!' : 'Share my rankings'}</div>
-            <div style={{ fontSize: 10, color: '#594238', marginTop: 2 }}>gigl.app/u/{profile?.username}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#ffffff' }}>{copied ? 'Link copied!' : 'Share my rankings'}</div>
+            <div style={{ fontSize: 10, color: '#A8A29E', marginTop: 2 }}>gigl.app/u/{profile?.username}</div>
           </div>
         </button>
       </div>
 
       {/* Rankings */}
       <div style={{ padding: '8px 24px 120px' }}>
-        <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>My rankings</div>
+        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>My rankings</div>
 
         {shows.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: 13, color: '#353534', marginBottom: 16 }}>No sets logged yet</div>
+            <div style={{ fontSize: 13, color: '#555555', marginBottom: 16 }}>No sets logged yet</div>
             <button onClick={() => router.push('/log')} style={{
-              background: '#D35400', border: 'none', borderRadius: 12,
+              background: '#D35400', border: 'none', borderRadius: 4,
               padding: '12px 24px', color: '#fff', fontSize: 12, fontWeight: 700,
               cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
               letterSpacing: '0.06em', textTransform: 'uppercase',
@@ -242,7 +242,7 @@ export default function ProfilePage() {
               const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
               const isEditing = editingId === show.id
               return (
-                <div key={show.id} style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
+                <div key={show.id} style={{ background: '#131313', borderRadius: 4, overflow: 'hidden' }}>
                   {resolvePhotoUrl(show.photo_url) && (
                     isVideoUrl(resolvePhotoUrl(show.photo_url)!) ? (
                       <VideoPlayer src={resolvePhotoUrl(show.photo_url)!} style={{ maxHeight: 220, objectFit: 'cover' }} />
@@ -255,19 +255,19 @@ export default function ProfilePage() {
                   {/* Info row */}
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
                     {/* Score tile */}
-                    <div style={{ width: 44, height: 44, background: '#252220', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                    <div style={{ width: 44, height: 44, background: '#1a1a1a', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
                       <span style={{ fontFamily: "'Noto Serif', Georgia, serif", fontSize: 16, fontWeight: 700, color: scoreColor(score), lineHeight: 1 }}>{score}</span>
                     </div>
                     {/* Artist info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "'Noto Serif', Georgia, serif", fontSize: 15, fontWeight: 600, color: '#f5ebe3', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{show.artist_name}</div>
-                      <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>{show.stage} · {show.day}</div>
+                      <div style={{ fontFamily: "'Noto Serif', Georgia, serif", fontSize: 15, fontWeight: 600, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{show.artist_name}</div>
+                      <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>{show.stage} · {show.day}</div>
                       <div style={{ fontSize: 10, color: '#D35400', marginTop: 2 }}>{rankLabel}</div>
                     </div>
                     {/* Edit button */}
                     <button onClick={() => isEditing ? setEditingId(null) : startEdit(show)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0, opacity: isEditing ? 1 : 0.35 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isEditing ? '#D35400' : '#f5ebe3'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isEditing ? '#D35400' : '#ffffff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                       </svg>
@@ -296,38 +296,38 @@ export default function ProfilePage() {
                       {editPhotoPreview ? (
                         <div style={{ position: 'relative', marginBottom: 12 }}>
                           {(editPhotoFile?.type.startsWith('video/') || isVideoUrl(editPhotoPreview)) ? (
-                            <VideoPlayer src={editPhotoPreview} style={{ borderRadius: 10, maxHeight: 180, objectFit: 'cover' }} />
+                            <VideoPlayer src={editPhotoPreview} style={{ borderRadius: 4, maxHeight: 180, objectFit: 'cover' }} />
                           ) : (
                             <img src={editPhotoPreview} alt=""
-                              style={{ width: '100%', borderRadius: 10, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                              style={{ width: '100%', borderRadius: 4, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
                           )}
                           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
                             <button onClick={() => fileInputRef.current?.click()} style={{
                               background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20,
-                              padding: '4px 10px', color: '#f5ebe3', fontSize: 10, cursor: 'pointer',
+                              padding: '4px 10px', color: '#ffffff', fontSize: 10, cursor: 'pointer',
                               fontFamily: "'Manrope', sans-serif", letterSpacing: '0.04em',
                             }}>Replace</button>
                             <button onClick={() => { setEditPhotoPreview(null); setEditPhotoFile(null) }} style={{
                               background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
-                              width: 26, height: 26, color: '#f5ebe3', fontSize: 15, cursor: 'pointer',
+                              width: 26, height: 26, color: '#ffffff', fontSize: 15, cursor: 'pointer',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>×</button>
                           </div>
                         </div>
                       ) : (
                         <button onClick={() => fileInputRef.current?.click()} style={{
-                          width: '100%', background: '#252220',
+                          width: '100%', background: '#1a1a1a',
                           border: '1.5px dashed rgba(255,255,255,0.08)',
-                          borderRadius: 10, padding: '14px 16px',
+                          borderRadius: 4, padding: '14px 16px',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           gap: 8, cursor: 'pointer', marginBottom: 12,
                         }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#353534" strokeWidth="1.5">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555555" strokeWidth="1.5">
                             <rect x="3" y="3" width="18" height="18" rx="2" />
                             <circle cx="8.5" cy="8.5" r="1.5" />
                             <polyline points="21 15 16 10 5 21" />
                           </svg>
-                          <span style={{ fontSize: 11, color: '#353534', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Add a photo / video</span>
+                          <span style={{ fontSize: 11, color: '#555555', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Add a photo / video</span>
                         </button>
                       )}
                       <textarea
@@ -337,8 +337,8 @@ export default function ProfilePage() {
                         placeholder="Add a review..."
                         rows={3}
                         style={{
-                          width: '100%', background: '#252220', border: '1px solid rgba(255,255,255,0.06)',
-                          borderRadius: 10, padding: '10px 12px', color: '#f5ebe3', fontSize: 13,
+                          width: '100%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: 4, padding: '10px 12px', color: '#ffffff', fontSize: 13,
                           fontFamily: "'Manrope', sans-serif", resize: 'none', outline: 'none',
                           boxSizing: 'border-box',
                         }}
@@ -352,7 +352,7 @@ export default function ProfilePage() {
                             )} style={{
                               fontSize: 10, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
                               background: active ? 'rgba(211,84,0,0.2)' : 'rgba(255,255,255,0.04)',
-                              color: active ? '#D35400' : 'rgba(245,235,227,0.35)',
+                              color: active ? '#D35400' : 'rgba(255,255,255,0.35)',
                               border: active ? '1px solid rgba(211,84,0,0.35)' : '1px solid rgba(255,255,255,0.06)',
                               fontFamily: "'Manrope', sans-serif",
                             }}>{tag}</button>
@@ -361,13 +361,13 @@ export default function ProfilePage() {
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button onClick={() => setEditingId(null)} style={{
-                          flex: 1, padding: '10px 0', borderRadius: 10,
+                          flex: 1, padding: '10px 0', borderRadius: 4,
                           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-                          color: 'rgba(245,235,227,0.35)', fontSize: 11, cursor: 'pointer',
+                          color: 'rgba(255,255,255,0.35)', fontSize: 11, cursor: 'pointer',
                           fontFamily: "'Manrope', sans-serif",
                         }}>Cancel</button>
                         <button onClick={() => saveEdit(show.id, show.artist_id)} disabled={editSaving} style={{
-                          flex: 2, padding: '10px 0', borderRadius: 10, background: '#D35400',
+                          flex: 2, padding: '10px 0', borderRadius: 4, background: '#D35400',
                           border: 'none', color: '#fff', fontSize: 11, fontWeight: 700,
                           cursor: editSaving ? 'default' : 'pointer', opacity: editSaving ? 0.7 : 1,
                           fontFamily: "'Manrope', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase',
@@ -376,21 +376,21 @@ export default function ProfilePage() {
 
                       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                         <button onClick={() => router.push(`/battle?newArtistId=${show.artist_id}`)} style={{
-                          flex: 1, padding: '10px 0', borderRadius: 10,
+                          flex: 1, padding: '10px 0', borderRadius: 4,
                           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-                          color: 'rgba(245,235,227,0.45)', fontSize: 11, cursor: 'pointer',
+                          color: 'rgba(255,255,255,0.45)', fontSize: 11, cursor: 'pointer',
                           fontFamily: "'Manrope', sans-serif",
                         }}>↺ Rerun battles</button>
                         {confirmDeleteId === show.id ? (
                           <>
                             <button onClick={() => setConfirmDeleteId(null)} style={{
-                              flex: 1, padding: '10px 0', borderRadius: 10,
+                              flex: 1, padding: '10px 0', borderRadius: 4,
                               background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-                              color: 'rgba(245,235,227,0.35)', fontSize: 11, cursor: 'pointer',
+                              color: 'rgba(255,255,255,0.35)', fontSize: 11, cursor: 'pointer',
                               fontFamily: "'Manrope', sans-serif",
                             }}>Keep it</button>
                             <button onClick={() => deleteShow(show.id)} style={{
-                              flex: 1, padding: '10px 0', borderRadius: 10,
+                              flex: 1, padding: '10px 0', borderRadius: 4,
                               background: 'rgba(180,30,30,0.2)', border: '1px solid rgba(180,30,30,0.35)',
                               color: '#e05050', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                               fontFamily: "'Manrope', sans-serif",
@@ -398,7 +398,7 @@ export default function ProfilePage() {
                           </>
                         ) : (
                           <button onClick={() => setConfirmDeleteId(show.id)} style={{
-                            flex: 1, padding: '10px 0', borderRadius: 10,
+                            flex: 1, padding: '10px 0', borderRadius: 4,
                             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
                             color: 'rgba(224,80,80,0.5)', fontSize: 11, cursor: 'pointer',
                             fontFamily: "'Manrope', sans-serif",
@@ -409,7 +409,7 @@ export default function ProfilePage() {
                   ) : (
                     <>
                       {show.review && (
-                        <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(245,235,227,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                        <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
                           &ldquo;{show.review}&rdquo;
                         </div>
                       )}
@@ -436,15 +436,15 @@ export default function ProfilePage() {
       {/* Bottom nav */}
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 430, background: '#0e0e0e',
+        width: '100%', maxWidth: 430, background: '#000000',
         padding: '16px 32px', display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         <button onClick={() => router.push('/feed')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#594238" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
-          <span style={{ fontSize: 9, color: '#594238', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Home</span>
+          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Home</span>
         </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -457,7 +457,7 @@ export default function ProfilePage() {
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
-          <span style={{ fontSize: 9, color: '#e0c0b2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
+          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
         </div>
 
         <button onClick={() => router.push('/profile')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>

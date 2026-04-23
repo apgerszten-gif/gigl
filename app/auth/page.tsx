@@ -42,9 +42,9 @@ export default function AuthPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#131313',
+      background: '#000000',
       fontFamily: "'Manrope', sans-serif",
-      color: '#f5ebe3',
+      color: '#ffffff',
       maxWidth: 430,
       margin: '0 auto',
       display: 'flex',
@@ -60,7 +60,7 @@ export default function AuthPage() {
           letterSpacing: '0.04em', marginBottom: 8,
         }}>Gigl</div>
         <div style={{
-          fontSize: 10, color: '#594238', letterSpacing: '0.14em',
+          fontSize: 10, color: '#A8A29E', letterSpacing: '0.14em',
           textTransform: 'uppercase',
         }}>Coachella 2026 · Weekend 2</div>
       </div>
@@ -89,9 +89,9 @@ export default function AuthPage() {
       {/* Form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
         {mode === 'signup' && (
-          <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+          <div style={{ background: '#131313', borderRadius: 4, padding: '14px 16px' }}>
             <div style={{
-              fontSize: 9, color: '#594238', letterSpacing: '0.1em',
+              fontSize: 9, color: '#A8A29E', letterSpacing: '0.1em',
               textTransform: 'uppercase', marginBottom: 6,
             }}>Username</div>
             <input
@@ -100,15 +100,15 @@ export default function AuthPage() {
               placeholder="how you'll appear in the feed"
               style={{
                 width: '100%', background: 'none', border: 'none', outline: 'none',
-                color: '#f5ebe3', fontSize: 15, fontFamily: "'Manrope', sans-serif",
+                color: '#ffffff', fontSize: 15, fontFamily: "'Manrope', sans-serif",
               }}
             />
           </div>
         )}
 
-        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+        <div style={{ background: '#131313', borderRadius: 4, padding: '14px 16px' }}>
           <div style={{
-            fontSize: 9, color: '#594238', letterSpacing: '0.1em',
+            fontSize: 9, color: '#A8A29E', letterSpacing: '0.1em',
             textTransform: 'uppercase', marginBottom: 6,
           }}>Email</div>
           <input
@@ -118,14 +118,14 @@ export default function AuthPage() {
             placeholder="your@email.com"
             style={{
               width: '100%', background: 'none', border: 'none', outline: 'none',
-              color: '#f5ebe3', fontSize: 15, fontFamily: "'Manrope', sans-serif",
+              color: '#ffffff', fontSize: 15, fontFamily: "'Manrope', sans-serif",
             }}
           />
         </div>
 
-        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+        <div style={{ background: '#131313', borderRadius: 4, padding: '14px 16px' }}>
           <div style={{
-            fontSize: 9, color: '#594238', letterSpacing: '0.1em',
+            fontSize: 9, color: '#A8A29E', letterSpacing: '0.1em',
             textTransform: 'uppercase', marginBottom: 6,
           }}>Password</div>
           <input
@@ -135,7 +135,7 @@ export default function AuthPage() {
             placeholder="••••••••"
             style={{
               width: '100%', background: 'none', border: 'none', outline: 'none',
-              color: '#f5ebe3', fontSize: 15, fontFamily: "'Manrope', sans-serif",
+              color: '#ffffff', fontSize: 15, fontFamily: "'Manrope', sans-serif",
             }}
           />
         </div>
@@ -144,7 +144,7 @@ export default function AuthPage() {
           <div style={{
             fontSize: 12, color: '#e05555', fontFamily: "'Manrope', sans-serif",
             padding: '10px 14px', background: 'rgba(224,85,85,0.08)',
-            borderRadius: 8, lineHeight: 1.5,
+            borderRadius: 4, lineHeight: 1.5,
           }}>{error}</div>
         )}
 
@@ -153,7 +153,7 @@ export default function AuthPage() {
           disabled={loading}
           style={{
             width: '100%', background: '#D35400',
-            border: 'none', borderRadius: 12, padding: 16,
+            border: 'none', borderRadius: 4, padding: 16,
             cursor: loading ? 'not-allowed' : 'pointer',
             opacity: loading ? 0.7 : 1,
             transition: 'opacity 0.2s',
@@ -173,7 +173,7 @@ export default function AuthPage() {
       {/* Switch mode */}
       <div style={{
         textAlign: 'center',
-        fontSize: 13, color: '#594238',
+        fontSize: 13, color: '#A8A29E',
         fontFamily: "'Manrope', sans-serif",
       }}>
         {mode === 'signup' ? 'Already have an account? ' : 'New here? '}

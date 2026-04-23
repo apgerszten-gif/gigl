@@ -179,8 +179,8 @@ function BattleInner() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#131313',
-      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      minHeight: '100vh', background: '#000000',
+      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
@@ -191,7 +191,7 @@ function BattleInner() {
         <button onClick={() => router.push('/feed')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#e0c0b2" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+            stroke="#A8A29E" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
         <span style={{
           fontFamily: "'Noto Serif', Georgia, serif",
@@ -207,7 +207,7 @@ function BattleInner() {
           {Array.from({ length: sessionLimit }).map((_, i) => (
             <div key={i} style={{
               width: 8, height: 8, borderRadius: '50%',
-              background: i < battles ? '#D35400' : i === battles ? '#f5ebe3' : '#353534',
+              background: i < battles ? '#D35400' : i === battles ? '#ffffff' : '#555555',
               transition: 'background 0.3s',
             }} />
           ))}
@@ -243,13 +243,13 @@ function BattleInner() {
                     onClick={() => handlePick(log.artist_id)}
                     disabled={!!picked}
                     style={{
-                      background: isWinner ? '#3a2200' : '#1a1a1a',
+                      background: isWinner ? '#3a2200' : '#131313',
                       border: isWinner
                         ? '2px solid #D35400'
                         : isNew
                         ? '1.5px solid rgba(211,84,0,0.4)'
                         : '1.5px solid transparent',
-                      borderRadius: 16, overflow: 'hidden',
+                      borderRadius: 4, overflow: 'hidden',
                       cursor: picked ? 'default' : 'pointer',
                       textAlign: 'left',
                       opacity: isLoser ? 0.35 : 1,
@@ -283,15 +283,15 @@ function BattleInner() {
                       <div>
                         <div style={{
                           fontFamily: "'Noto Serif', Georgia, serif",
-                          fontSize: 15, fontWeight: 600, color: '#f5ebe3',
+                          fontSize: 15, fontWeight: 600, color: '#ffffff',
                         }}>{artist.name}</div>
                         <div style={{
-                          fontSize: 9, color: '#594238', letterSpacing: '0.06em',
+                          fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
                           textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
                           marginTop: 2,
                         }}>{artist.stage}</div>
                         <div style={{
-                          fontSize: 9, color: '#594238', letterSpacing: '0.06em',
+                          fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
                           textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
                         }}>
                           {artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}
@@ -300,10 +300,10 @@ function BattleInner() {
                     </div>
                     <div style={{ padding: 12 }}>
                       <div style={{
-                        background: isWinner ? '#D35400' : '#252220',
-                        borderRadius: 8, padding: 8,
+                        background: isWinner ? '#D35400' : '#1a1a1a',
+                        borderRadius: 4, padding: 8,
                         textAlign: 'center', fontSize: 11, fontWeight: 700,
-                        color: isWinner ? '#fff' : '#594238',
+                        color: isWinner ? '#fff' : '#A8A29E',
                         letterSpacing: '0.08em', textTransform: 'uppercase',
                         fontFamily: "'Manrope', sans-serif",
                         transition: 'all 0.25s ease',
@@ -322,7 +322,7 @@ function BattleInner() {
                   onClick={() => pickPair(bucketLogs, usedOpponents.current)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 11, color: '#353534', letterSpacing: '0.06em',
+                    fontSize: 11, color: '#555555', letterSpacing: '0.06em',
                     textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
                   }}
                 >

@@ -27,7 +27,7 @@ function scoreColor(score: string) {
   if (n >= 9) return '#F5A623'
   if (n >= 7.5) return '#D35400'
   if (n >= 6) return '#e0a060'
-  return 'rgba(245,235,227,0.3)'
+  return 'rgba(255,255,255,0.3)'
 }
 
 export default async function ArtistPage({ params }: { params: { artistId: string } }) {
@@ -75,20 +75,20 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#131313',
-      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      minHeight: '100vh', background: '#000000',
+      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
       <div style={{
         padding: '20px 24px 16px',
-        position: 'sticky', top: 0, background: '#131313', zIndex: 10,
+        position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <a href="/feed" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#e0c0b2" strokeWidth="2">
+            stroke="#A8A29E" strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </a>
@@ -101,7 +101,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
       {/* Hero */}
       <div style={{ padding: '24px 24px 0' }}>
-        <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
           {stage}{day ? ` · ${dayLabel(day)}` : ''}
         </div>
         <div style={{
@@ -131,7 +131,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
         borderTop: '1px solid rgba(255,255,255,0.04)',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
-        background: '#0f0f11',
+        background: '#000000',
       }}>
         {[
           { label: 'Ratings', value: logs.length.toString() },
@@ -145,9 +145,9 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
             <div style={{
               fontFamily: "'Noto Serif', Georgia, serif",
               fontSize: 18, fontWeight: 700,
-              color: i === 1 ? '#D35400' : '#f5ebe3',
+              color: i === 1 ? '#D35400' : '#ffffff',
             }}>{stat.value}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#594238', marginTop: 3 }}>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#A8A29E', marginTop: 3 }}>
               {stat.label}
             </div>
           </div>
@@ -156,18 +156,18 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
       {/* Reaction breakdown */}
       <div style={{ padding: '16px 24px 0' }}>
-        <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
           Crowd reaction
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
             { label: 'Loved it 👍', count: loved, color: '#D35400' },
-            { label: 'It was ok 🤷', count: ok, color: '#594238' },
-            { label: 'Kinda Wack 👎', count: skip, color: '#353534' },
+            { label: 'It was ok 🤷', count: ok, color: '#A8A29E' },
+            { label: 'Kinda Wack 👎', count: skip, color: '#555555' },
           ].map(row => (
             <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 90, fontSize: 11, color: 'rgba(245,235,227,0.5)', flexShrink: 0 }}>{row.label}</div>
-              <div style={{ flex: 1, height: 6, background: '#1a1a1a', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ width: 90, fontSize: 11, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>{row.label}</div>
+              <div style={{ flex: 1, height: 6, background: '#131313', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{
                   height: '100%', borderRadius: 3,
                   background: row.color,
@@ -175,7 +175,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                   transition: 'width 0.4s ease',
                 }} />
               </div>
-              <div style={{ width: 20, fontSize: 11, color: '#594238', textAlign: 'right', flexShrink: 0 }}>{row.count}</div>
+              <div style={{ width: 20, fontSize: 11, color: '#A8A29E', textAlign: 'right', flexShrink: 0 }}>{row.count}</div>
             </div>
           ))}
         </div>
@@ -184,7 +184,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
       {/* Reviews */}
       {reviews.length > 0 && (
         <div style={{ padding: '20px 24px 100px' }}>
-          <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
             What people are saying
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -192,11 +192,11 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
               const score = eloToDisplay(log.elo)
               const username = usernameMap[log.user_id] ?? 'anonymous'
               return (
-                <div key={i} style={{ background: '#1a1a1a', borderRadius: 12, padding: '14px 16px' }}>
+                <div key={i} style={{ background: '#131313', borderRadius: 4, padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                     <div style={{
-                      width: 36, height: 36, background: '#252220', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8,
+                      width: 36, height: 36, background: '#1a1a1a', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4,
                     }}>
                       <span style={{
                         fontFamily: "'Noto Serif', Georgia, serif",
@@ -206,12 +206,12 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                     </div>
                     <div>
                       <a href={`/u/${username}`} style={{
-                        fontSize: 12, fontWeight: 600, color: '#f5ebe3',
+                        fontSize: 12, fontWeight: 600, color: '#ffffff',
                         textDecoration: 'none', fontFamily: "'Manrope', sans-serif",
                       }}>@{username}</a>
                     </div>
                   </div>
-                  <div style={{ fontSize: 13, color: 'rgba(245,235,227,0.65)', fontStyle: 'italic', lineHeight: 1.55 }}>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', lineHeight: 1.55 }}>
                     &ldquo;{log.review}&rdquo;
                   </div>
                   {log.tags && log.tags.length > 0 && (
@@ -235,7 +235,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
       {reviews.length === 0 && (
         <div style={{ padding: '24px 24px 100px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: '#353534' }}>No written reviews yet</div>
+          <div style={{ fontSize: 13, color: '#555555' }}>No written reviews yet</div>
         </div>
       )}
     </div>

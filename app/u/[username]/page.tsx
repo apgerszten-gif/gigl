@@ -21,7 +21,7 @@ function scoreColor(score: string) {
   if (n >= 9) return '#F5A623'
   if (n >= 7.5) return '#D35400'
   if (n >= 6) return '#e0a060'
-  return 'rgba(245,235,227,0.3)'
+  return 'rgba(255,255,255,0.3)'
 }
 
 export default async function PublicProfile({ params }: { params: { username: string } }) {
@@ -45,14 +45,14 @@ export default async function PublicProfile({ params }: { params: { username: st
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#131313',
-      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      minHeight: '100vh', background: '#000000',
+      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
       <div style={{
         padding: '20px 24px 16px',
-        position: 'sticky', top: 0, background: '#131313', zIndex: 10,
+        position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -62,7 +62,7 @@ export default async function PublicProfile({ params }: { params: { username: st
           textDecoration: 'none',
         }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#e0c0b2" strokeWidth="2">
+            stroke="#A8A29E" strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </a>
@@ -76,7 +76,7 @@ export default async function PublicProfile({ params }: { params: { username: st
 
       {/* Profile header */}
       <div style={{ padding: '20px 24px 0' }}>
-        <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
           Coachella 2026 · Weekend 2
         </div>
         <div style={{
@@ -87,7 +87,7 @@ export default async function PublicProfile({ params }: { params: { username: st
           {profile.display_name}&apos;s<br />
           <span style={{ color: '#D35400', fontStyle: 'italic' }}>rankings.</span>
         </div>
-        <div style={{ fontSize: 11, color: '#594238', marginBottom: 16 }}>@{profile.username}</div>
+        <div style={{ fontSize: 11, color: '#A8A29E', marginBottom: 16 }}>@{profile.username}</div>
       </div>
 
       {/* Stats bar */}
@@ -95,7 +95,7 @@ export default async function PublicProfile({ params }: { params: { username: st
         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
         borderTop: '1px solid rgba(255,255,255,0.04)',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
-        background: '#0f0f11',
+        background: '#000000',
       }}>
         {[
           { label: 'Sets logged', value: (shows?.length || 0).toString() },
@@ -109,9 +109,9 @@ export default async function PublicProfile({ params }: { params: { username: st
             <div style={{
               fontFamily: "'Noto Serif', Georgia, serif",
               fontSize: 18, fontWeight: 700,
-              color: i === 1 ? '#D35400' : '#f5ebe3',
+              color: i === 1 ? '#D35400' : '#ffffff',
             }}>{stat.value}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#594238', marginTop: 3 }}>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#A8A29E', marginTop: 3 }}>
               {stat.label}
             </div>
           </div>
@@ -120,13 +120,13 @@ export default async function PublicProfile({ params }: { params: { username: st
 
       {/* Rankings */}
       <div style={{ padding: '16px 24px 100px' }}>
-        <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
           Their rankings
         </div>
 
         {(!shows || shows.length === 0) ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: 13, color: '#353534' }}>No sets logged yet</div>
+            <div style={{ fontSize: 13, color: '#555555' }}>No sets logged yet</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -135,7 +135,7 @@ export default async function PublicProfile({ params }: { params: { username: st
               const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
               const photoUrl = resolvePhotoUrl(show.photo_url)
               return (
-                <div key={show.id} style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
+                <div key={show.id} style={{ background: '#131313', borderRadius: 4, overflow: 'hidden' }}>
                   {photoUrl && (
                     isVideoUrl(photoUrl) ? (
                       <VideoPlayer src={photoUrl} style={{ maxHeight: 220, objectFit: 'cover' }} />
@@ -146,8 +146,8 @@ export default async function PublicProfile({ params }: { params: { username: st
                   )}
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{
-                      width: 44, height: 44, background: '#252220', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10,
+                      width: 44, height: 44, background: '#1a1a1a', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4,
                     }}>
                       <span style={{
                         fontFamily: "'Noto Serif', Georgia, serif",
@@ -158,17 +158,17 @@ export default async function PublicProfile({ params }: { params: { username: st
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontFamily: "'Noto Serif', Georgia, serif",
-                        fontSize: 15, fontWeight: 600, color: '#f5ebe3',
+                        fontSize: 15, fontWeight: 600, color: '#ffffff',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}>{show.artist_name}</div>
-                      <div style={{ fontSize: 10, color: '#594238', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>
                         {show.stage} · {show.day}
                       </div>
                       <div style={{ fontSize: 10, color: '#D35400', marginTop: 2 }}>{rankLabel}</div>
                     </div>
                   </div>
                   {show.review && (
-                    <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(245,235,227,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                    <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
                       &ldquo;{show.review}&rdquo;
                     </div>
                   )}
@@ -191,10 +191,10 @@ export default async function PublicProfile({ params }: { params: { username: st
         )}
 
         <div style={{ marginTop: 32, textAlign: 'center' }}>
-          <p style={{ fontSize: 11, color: '#353534', marginBottom: 12 }}>Want to rank your Coachella sets?</p>
+          <p style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>Want to rank your Coachella sets?</p>
           <a href="/auth" style={{
             display: 'inline-block', background: '#D35400',
-            color: '#fff', borderRadius: 12, padding: '12px 24px',
+            color: '#fff', borderRadius: 4, padding: '12px 24px',
             fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
             textTransform: 'uppercase', textDecoration: 'none',
             fontFamily: "'Manrope', sans-serif",

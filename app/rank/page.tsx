@@ -45,8 +45,8 @@ export default function RankPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#131313',
-      fontFamily: "'Manrope', sans-serif", color: '#f5ebe3',
+      minHeight: '100vh', background: '#000000',
+      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
@@ -57,7 +57,7 @@ export default function RankPage() {
         <button onClick={() => router.push('/feed')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#e0c0b2" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+            stroke="#A8A29E" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
         <span style={{
           fontFamily: "'Noto Serif', Georgia, serif",
@@ -81,7 +81,7 @@ export default function RankPage() {
           <span style={{ color: '#D35400', fontStyle: 'italic' }}>Leaderboard.</span>
         </div>
         <div style={{
-          fontSize: 10, color: '#594238', letterSpacing: '0.08em',
+          fontSize: 10, color: '#A8A29E', letterSpacing: '0.08em',
           textTransform: 'uppercase', marginBottom: 28,
         }}>
           {logs.length} shows ranked
@@ -90,11 +90,11 @@ export default function RankPage() {
 
         {logs.length === 0 && !loading && (
           <div style={{
-            background: '#1a1a1a', borderRadius: 16, padding: 32,
+            background: '#131313', borderRadius: 4, padding: 32,
             textAlign: 'center',
           }}>
             <div style={{
-              fontSize: 13, color: '#594238', fontFamily: "'Manrope', sans-serif",
+              fontSize: 13, color: '#A8A29E', fontFamily: "'Manrope', sans-serif",
               lineHeight: 1.6,
             }}>
               Log some shows to build your rankings
@@ -103,7 +103,7 @@ export default function RankPage() {
         )}
 
         {logs.length > 0 && (
-          <div style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: '#131313', borderRadius: 4, overflow: 'hidden' }}>
             {logs.map((log, i) => {
               const artist = getArtist(log.artist_id)
               if (!artist) return null
@@ -117,24 +117,24 @@ export default function RankPage() {
                 }}>
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%',
-                    background: isTop3 ? 'rgba(211,84,0,0.15)' : '#252220',
+                    background: isTop3 ? 'rgba(211,84,0,0.15)' : '#1a1a1a',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
                   }}>
                     <span style={{
                       fontFamily: "'Noto Serif', Georgia, serif",
                       fontSize: 12, fontWeight: 700,
-                      color: isTop3 ? '#D35400' : '#594238',
+                      color: isTop3 ? '#D35400' : '#A8A29E',
                     }}>{i + 1}</span>
                   </div>
 
                   <div style={{ flex: 1 }}>
                     <div style={{
                       fontFamily: "'Noto Serif', Georgia, serif",
-                      fontSize: 14, fontWeight: 600, color: '#f5ebe3', marginBottom: 2,
+                      fontSize: 14, fontWeight: 600, color: '#ffffff', marginBottom: 2,
                     }}>{artist.name}</div>
                     <div style={{
-                      fontSize: 9, color: '#594238', letterSpacing: '0.06em',
+                      fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
                       textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
                     }}>
                       {artist.stage} · {artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}
@@ -144,7 +144,7 @@ export default function RankPage() {
                   <div style={{
                     fontFamily: "'Noto Serif', Georgia, serif",
                     fontSize: 20, fontWeight: 700,
-                    color: hasEnoughForScores ? '#D35400' : '#353534',
+                    color: hasEnoughForScores ? '#D35400' : '#555555',
                     minWidth: 36, textAlign: 'right',
                   }}>
                     {hasEnoughForScores ? eloToDisplay(log.elo) : '—'}
@@ -160,16 +160,16 @@ export default function RankPage() {
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430,
-        background: '#0e0e0e', padding: '16px 32px',
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 32px',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         <button onClick={() => router.push('/feed')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#594238" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
-          <span style={{ fontSize: 9, color: '#594238', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Home</span>
+          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Home</span>
         </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -183,7 +183,7 @@ export default function RankPage() {
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
-          <span style={{ fontSize: 9, color: '#e0c0b2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
+          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
