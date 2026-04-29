@@ -69,19 +69,19 @@ function SectionSub({ children }: { children: string }) {
 function LogMock() {
   return (
     <div style={{ background: T.card, borderRadius: 4, overflow: 'hidden' }}>
-      {/* Fake photo area */}
-      <div style={{
-        height: 110,
-        background: 'linear-gradient(135deg, #1a0800 0%, #2d1100 60%, #1a0800 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative',
-      }}>
-        <span style={{ fontSize: 44, filter: 'drop-shadow(0 0 20px rgba(211,84,0,0.5))' }}>⚡</span>
+      {/* Photo */}
+      <div style={{ position: 'relative' }}>
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/e/ec/Charli_XCX_Lollapalooza.JPG"
+          alt="Charli XCX performing"
+          style={{ width: '100%', height: 160, objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+        />
         <div style={{
           position: 'absolute', bottom: 8, right: 10,
-          fontSize: 9, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.08em',
+          fontSize: 9, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em',
           textTransform: 'uppercase', fontFamily: T.sans,
-        }}>📷 Add photo</div>
+          background: 'rgba(0,0,0,0.4)', padding: '3px 8px', borderRadius: 3,
+        }}>📷 Add photo / video</div>
       </div>
 
       {/* Info row */}
@@ -95,7 +95,7 @@ function LogMock() {
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 600, color: T.white, marginBottom: 2 }}>Charli XCX</div>
           <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            Sahara Stage · Apr 18
+            What Stage · Jun 13
           </div>
         </div>
       </div>
@@ -126,50 +126,59 @@ function FeedMock() {
     {
       name: 'Jungle',
       score: '8.7',
-      stage: 'Gobi Stage · Apr 17',
+      stage: 'Which Stage · Jun 12',
       user: '@festivalrat',
       review: '"peaked at Keep Moving — room went sideways"',
       tags: ['#peak-energy'],
       time: '4m ago',
+      photo: 'https://upload.wikimedia.org/wikipedia/commons/7/78/Jungle-band-by-moncboy.jpg',
     },
     {
       name: 'Magdalena Bay',
       score: '9.4',
-      stage: 'Mojave · Apr 19',
+      stage: 'This Tent · Jun 14',
       user: '@nachtfalke',
       review: '"best set of the weekend, no contest"',
       tags: ['#unexpected-setlist', '#top-5-ever'],
       time: '12m ago',
+      photo: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Magdalena_Bay_at_Union_Transfer.jpg',
     },
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.map((item, i) => (
-        <div key={i} style={{ background: T.card, borderRadius: 4, padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <div style={{
-            width: 46, height: 46, background: T.cardInner, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: 4, marginTop: 2,
-          }}>
-            <span style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: T.accent }}>{item.score}</span>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
-              <div style={{ fontFamily: T.serif, fontSize: 14, fontWeight: 600, color: T.white }}>{item.name}</div>
-              <div style={{ fontSize: 9, color: T.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans, flexShrink: 0 }}>{item.time}</div>
+        <div key={i} style={{ background: T.card, borderRadius: 4, overflow: 'hidden' }}>
+          <img
+            src={item.photo}
+            alt={item.name}
+            style={{ width: '100%', height: 140, objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+          />
+          <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <div style={{
+              width: 46, height: 46, background: T.cardInner, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 4, marginTop: 2,
+            }}>
+              <span style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: T.accent }}>{item.score}</span>
             </div>
-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 3 }}>{item.stage}</div>
-            <div style={{ fontSize: 11, color: T.accent, fontFamily: T.sans, marginBottom: 6 }}>{item.user}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', fontFamily: T.sans, lineHeight: 1.5, marginBottom: 8 }}>{item.review}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {item.tags.map(tag => (
-                <span key={tag} style={{
-                  fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                  background: T.accentDim, color: T.accentMuted, border: `1px solid ${T.accentBorder}`,
-                  fontFamily: T.sans,
-                }}>{tag}</span>
-              ))}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+                <div style={{ fontFamily: T.serif, fontSize: 14, fontWeight: 600, color: T.white }}>{item.name}</div>
+                <div style={{ fontSize: 9, color: T.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans, flexShrink: 0 }}>{item.time}</div>
+              </div>
+              <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 3 }}>{item.stage}</div>
+              <div style={{ fontSize: 11, color: T.accent, fontFamily: T.sans, marginBottom: 6 }}>{item.user}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', fontFamily: T.sans, lineHeight: 1.5, marginBottom: 8 }}>{item.review}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {item.tags.map(tag => (
+                  <span key={tag} style={{
+                    fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                    background: T.accentDim, color: T.accentMuted, border: `1px solid ${T.accentBorder}`,
+                    fontFamily: T.sans,
+                  }}>{tag}</span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -246,7 +255,7 @@ function ArtistMock() {
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 700, color: T.white, marginBottom: 2 }}>Magdalena Bay</div>
           <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            Mojave Stage · Apr 19
+            This Tent · Jun 14
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -300,7 +309,7 @@ function ProfileMock() {
         <div>
           <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: T.white, marginBottom: 1 }}>@festivalrat</div>
           <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            Coachella 2026 · W2
+            Bonnaroo 2026 · Manchester, TN
           </div>
         </div>
       </div>
@@ -327,7 +336,7 @@ function ProfileMock() {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 2 }}>Top Rated</div>
           <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: T.white }}>Charli XCX</div>
-          <div style={{ fontSize: 11, color: T.muted, fontFamily: T.sans }}>Sahara Stage · 9.2</div>
+          <div style={{ fontSize: 11, color: T.muted, fontFamily: T.sans }}>What Stage · 9.2</div>
         </div>
         <div style={{ fontFamily: T.serif, fontSize: 28, fontWeight: 700, color: T.accent }}>9.2</div>
       </div>
@@ -380,7 +389,7 @@ export default function LandingPage() {
             color: T.accent, letterSpacing: '0.04em', lineHeight: 1,
           }}>Gigl</div>
           <div style={{ fontSize: 10, color: T.faint, letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: T.sans, marginTop: 6 }}>
-            Live music · Festival season · Your rankings
+            Live music · Bonnaroo 2026 · Your rankings
           </div>
         </div>
 
@@ -442,7 +451,7 @@ export default function LandingPage() {
         <SectionLabel>01 / Log</SectionLabel>
         <SectionHeading line1="Log the set while" line2="it's still ringing." />
         <SectionSub>
-          Rate a show the moment it ends. Add a photo, write what you felt, tag the vibe — your personal concert diary.
+          Rate a show the moment it ends. Add a photo, write what you felt, tag the vibe — your very own concert diary.
         </SectionSub>
         <LogMock />
       </div>
@@ -517,7 +526,7 @@ export default function LandingPage() {
           fontSize: 14, color: T.muted, fontFamily: T.sans,
           lineHeight: 1.65, marginBottom: 40, maxWidth: 290,
         }}>
-          Join everyone logging every set this festival season.
+          Join everyone logging every set at Bonnaroo 2026.
         </div>
         <button
           onClick={() => router.push('/auth')}
@@ -550,7 +559,7 @@ export default function LandingPage() {
           marginTop: 80, fontSize: 10, color: '#1c1c1c',
           letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
         }}>
-          Gigl · Built for festival season
+          Gigl · Bonnaroo 2026
         </div>
       </div>
 
