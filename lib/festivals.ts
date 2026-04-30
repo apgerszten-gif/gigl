@@ -141,43 +141,6 @@ const LOLLAPALOOZA: Festival = {
   ],
 }
 
-// ── Governors Ball 2026 ───────────────────────────────────────────────────────
-
-const GOVBALL: Festival = {
-  id: 'governors-ball-2026',
-  name: "Governor's Ball 2026",
-  shortName: "Gov Ball",
-  city: 'New York',
-  state: 'NY',
-  dates: 'Jun 5–7, 2026',
-  days: ['friday', 'saturday', 'sunday'],
-  dayDates: { friday: 'Jun 5', saturday: 'Jun 6', sunday: 'Jun 7' },
-  stages: ['Capital One City Stage', 'Bacardi Stage', 'Mastercard Stage'],
-  emoji: '🗽',
-  headliners: ['Charli XCX', 'Peso Pluma', 'Doja Cat'],
-  artists: [
-    // Capital One City Stage
-    { id: 'govball-charli-xcx',      name: 'Charli XCX',        stage: 'Capital One City Stage', day: 'friday',   headliner: true },
-    { id: 'govball-peso-pluma',      name: 'Peso Pluma',        stage: 'Capital One City Stage', day: 'saturday', headliner: true },
-    { id: 'govball-doja-cat',        name: 'Doja Cat',          stage: 'Capital One City Stage', day: 'sunday',   headliner: true },
-    { id: 'govball-doechii',         name: 'Doechii',           stage: 'Capital One City Stage', day: 'friday' },
-    { id: 'govball-kali-uchis',      name: 'Kali Uchis',        stage: 'Capital One City Stage', day: 'saturday' },
-
-    // Bacardi Stage
-    { id: 'govball-clairo',          name: 'Clairo',            stage: 'Bacardi Stage',          day: 'friday' },
-    { id: 'govball-alex-g',          name: 'Alex G',            stage: 'Bacardi Stage',          day: 'saturday' },
-    { id: 'govball-omar-apollo',     name: 'Omar Apollo',       stage: 'Bacardi Stage',          day: 'sunday' },
-    { id: 'govball-pinkpantheress',  name: 'PinkPantheress',    stage: 'Bacardi Stage',          day: 'friday' },
-    { id: 'govball-wet-leg',         name: 'Wet Leg',           stage: 'Bacardi Stage',          day: 'saturday' },
-    { id: 'govball-magdalena-bay',   name: 'Magdalena Bay',     stage: 'Bacardi Stage',          day: 'sunday' },
-
-    // Mastercard Stage
-    { id: 'govball-peggy-gou',       name: 'Peggy Gou',         stage: 'Mastercard Stage',       day: 'saturday' },
-    { id: 'govball-four-tet',        name: 'Four Tet',          stage: 'Mastercard Stage',       day: 'friday' },
-    { id: 'govball-jungle',          name: 'Jungle',            stage: 'Mastercard Stage',       day: 'sunday' },
-  ],
-}
-
 // ── Outside Lands 2026 ────────────────────────────────────────────────────────
 
 const OUTSIDE_LANDS: Festival = {
@@ -222,7 +185,7 @@ const OUTSIDE_LANDS: Festival = {
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 
-export const FESTIVALS: Festival[] = [COACHELLA, BONNAROO, LOLLAPALOOZA, GOVBALL, OUTSIDE_LANDS]
+export const FESTIVALS: Festival[] = [COACHELLA, BONNAROO, LOLLAPALOOZA, OUTSIDE_LANDS]
 
 export function getFestival(id: string): Festival | null {
   return FESTIVALS.find(f => f.id === id) ?? null
