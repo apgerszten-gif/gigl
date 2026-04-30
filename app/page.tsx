@@ -95,7 +95,7 @@ function LogMock() {
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 600, color: T.white, marginBottom: 2 }}>Charli XCX</div>
           <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            What Stage · Jun 13
+            Main Stage · Night 2
           </div>
         </div>
       </div>
@@ -126,7 +126,7 @@ function FeedMock() {
     {
       name: 'Jungle',
       score: '8.7',
-      stage: 'Which Stage · Jun 12',
+      stage: 'Side Stage · Night 1',
       user: '@festivalrat',
       review: '"peaked at Keep Moving — room went sideways"',
       tags: ['#peak-energy'],
@@ -136,7 +136,7 @@ function FeedMock() {
     {
       name: 'Magdalena Bay',
       score: '9.4',
-      stage: 'This Tent · Jun 14',
+      stage: 'The Tent · Night 3',
       user: '@nachtfalke',
       review: '"best set of the weekend, no contest"',
       tags: ['#unexpected-setlist', '#top-5-ever'],
@@ -205,7 +205,7 @@ function RankingsMock() {
         padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)',
         display: 'flex', gap: 6,
       }}>
-        {['All Days', 'Apr 17', 'Apr 18', 'Apr 19'].map((d, i) => (
+        {['All Days', 'Day 1', 'Day 2', 'Day 3'].map((d, i) => (
           <button key={d} style={{
             padding: '5px 10px', borderRadius: 4, fontSize: 9,
             border: 'none', cursor: 'default',
@@ -255,7 +255,7 @@ function ArtistMock() {
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 700, color: T.white, marginBottom: 2 }}>Magdalena Bay</div>
           <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            This Tent · Jun 14
+            The Tent · Night 3
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -309,7 +309,7 @@ function ProfileMock() {
         <div>
           <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: T.white, marginBottom: 1 }}>@festivalrat</div>
           <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            Bonnaroo 2026 · Manchester, TN
+            Festival Season · 2026
           </div>
         </div>
       </div>
@@ -389,7 +389,7 @@ export default function LandingPage() {
             color: T.accent, letterSpacing: '0.04em', lineHeight: 1,
           }}>Gigl</div>
           <div style={{ fontSize: 10, color: T.faint, letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: T.sans, marginTop: 6 }}>
-            Live music · Bonnaroo 2026 · Your rankings
+            Live music · Festival season · Your rankings
           </div>
         </div>
 
@@ -526,7 +526,7 @@ export default function LandingPage() {
           fontSize: 14, color: T.muted, fontFamily: T.sans,
           lineHeight: 1.65, marginBottom: 40, maxWidth: 290,
         }}>
-          Join everyone logging every set at Bonnaroo 2026.
+          Join everyone logging every set this summer.
         </div>
         <button
           onClick={() => router.push('/auth')}
@@ -559,7 +559,7 @@ export default function LandingPage() {
           marginTop: 80, fontSize: 10, color: '#1c1c1c',
           letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
         }}>
-          Gigl · Bonnaroo 2026
+          Gigl · Festival season 2026
         </div>
       </div>
 

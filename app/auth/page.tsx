@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -36,7 +37,8 @@ export default function AuthPage() {
     }
 
     setLoading(false)
-    router.push('/feed')
+    const hasFestival = typeof window !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_KEY)
+    router.push(hasFestival ? '/feed' : '/select-festival')
   }
 
   return (
@@ -62,7 +64,7 @@ export default function AuthPage() {
         <div style={{
           fontSize: 10, color: '#A8A29E', letterSpacing: '0.14em',
           textTransform: 'uppercase',
-        }}>Coachella 2026 · Weekend 2</div>
+        }}>Festival season · 2026</div>
       </div>
 
       {/* Headline */}
@@ -192,7 +194,7 @@ export default function AuthPage() {
         fontSize: 10, color: '#2a1a10', letterSpacing: '0.1em',
         textTransform: 'uppercase',
       }}>
-        Apr 17–19 · Empire Polo Club · Indio
+        Rate every set. Rank every moment.
       </div>
     </div>
   )

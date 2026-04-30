@@ -2,7 +2,7 @@
 
 import { useState, Suspense, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ARTISTS, ARTISTS_BY_DAY } from '@/lib/artists'
+import { getFestival, getArtistsByDay, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { VideoPlayer } from '@/components/VideoPlayer'
 
@@ -29,13 +29,7 @@ const REACTIONS = [
 
 const ELO_SEEDS = { loved: 1600, ok: 1500, skip: 1400 }
 
-type Day = 'friday' | 'saturday' | 'sunday'
-
-const DAY_LABELS: Record<Day, string> = {
-  friday: 'Fri Apr 17',
-  saturday: 'Sat Apr 18',
-  sunday: 'Sun Apr 19',
-}
+type Day = string
 
 interface ExistingLog {
   emoji: string
@@ -50,13 +44,12 @@ function LogInner() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const artistIdParam = searchParams.get('artistId')
-  // rerate=1 signals we're re-rating an already-logged show
   const isRerate = searchParams.get('rerate') === '1'
-  const artistFromParam = artistIdParam ? ARTISTS.find(a => a.id === artistIdParam) : null
 
+  const [festival, setFestival]             = useState<Festival | null>(null)
   const [activeDay, setActiveDay]           = useState<Day>('friday')
   const [search, setSearch]                 = useState('')
-  const [selectedArtist, setSelectedArtist] = useState(artistFromParam ?? null)
+  const [selectedArtist, setSelectedArtist] = useState<FestivalArtist | null>(null)
   const [reaction, setReaction]             = useState<'loved' | 'ok' | 'skip' | null>(null)
   const [photo, setPhoto]                   = useState<File | null>(null)
   const [photoPreview, setPhotoPreview]     = useState<string | null>(null)
@@ -65,6 +58,20 @@ function LogInner() {
   // Maps artist_id → existing log data (emoji + photo_url)
   const [loggedMap, setLoggedMap]           = useState<Map<string, ExistingLog>>(new Map())
   const [loadingLogged, setLoadingLogged]   = useState(true)
+
+  useEffect(() => {
+    const festivalId = localStorage.getItem(LOCAL_STORAGE_KEY)
+    if (!festivalId) { router.replace('/select-festival'); return }
+    const f = getFestival(festivalId)
+    if (f) {
+      setFestival(f)
+      setActiveDay(f.days[0])
+      if (artistIdParam) {
+        const found = f.artists.find(a => a.id === artistIdParam)
+        if (found) setSelectedArtist(found)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     async function fetchLogged() {
@@ -97,15 +104,12 @@ function LogInner() {
   }, [])
 
   const artist = selectedArtist
-
-  // In normal log mode: hide already-logged artists.
-  // In re-rate mode (arriving from feed): show all so user can pick (but
-  // typically they arrive with artistId pre-set so the picker is skipped).
   const loggedIds = new Set(loggedMap.keys())
+  const festivalArtists = festival?.artists ?? []
 
   const allArtists = (search
-    ? ARTISTS.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
-    : ARTISTS_BY_DAY[activeDay]
+    ? festivalArtists.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
+    : getArtistsByDay(festival!, activeDay)
   ).filter(a => isRerate ? loggedIds.has(a.id) : !loggedIds.has(a.id))
 
   async function handleMediaChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -226,9 +230,9 @@ function LogInner() {
             />
           </div>
 
-          {!search && (
+          {!search && festival && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              {(['friday', 'saturday', 'sunday'] as Day[]).map(day => (
+              {festival.days.map(day => (
                 <button
                   key={day}
                   onClick={() => setActiveDay(day)}
@@ -245,7 +249,7 @@ function LogInner() {
                     letterSpacing: '0.08em', textTransform: 'uppercase',
                     fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
                   }}>
-                    {DAY_LABELS[day].split(' ').map((w, i) => (
+                    {[day.slice(0, 3).toUpperCase(), festival.dayDates[day]].map((w, i) => (
                       <span key={i} style={{ display: 'block' }}>{w}</span>
                     ))}
                   </div>
@@ -376,7 +380,7 @@ function LogInner() {
           fontSize: 10, color: '#A8A29E', letterSpacing: '0.08em',
           textTransform: 'uppercase', marginBottom: 36,
         }}>
-          {artist.stage} · {artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}
+          {artist.stage} · {festival?.dayDates[artist.day] ?? artist.day}
         </div>
 
         <div style={{

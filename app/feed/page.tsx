@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ARTISTS } from '@/lib/artists'
+import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { eloToDisplay } from '@/lib/elo'
 import { VideoPlayer } from '@/components/VideoPlayer'
@@ -45,8 +46,16 @@ function FeedInner() {
   const [globalFeed, setGlobalFeed]         = useState<GlobalLog[]>([])
   const [loading, setLoading]               = useState(true)
   const [currentUserId, setCurrentUserId]   = useState<string | null>(null)
-  // Map of user_id -> number of logs they have
   const [userLogCounts, setUserLogCounts]   = useState<Record<string, number>>({})
+  const [festivalName, setFestivalName]     = useState<string | null>(null)
+
+  useEffect(() => {
+    const id = localStorage.getItem(LOCAL_STORAGE_KEY)
+    if (id) {
+      const f = getFestival(id)
+      if (f) setFestivalName(f.shortName + ' ' + f.dates.slice(-4))
+    }
+  }, [])
 
   useEffect(() => { fetchFeed() }, [])
 
@@ -97,9 +106,7 @@ function FeedInner() {
   }
 
   function dayLabel(day: string) {
-    if (day === 'friday') return 'Apr 17'
-    if (day === 'saturday') return 'Apr 18'
-    return 'Apr 19'
+    return day.charAt(0).toUpperCase() + day.slice(1)
   }
 
   return (
@@ -134,7 +141,7 @@ function FeedInner() {
         <div style={{
           fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 4,
-        }}>Coachella 2026 · Weekend 2</div>
+        }}>{festivalName ?? 'Festival Season 2026'}</div>
         <div style={{
           fontFamily: "'Noto Serif', Georgia, serif",
           fontSize: 28, fontWeight: 700, lineHeight: 1.1,
