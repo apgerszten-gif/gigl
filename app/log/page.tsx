@@ -107,9 +107,9 @@ function LogInner() {
   const loggedIds = new Set(loggedMap.keys())
   const festivalArtists = festival?.artists ?? []
 
-  const allArtists = (search
+  const allArtists = (festival == null ? [] : search
     ? festivalArtists.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
-    : getArtistsByDay(festival!, activeDay)
+    : getArtistsByDay(festival, activeDay)
   ).filter(a => isRerate ? loggedIds.has(a.id) : !loggedIds.has(a.id))
 
   async function handleMediaChange(e: React.ChangeEvent<HTMLInputElement>) {
