@@ -7,6 +7,7 @@ import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { eloToDisplay } from '@/lib/elo'
 import { VideoPlayer } from '@/components/VideoPlayer'
+import { useTheme } from '@/components/FestivalThemeProvider'
 
 const SCORE_THRESHOLD = 4
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
@@ -42,6 +43,7 @@ function FeedInner() {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const pendingArtistId = searchParams.get('pending')
+  const T = useTheme()
 
   const [globalFeed, setGlobalFeed]         = useState<GlobalLog[]>([])
   const [loading, setLoading]               = useState(true)
@@ -72,7 +74,6 @@ function FeedInner() {
 
     if (!logs) { setLoading(false); return }
 
-    // Count logs per user
     const counts: Record<string, number> = {}
     logs.forEach(l => { counts[l.user_id] = (counts[l.user_id] ?? 0) + 1 })
     setUserLogCounts(counts)
@@ -112,8 +113,8 @@ function FeedInner() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#000000',
-      fontFamily: "'Manrope', sans-serif",
+      background: T.bg,
+      fontFamily: T.sans,
       color: '#ffffff',
       maxWidth: 430,
       margin: '0 auto',
@@ -121,49 +122,49 @@ function FeedInner() {
       {/* Top bar */}
       <div style={{
         padding: '20px 24px 16px',
-        position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
+        position: 'sticky', top: 0, background: T.bgRgba, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
-          fontSize: 22, fontWeight: 700, color: '#D35400',
-          letterSpacing: '0.04em',
-        }}>Gigl</div>
+        {T.logoUrl ? (
+          <img src={T.logoUrl} alt="Festival" style={{ height: 22, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+        ) : (
+          <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: T.accent, letterSpacing: '0.04em' }}>Gigl</div>
+        )}
         <button
           onClick={async () => { await supabase.auth.signOut(); router.push('/auth') }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(255,255,255,0.25)', fontSize: 11, fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(255,255,255,0.25)', fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em' }}
         >sign out</button>
       </div>
 
       {/* Feed header */}
       <div style={{ padding: '20px 24px 8px' }}>
         <div style={{
-          fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em',
+          fontSize: 10, color: T.muted, letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 4,
         }}>{festivalName ?? 'Festival Season 2026'}</div>
         <div style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: T.serif,
           fontSize: 28, fontWeight: 700, lineHeight: 1.1,
           letterSpacing: '-0.02em', marginBottom: 16,
         }}>
-          What everyone's<br />
-          <span style={{ color: '#D35400', fontStyle: 'italic' }}>ranking.</span>
+          What everyone&apos;s<br />
+          <span style={{ color: T.accent, fontStyle: 'italic' }}>ranking.</span>
         </div>
         {/* Activity / Rankings tabs */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           <button style={{
             flex: 1, padding: '8px 0', borderRadius: 4,
-            background: '#D35400', border: 'none',
+            background: T.accent, border: 'none',
             color: '#fff', fontSize: 11, cursor: 'default',
-            fontFamily: "'Manrope', sans-serif", fontWeight: 700,
+            fontFamily: T.sans, fontWeight: 700,
             letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>Activity</button>
           <button onClick={() => router.push('/rankings')} style={{
             flex: 1, padding: '8px 0', borderRadius: 4,
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
             color: 'rgba(255,255,255,0.35)', fontSize: 11, cursor: 'pointer',
-            fontFamily: "'Manrope', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontFamily: T.sans, letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>Rankings</button>
         </div>
       </div>
@@ -173,20 +174,14 @@ function FeedInner() {
         {loading && (
           <div style={{
             textAlign: 'center', padding: 40,
-            fontSize: 12, color: '#555555', letterSpacing: '0.08em',
+            fontSize: 12, color: T.faint, letterSpacing: '0.08em',
             textTransform: 'uppercase',
           }}>Loading...</div>
         )}
 
         {!loading && globalFeed.length === 0 && (
-          <div style={{
-            background: '#131313', borderRadius: 4, padding: 32,
-            textAlign: 'center',
-          }}>
-            <div style={{
-              fontSize: 13, color: '#A8A29E',
-              fontFamily: "'Manrope', sans-serif", lineHeight: 1.6,
-            }}>
+          <div style={{ background: T.card, borderRadius: 4, padding: 32, textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: T.muted, fontFamily: T.sans, lineHeight: 1.6 }}>
               No ratings yet — be the first to log a show
             </div>
           </div>
@@ -208,10 +203,10 @@ function FeedInner() {
               <div
                 key={`${item.user_id}-${item.artist_id}-${i}`}
                 style={{
-                  background: '#131313',
+                  background: T.card,
                   borderRadius: 4,
                   overflow: 'hidden',
-                  border: isPending ? '1.5px solid rgba(211,84,0,0.3)' : 'none',
+                  border: isPending ? `1.5px solid ${T.accentBorder}` : 'none',
                 }}
               >
                 {/* Photo / Video */}
@@ -228,13 +223,10 @@ function FeedInner() {
                 )}
 
                 {/* Info row */}
-                <div style={{
-                  padding: '14px 16px',
-                  display: 'flex', gap: 14, alignItems: 'center',
-                }}>
+                <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
                   {/* Score tile */}
                   <div style={{
-                    width: 48, height: 48, background: '#1a1a1a',
+                    width: 48, height: 48, background: T.cardInner,
                     flexShrink: 0, display: 'flex', alignItems: 'center',
                     justifyContent: 'center', borderRadius: 4,
                   }}>
@@ -242,8 +234,8 @@ function FeedInner() {
                       <span style={{ fontSize: 18 }}>🔒</span>
                     ) : showScore ? (
                       <span style={{
-                        fontFamily: "'Noto Serif', Georgia, serif",
-                        fontSize: 18, fontWeight: 700, color: '#D35400',
+                        fontFamily: T.serif,
+                        fontSize: 18, fontWeight: 700, color: T.accent,
                         lineHeight: 1,
                       }}>
                         {eloToDisplay(item.elo)}
@@ -258,16 +250,16 @@ function FeedInner() {
                     <div
                       onClick={() => router.push(`/artist/${item.artist_id}`)}
                       style={{
-                        fontFamily: "'Noto Serif', Georgia, serif",
+                        fontFamily: T.serif,
                         fontSize: 15, fontWeight: 600, color: '#ffffff',
                         marginBottom: 2,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         cursor: 'pointer',
                       }}>{name}</div>
                     <div style={{
-                      fontSize: 10, color: '#A8A29E',
+                      fontSize: 10, color: T.muted,
                       letterSpacing: '0.06em', textTransform: 'uppercase',
-                      fontFamily: "'Manrope', sans-serif", marginBottom: 2,
+                      fontFamily: T.sans, marginBottom: 2,
                     }}>
                       {stageName}{day ? ` · ${dayLabel(day)}` : ''}
                     </div>
@@ -275,8 +267,8 @@ function FeedInner() {
                       onClick={() => router.push(isMe ? '/profile' : `/u/${username}`)}
                       style={{
                         fontSize: 11,
-                        color: isMe ? '#D35400' : '#A8A29E',
-                        fontFamily: "'Manrope', sans-serif",
+                        color: isMe ? T.accent : T.muted,
+                        fontFamily: T.sans,
                         fontWeight: isMe ? 600 : 400,
                         cursor: 'pointer',
                       }}
@@ -287,8 +279,8 @@ function FeedInner() {
 
                   {/* Time */}
                   <div style={{
-                    fontSize: 10, color: '#555555', letterSpacing: '0.06em',
-                    textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                    fontSize: 10, color: T.faint, letterSpacing: '0.06em',
+                    textTransform: 'uppercase', fontFamily: T.sans,
                     flexShrink: 0,
                   }}>
                     {timeAgo(item.created_at)}
@@ -298,7 +290,7 @@ function FeedInner() {
                 {/* Review */}
                 {item.review && (
                   <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                    "{item.review}"
+                    &ldquo;{item.review}&rdquo;
                   </div>
                 )}
 
@@ -308,9 +300,9 @@ function FeedInner() {
                     {item.tags.map(tag => (
                       <span key={tag} style={{
                         fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                        background: 'rgba(211,84,0,0.12)', color: 'rgba(211,84,0,0.7)',
-                        border: '1px solid rgba(211,84,0,0.2)',
-                        fontFamily: "'Manrope', sans-serif", letterSpacing: '0.04em',
+                        background: T.accentDim, color: T.accentMuted,
+                        border: `1px solid ${T.accentBorder}`,
+                        fontFamily: T.sans, letterSpacing: '0.04em',
                       }}>{tag}</span>
                     ))}
                   </div>
@@ -325,31 +317,31 @@ function FeedInner() {
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430,
-        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 32px',
+        background: T.bgRgba, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 32px',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         <button style={{
           background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#D35400" stroke="none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={T.accent} stroke="none">
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />
             <rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
           <span style={{
-            fontSize: 9, color: '#D35400', letterSpacing: '0.08em',
-            textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+            fontSize: 9, color: T.accent, letterSpacing: '0.08em',
+            textTransform: 'uppercase', fontFamily: T.sans,
           }}>Home</span>
         </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <div style={{
-            width: 40, height: 40, background: '#D35400', borderRadius: '50%',
+            width: 40, height: 40, background: T.accent, borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginTop: -20, cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(211,84,0,0.4)',
+            boxShadow: `0 4px 16px ${T.accentGlow}`,
           }} onClick={() => router.push('/log')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
               stroke="#fff" strokeWidth="2.5">
@@ -358,8 +350,8 @@ function FeedInner() {
             </svg>
           </div>
           <span style={{
-            fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em',
-            textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
+            textTransform: 'uppercase', fontFamily: T.sans,
           }}>Log</span>
         </div>
 
@@ -371,12 +363,12 @@ function FeedInner() {
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#A8A29E" strokeWidth="2">
+            stroke={T.muted} strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <span style={{
-            fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em',
-            textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
+            textTransform: 'uppercase', fontFamily: T.sans,
           }}>You</span>
         </button>
       </div>

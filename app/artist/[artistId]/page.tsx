@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { eloToDisplay } from '@/lib/elo'
 import { ARTISTS } from '@/lib/artists'
 import { notFound } from 'next/navigation'
+import { DEFAULT_THEME as T } from '@/lib/theme'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -25,7 +26,7 @@ function dayLabel(d: string) {
 function scoreColor(score: string) {
   const n = parseFloat(score)
   if (n >= 9) return '#F5A623'
-  if (n >= 7.5) return '#D35400'
+  if (n >= 7.5) return T.accent
   if (n >= 6) return '#e0a060'
   return 'rgba(255,255,255,0.3)'
 }
@@ -75,42 +76,42 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#000000',
-      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
+      minHeight: '100vh', background: T.bg,
+      fontFamily: T.sans, color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
       <div style={{
         padding: '20px 24px 16px',
-        position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
+        position: 'sticky', top: 0, background: T.bgRgba, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <a href="/feed" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#A8A29E" strokeWidth="2">
+            stroke={T.muted} strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </a>
         <div style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
-          fontSize: 22, fontWeight: 700, color: '#D35400', letterSpacing: '0.04em',
+          fontFamily: T.serif,
+          fontSize: 22, fontWeight: 700, color: T.accent, letterSpacing: '0.04em',
         }}>Gigl</div>
         <div style={{ width: 18 }} />
       </div>
 
       {/* Hero */}
       <div style={{ padding: '24px 24px 0' }}>
-        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+        <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
           {stage}{day ? ` · ${dayLabel(day)}` : ''}
         </div>
         <div style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: T.serif,
           fontSize: 30, fontWeight: 700, lineHeight: 1.1,
           letterSpacing: '-0.02em', marginBottom: 20,
         }}>
           {artistName}<br />
-          <span style={{ color: '#D35400', fontStyle: 'italic', fontSize: 22 }}>by the numbers.</span>
+          <span style={{ color: T.accent, fontStyle: 'italic', fontSize: 22 }}>by the numbers.</span>
         </div>
       </div>
 
@@ -131,7 +132,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
         borderTop: '1px solid rgba(255,255,255,0.04)',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
-        background: '#000000',
+        background: T.bg,
       }}>
         {[
           { label: 'Ratings', value: logs.length.toString() },
@@ -143,11 +144,11 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
             borderRight: i < 2 ? '1px solid rgba(255,255,255,0.04)' : 'none',
           }}>
             <div style={{
-              fontFamily: "'Noto Serif', Georgia, serif",
+              fontFamily: T.serif,
               fontSize: 18, fontWeight: 700,
-              color: i === 1 ? '#D35400' : '#ffffff',
+              color: i === 1 ? T.accent : '#ffffff',
             }}>{stat.value}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#A8A29E', marginTop: 3 }}>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3 }}>
               {stat.label}
             </div>
           </div>
@@ -156,18 +157,18 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
       {/* Reaction breakdown */}
       <div style={{ padding: '16px 24px 0' }}>
-        <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
           Crowd reaction
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
-            { label: 'Loved it 👍', count: loved, color: '#D35400' },
-            { label: 'It was ok 🤷', count: ok, color: '#A8A29E' },
-            { label: 'Kinda Wack 👎', count: skip, color: '#555555' },
+            { label: 'Loved it 👍', count: loved, color: T.accent },
+            { label: 'It was ok 🤷', count: ok, color: T.muted },
+            { label: 'Kinda Wack 👎', count: skip, color: T.faint },
           ].map(row => (
             <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 90, fontSize: 11, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>{row.label}</div>
-              <div style={{ flex: 1, height: 6, background: '#131313', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ flex: 1, height: 6, background: T.card, borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{
                   height: '100%', borderRadius: 3,
                   background: row.color,
@@ -175,7 +176,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                   transition: 'width 0.4s ease',
                 }} />
               </div>
-              <div style={{ width: 20, fontSize: 11, color: '#A8A29E', textAlign: 'right', flexShrink: 0 }}>{row.count}</div>
+              <div style={{ width: 20, fontSize: 11, color: T.muted, textAlign: 'right', flexShrink: 0 }}>{row.count}</div>
             </div>
           ))}
         </div>
@@ -184,7 +185,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
       {/* Reviews */}
       {reviews.length > 0 && (
         <div style={{ padding: '20px 24px 100px' }}>
-          <div style={{ fontSize: 10, color: '#A8A29E', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
             What people are saying
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -192,14 +193,14 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
               const score = eloToDisplay(log.elo)
               const username = usernameMap[log.user_id] ?? 'anonymous'
               return (
-                <div key={i} style={{ background: '#131313', borderRadius: 4, padding: '14px 16px' }}>
+                <div key={i} style={{ background: T.card, borderRadius: 4, padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                     <div style={{
-                      width: 36, height: 36, background: '#1a1a1a', flexShrink: 0,
+                      width: 36, height: 36, background: T.cardInner, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4,
                     }}>
                       <span style={{
-                        fontFamily: "'Noto Serif', Georgia, serif",
+                        fontFamily: T.serif,
                         fontSize: 14, fontWeight: 700,
                         color: scoreColor(score), lineHeight: 1,
                       }}>{score}</span>
@@ -207,7 +208,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                     <div>
                       <a href={`/u/${username}`} style={{
                         fontSize: 12, fontWeight: 600, color: '#ffffff',
-                        textDecoration: 'none', fontFamily: "'Manrope', sans-serif",
+                        textDecoration: 'none', fontFamily: T.sans,
                       }}>@{username}</a>
                     </div>
                   </div>
@@ -219,9 +220,9 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                       {log.tags.map((tag: string) => (
                         <span key={tag} style={{
                           fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                          background: 'rgba(211,84,0,0.12)', color: 'rgba(211,84,0,0.7)',
-                          border: '1px solid rgba(211,84,0,0.2)',
-                          fontFamily: "'Manrope', sans-serif",
+                          background: T.accentDim, color: T.accentMuted,
+                          border: `1px solid ${T.accentBorder}`,
+                          fontFamily: T.sans,
                         }}>{tag}</span>
                       ))}
                     </div>
@@ -235,7 +236,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
       {reviews.length === 0 && (
         <div style={{ padding: '24px 24px 100px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: '#555555' }}>No written reviews yet</div>
+          <div style={{ fontSize: 13, color: T.faint }}>No written reviews yet</div>
         </div>
       )}
     </div>

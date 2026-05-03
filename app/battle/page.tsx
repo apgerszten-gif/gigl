@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ARTISTS } from '@/lib/artists'
 import { createClient } from '@/lib/supabase/client'
 import { newRatings } from '@/lib/elo'
+import { useTheme } from '@/components/FestivalThemeProvider'
 
 interface LoggedArtist {
   artist_id: string
@@ -34,6 +35,7 @@ function BattleInner() {
   const [picked, setPicked]               = useState<string | null>(null)
 
   const usedOpponents = useRef<Set<string>>(new Set())
+  const T = useTheme()
 
   useEffect(() => { fetchLogs(true) }, [])
 
@@ -179,8 +181,8 @@ function BattleInner() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#000000',
-      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
+      minHeight: '100vh', background: T.bg,
+      fontFamily: T.sans, color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
@@ -191,13 +193,13 @@ function BattleInner() {
         <button onClick={() => router.push('/feed')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#A8A29E" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+            stroke={T.muted} strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <span style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
-          fontSize: 15, fontWeight: 700, color: '#D35400',
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>Gigl</span>
+        {T.logoUrl ? (
+          <img src={T.logoUrl} alt="Festival" style={{ height: 18, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+        ) : (
+          <span style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Gigl</span>
+        )}
         <div style={{ width: 18 }} />
       </div>
 
@@ -207,24 +209,24 @@ function BattleInner() {
           {Array.from({ length: sessionLimit }).map((_, i) => (
             <div key={i} style={{
               width: 8, height: 8, borderRadius: '50%',
-              background: i < battles ? '#D35400' : i === battles ? '#ffffff' : '#555555',
+              background: i < battles ? T.accent : i === battles ? '#ffffff' : T.faint,
               transition: 'background 0.3s',
             }} />
           ))}
         </div>
 
         <div style={{
-          fontSize: 10, color: '#D35400', letterSpacing: '0.12em',
+          fontSize: 10, color: T.accent, letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 8,
         }}>Battle {battles + 1} of {sessionLimit}</div>
 
         <div style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: T.serif,
           fontSize: 34, fontWeight: 700, lineHeight: 1.1,
           letterSpacing: '-0.02em', marginBottom: 28,
         }}>
           Which set hit<br />
-          <span style={{ color: '#D35400', fontStyle: 'italic' }}>harder?</span>
+          <span style={{ color: T.accent, fontStyle: 'italic' }}>harder?</span>
         </div>
 
         {pair && (
@@ -243,11 +245,11 @@ function BattleInner() {
                     onClick={() => handlePick(log.artist_id)}
                     disabled={!!picked}
                     style={{
-                      background: isWinner ? '#3a2200' : '#131313',
+                      background: isWinner ? T.accentDeep : T.card,
                       border: isWinner
-                        ? '2px solid #D35400'
+                        ? `2px solid ${T.accent}`
                         : isNew
-                        ? '1.5px solid rgba(211,84,0,0.4)'
+                        ? `1.5px solid ${T.accentBorder}`
                         : '1.5px solid transparent',
                       borderRadius: 4, overflow: 'hidden',
                       cursor: picked ? 'default' : 'pointer',
@@ -258,10 +260,7 @@ function BattleInner() {
                     }}
                   >
                     <div style={{
-                      background: isWinner
-                        ? '#4a2800'
-                        : artist.day === 'friday' ? '#2a1f0f'
-                        : artist.day === 'saturday' ? '#0f1a1a' : '#1a0f1a',
+                      background: isWinner ? T.cardInner : T.cardAlt,
                       height: 140, display: 'flex', alignItems: 'flex-end',
                       padding: 12, position: 'relative',
                       transition: 'background 0.25s ease',
@@ -275,37 +274,31 @@ function BattleInner() {
                       {isNew && !isWinner && (
                         <div style={{
                           position: 'absolute', top: 10, right: 10,
-                          fontSize: 9, color: '#D35400', letterSpacing: '0.1em',
-                          textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
-                          background: 'rgba(211,84,0,0.15)', padding: '3px 7px', borderRadius: 20,
+                          fontSize: 9, color: T.accent, letterSpacing: '0.1em',
+                          textTransform: 'uppercase', fontFamily: T.sans,
+                          background: T.accentDim, padding: '3px 7px', borderRadius: 20,
                         }}>New</div>
                       )}
                       <div>
                         <div style={{
-                          fontFamily: "'Noto Serif', Georgia, serif",
+                          fontFamily: T.serif,
                           fontSize: 15, fontWeight: 600, color: '#ffffff',
                         }}>{artist.name}</div>
                         <div style={{
-                          fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
-                          textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                          fontSize: 9, color: T.muted, letterSpacing: '0.06em',
+                          textTransform: 'uppercase', fontFamily: T.sans,
                           marginTop: 2,
                         }}>{artist.stage}</div>
-                        <div style={{
-                          fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
-                          textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
-                        }}>
-                          {artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}
-                        </div>
                       </div>
                     </div>
                     <div style={{ padding: 12 }}>
                       <div style={{
-                        background: isWinner ? '#D35400' : '#1a1a1a',
+                        background: isWinner ? T.accent : T.cardInner,
                         borderRadius: 4, padding: 8,
                         textAlign: 'center', fontSize: 11, fontWeight: 700,
-                        color: isWinner ? '#fff' : '#A8A29E',
+                        color: isWinner ? '#fff' : T.muted,
                         letterSpacing: '0.08em', textTransform: 'uppercase',
-                        fontFamily: "'Manrope', sans-serif",
+                        fontFamily: T.sans,
                         transition: 'all 0.25s ease',
                       }}>
                         {isWinner ? '✓ Picked' : 'Pick this'}
@@ -322,8 +315,8 @@ function BattleInner() {
                   onClick={() => pickPair(bucketLogs, usedOpponents.current)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 11, color: '#555555', letterSpacing: '0.06em',
-                    textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                    fontSize: 11, color: T.faint, letterSpacing: '0.06em',
+                    textTransform: 'uppercase', fontFamily: T.sans,
                   }}
                 >
                   Skip this match

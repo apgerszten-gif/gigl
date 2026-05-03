@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ARTISTS } from '@/lib/artists'
 import { createClient } from '@/lib/supabase/client'
 import { eloToDisplay } from '@/lib/elo'
+import { useTheme } from '@/components/FestivalThemeProvider'
 
 const SCORE_THRESHOLD = 4
 
@@ -16,6 +17,7 @@ interface LoggedArtist {
 export default function RankPage() {
   const router = useRouter()
   const supabase = createClient()
+  const T = useTheme()
 
   const [logs, setLogs]       = useState<LoggedArtist[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,8 +47,8 @@ export default function RankPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#000000',
-      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
+      minHeight: '100vh', background: T.bg,
+      fontFamily: T.sans, color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       {/* Top bar */}
@@ -57,31 +59,31 @@ export default function RankPage() {
         <button onClick={() => router.push('/feed')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#A8A29E" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+            stroke={T.muted} strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <span style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
-          fontSize: 15, fontWeight: 700, color: '#D35400',
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>Gigl</span>
+        {T.logoUrl ? (
+          <img src={T.logoUrl} alt="Festival" style={{ height: 18, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+        ) : (
+          <span style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Gigl</span>
+        )}
         <div style={{ width: 18 }} />
       </div>
 
       <div style={{ padding: '0 24px 100px' }}>
         <div style={{
-          fontSize: 10, color: '#D35400', letterSpacing: '0.12em',
+          fontSize: 10, color: T.accent, letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 8,
         }}>Your Rankings</div>
         <div style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: T.serif,
           fontSize: 34, fontWeight: 700, lineHeight: 1.1,
           letterSpacing: '-0.02em', marginBottom: 6,
         }}>
           Your<br />
-          <span style={{ color: '#D35400', fontStyle: 'italic' }}>Leaderboard.</span>
+          <span style={{ color: T.accent, fontStyle: 'italic' }}>Leaderboard.</span>
         </div>
         <div style={{
-          fontSize: 10, color: '#A8A29E', letterSpacing: '0.08em',
+          fontSize: 10, color: T.muted, letterSpacing: '0.08em',
           textTransform: 'uppercase', marginBottom: 28,
         }}>
           {logs.length} shows ranked
@@ -90,11 +92,11 @@ export default function RankPage() {
 
         {logs.length === 0 && !loading && (
           <div style={{
-            background: '#131313', borderRadius: 4, padding: 32,
+            background: T.card, borderRadius: 4, padding: 32,
             textAlign: 'center',
           }}>
             <div style={{
-              fontSize: 13, color: '#A8A29E', fontFamily: "'Manrope', sans-serif",
+              fontSize: 13, color: T.muted, fontFamily: T.sans,
               lineHeight: 1.6,
             }}>
               Log some shows to build your rankings
@@ -103,7 +105,7 @@ export default function RankPage() {
         )}
 
         {logs.length > 0 && (
-          <div style={{ background: '#131313', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ background: T.card, borderRadius: 4, overflow: 'hidden' }}>
             {logs.map((log, i) => {
               const artist = getArtist(log.artist_id)
               if (!artist) return null
@@ -113,38 +115,38 @@ export default function RankPage() {
                   display: 'flex', alignItems: 'center', gap: 14,
                   padding: '14px 16px',
                   borderBottom: i < logs.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                  background: isTop3 ? 'rgba(211,84,0,0.04)' : 'transparent',
+                  background: isTop3 ? T.accentDim : 'transparent',
                 }}>
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%',
-                    background: isTop3 ? 'rgba(211,84,0,0.15)' : '#1a1a1a',
+                    background: isTop3 ? T.accentDim : T.cardInner,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
                   }}>
                     <span style={{
-                      fontFamily: "'Noto Serif', Georgia, serif",
+                      fontFamily: T.serif,
                       fontSize: 12, fontWeight: 700,
-                      color: isTop3 ? '#D35400' : '#A8A29E',
+                      color: isTop3 ? T.accent : T.muted,
                     }}>{i + 1}</span>
                   </div>
 
                   <div style={{ flex: 1 }}>
                     <div style={{
-                      fontFamily: "'Noto Serif', Georgia, serif",
+                      fontFamily: T.serif,
                       fontSize: 14, fontWeight: 600, color: '#ffffff', marginBottom: 2,
                     }}>{artist.name}</div>
                     <div style={{
-                      fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
-                      textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                      fontSize: 9, color: T.muted, letterSpacing: '0.06em',
+                      textTransform: 'uppercase', fontFamily: T.sans,
                     }}>
-                      {artist.stage} · {artist.day === 'friday' ? 'Apr 17' : artist.day === 'saturday' ? 'Apr 18' : 'Apr 19'}
+                      {artist.stage}
                     </div>
                   </div>
 
                   <div style={{
-                    fontFamily: "'Noto Serif', Georgia, serif",
+                    fontFamily: T.serif,
                     fontSize: 20, fontWeight: 700,
-                    color: hasEnoughForScores ? '#D35400' : '#555555',
+                    color: hasEnoughForScores ? T.accent : T.faint,
                     minWidth: 36, textAlign: 'right',
                   }}>
                     {hasEnoughForScores ? eloToDisplay(log.elo) : '—'}
@@ -160,37 +162,37 @@ export default function RankPage() {
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430,
-        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 32px',
+        background: T.bgRgba, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 32px',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         <button onClick={() => router.push('/feed')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
-          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Home</span>
+          <span style={{ fontSize: 9, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>Home</span>
         </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <div style={{
-            width: 40, height: 40, background: '#D35400', borderRadius: '50%',
+            width: 40, height: 40, background: T.accent, borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginTop: -20, cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(211,84,0,0.4)',
+            boxShadow: `0 4px 16px ${T.accentGlow}`,
           }} onClick={() => router.push('/log')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
-          <span style={{ fontSize: 9, color: '#A8A29E', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>Log</span>
+          <span style={{ fontSize: 9, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>Log</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D35400" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
-          <span style={{ fontSize: 9, color: '#D35400', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif" }}>You</span>
+          <span style={{ fontSize: 9, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>You</span>
         </div>
       </div>
     </div>

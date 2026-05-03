@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getFestival, getArtistsByDay, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { VideoPlayer } from '@/components/VideoPlayer'
+import { useTheme } from '@/components/FestivalThemeProvider'
 
 function getVideoDuration(file: File): Promise<number> {
   return new Promise(resolve => {
@@ -42,6 +43,7 @@ function LogInner() {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const T = useTheme()
 
   const artistIdParam = searchParams.get('artistId')
   const isRerate = searchParams.get('rerate') === '1'
@@ -55,7 +57,6 @@ function LogInner() {
   const [photoPreview, setPhotoPreview]     = useState<string | null>(null)
   const [review, setReview]                 = useState('')
   const [saving, setSaving]                 = useState(false)
-  // Maps artist_id → existing log data (emoji + photo_url)
   const [loggedMap, setLoggedMap]           = useState<Map<string, ExistingLog>>(new Map())
   const [loadingLogged, setLoadingLogged]   = useState(true)
 
@@ -88,7 +89,6 @@ function LogInner() {
         data.forEach(r => map.set(r.artist_id, { emoji: r.emoji, photo_url: r.photo_url, review: r.review }))
         setLoggedMap(map)
 
-        // If arriving via re-rate deep link, pre-select artist and seed its existing reaction
         if (isRerate && artistIdParam) {
           const existing = map.get(artistIdParam)
           if (existing) {
@@ -137,7 +137,6 @@ function LogInner() {
     const initialElo = ELO_SEEDS[reaction]
     let photoUrl: string | null = loggedMap.get(artist.id)?.photo_url ?? null
 
-    // Only upload if user selected a new photo file
     if (photo) {
       const ext = photo.name.split('.').pop()
       const path = `${user.id}/${artist.id}-${Date.now()}.${ext}`
@@ -174,7 +173,6 @@ function LogInner() {
     }
 
     setSaving(false)
-    // Send to battle with the new artist id regardless of new vs re-rate
     router.push(`/battle?newArtistId=${artist.id}`)
   }
 
@@ -182,26 +180,26 @@ function LogInner() {
   if (!artist) {
     return (
       <div style={{
-        minHeight: '100vh', background: '#000000',
-        fontFamily: "'Manrope', sans-serif", color: '#ffffff',
+        minHeight: '100vh', background: T.bg,
+        fontFamily: T.sans, color: '#ffffff',
         maxWidth: 430, margin: '0 auto',
       }}>
         <div style={{
           display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', padding: '20px 24px 16px',
-          position: 'sticky', top: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
+          position: 'sticky', top: 0, background: T.bgRgba, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
           borderBottom: '1px solid rgba(255,255,255,0.04)',
         }}>
           <button onClick={() => router.push('/feed')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="#A8A29E" strokeWidth="2">
+              stroke={T.muted} strokeWidth="2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
           <span style={{
-            fontFamily: "'Noto Serif', Georgia, serif",
-            fontSize: 15, fontWeight: 700, color: '#D35400',
+            fontFamily: T.serif,
+            fontSize: 15, fontWeight: 700, color: T.accent,
             letterSpacing: '0.08em', textTransform: 'uppercase',
           }}>{isRerate ? 'Re-rate a Show' : 'Log a Show'}</span>
           <div style={{ width: 18 }} />
@@ -209,12 +207,12 @@ function LogInner() {
 
         <div style={{ padding: '16px 24px 100px' }}>
           <div style={{
-            background: '#131313', borderRadius: 4,
+            background: T.card, borderRadius: 4,
             padding: '12px 16px', marginBottom: 16,
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="#A8A29E" strokeWidth="2">
+              stroke={T.muted} strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -224,7 +222,7 @@ function LogInner() {
               placeholder="Search artists..."
               style={{
                 background: 'none', border: 'none', outline: 'none',
-                color: '#ffffff', fontSize: 14, fontFamily: "'Manrope', sans-serif",
+                color: '#ffffff', fontSize: 14, fontFamily: T.sans,
                 width: '100%',
               }}
             />
@@ -238,16 +236,16 @@ function LogInner() {
                   onClick={() => setActiveDay(day)}
                   style={{
                     flex: 1,
-                    background: activeDay === day ? '#D35400' : '#131313',
+                    background: activeDay === day ? T.accent : T.card,
                     border: 'none', borderRadius: 4, padding: '8px 4px',
                     cursor: 'pointer',
                   }}
                 >
                   <div style={{
                     fontSize: 9, fontWeight: 700,
-                    color: activeDay === day ? '#fff' : '#A8A29E',
+                    color: activeDay === day ? '#fff' : T.muted,
                     letterSpacing: '0.08em', textTransform: 'uppercase',
-                    fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
+                    fontFamily: T.sans, lineHeight: 1.4,
                   }}>
                     {[day.slice(0, 3).toUpperCase(), festival.dayDates[day]].map((w, i) => (
                       <span key={i} style={{ display: 'block' }}>{w}</span>
@@ -261,18 +259,12 @@ function LogInner() {
           {loadingLogged ? (
             <div style={{
               textAlign: 'center', padding: 40,
-              fontSize: 12, color: '#555555', letterSpacing: '0.08em',
+              fontSize: 12, color: T.faint, letterSpacing: '0.08em',
               textTransform: 'uppercase',
             }}>Loading...</div>
           ) : allArtists.length === 0 ? (
-            <div style={{
-              background: '#131313', borderRadius: 4, padding: 32,
-              textAlign: 'center',
-            }}>
-              <div style={{
-                fontSize: 13, color: '#A8A29E',
-                fontFamily: "'Manrope', sans-serif", lineHeight: 1.6,
-              }}>
+            <div style={{ background: T.card, borderRadius: 4, padding: 32, textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: T.muted, fontFamily: T.sans, lineHeight: 1.6 }}>
                 {search
                   ? 'No artists match your search'
                   : isRerate
@@ -299,7 +291,7 @@ function LogInner() {
                       }
                     }}
                     style={{
-                      background: i % 2 === 0 ? '#131313' : '#0d0d0d',
+                      background: i % 2 === 0 ? T.card : T.cardAlt,
                       border: 'none',
                       borderRadius: i === 0 ? '4px 4px 2px 2px'
                         : i === allArtists.length - 1 ? '2px 2px 4px 4px' : 2,
@@ -310,19 +302,19 @@ function LogInner() {
                   >
                     <div style={{ flex: 1 }}>
                       <div style={{
-                        fontFamily: "'Noto Serif', Georgia, serif",
+                        fontFamily: T.serif,
                         fontSize: 14, fontWeight: 600, color: '#ffffff', marginBottom: 2,
                       }}>{a.name}</div>
                       <div style={{
-                        fontSize: 9, color: '#A8A29E', letterSpacing: '0.06em',
-                        textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+                        fontSize: 9, color: T.muted, letterSpacing: '0.06em',
+                        textTransform: 'uppercase', fontFamily: T.sans,
                       }}>{a.stage}</div>
                     </div>
                     {reactionEmoji && (
                       <span style={{ fontSize: 16 }}>{reactionEmoji}</span>
                     )}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="#555555" strokeWidth="2">
+                      stroke={T.faint} strokeWidth="2">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
                   </button>
@@ -338,8 +330,8 @@ function LogInner() {
   // ── Reaction + photo view ─────────────────────────────────────────────────
   return (
     <div style={{
-      minHeight: '100vh', background: '#000000',
-      fontFamily: "'Manrope', sans-serif", color: '#ffffff',
+      minHeight: '100vh', background: T.bg,
+      fontFamily: T.sans, color: '#ffffff',
       maxWidth: 430, margin: '0 auto',
     }}>
       <div style={{
@@ -349,35 +341,35 @@ function LogInner() {
         <button onClick={() => setSelectedArtist(null)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#A8A29E" strokeWidth="2">
+            stroke={T.muted} strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <span style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
-          fontSize: 15, fontWeight: 700, color: '#D35400',
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>Gigl</span>
+        {T.logoUrl ? (
+          <img src={T.logoUrl} alt="Festival" style={{ height: 18, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+        ) : (
+          <span style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Gigl</span>
+        )}
         <div style={{ width: 18 }} />
       </div>
 
       <div style={{ padding: '0 24px 40px' }}>
         <div style={{
-          fontSize: 10, color: '#D35400', letterSpacing: '0.12em',
+          fontSize: 10, color: T.accent, letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 8,
         }}>{isRerate ? 'Re-rate' : 'Log a Show'}</div>
 
         <div style={{
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: T.serif,
           fontSize: 34, fontWeight: 700, lineHeight: 1.1,
           letterSpacing: '-0.02em', marginBottom: 6,
         }}>
           How was<br />
-          <span style={{ color: '#D35400', fontStyle: 'italic' }}>{artist.name}?</span>
+          <span style={{ color: T.accent, fontStyle: 'italic' }}>{artist.name}?</span>
         </div>
 
         <div style={{
-          fontSize: 10, color: '#A8A29E', letterSpacing: '0.08em',
+          fontSize: 10, color: T.muted, letterSpacing: '0.08em',
           textTransform: 'uppercase', marginBottom: 36,
         }}>
           {artist.stage} · {festival?.dayDates[artist.day] ?? artist.day}
@@ -389,27 +381,26 @@ function LogInner() {
         }}>
           {REACTIONS.map(r => (
             <button key={r.value} onClick={() => setReaction(r.value)} style={{
-              background: reaction === r.value ? '#2a1a00' : '#131313',
-              border: reaction === r.value ? '1.5px solid #D35400' : '1.5px solid transparent',
+              background: reaction === r.value ? T.accentDeep : T.card,
+              border: reaction === r.value ? `1.5px solid ${T.accent}` : '1.5px solid transparent',
               borderRadius: 4, padding: '20px 12px',
               textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s ease',
             }}>
               <div style={{ fontSize: 24, marginBottom: 8 }}>{r.emoji}</div>
               <div style={{
                 fontSize: 11, fontWeight: 700,
-                color: reaction === r.value ? '#D35400' : '#A8A29E',
+                color: reaction === r.value ? T.accent : T.muted,
                 letterSpacing: '0.06em', textTransform: 'uppercase',
-                fontFamily: "'Manrope', sans-serif",
+                fontFamily: T.sans,
               }}>{r.label}</div>
             </button>
           ))}
         </div>
 
-        {/* Photo section — visible, comments section removed */}
         <div style={{
-          fontSize: 10, color: '#A8A29E', letterSpacing: '0.1em',
+          fontSize: 10, color: T.muted, letterSpacing: '0.1em',
           textTransform: 'uppercase', marginBottom: 10,
-        }}>Add a photo <span style={{ color: '#555555' }}>(optional)</span></div>
+        }}>Add a photo <span style={{ color: T.faint }}>(optional)</span></div>
 
         <input
           ref={fileInputRef}
@@ -446,7 +437,7 @@ function LogInner() {
           <button
             onClick={() => fileInputRef.current?.click()}
             style={{
-              width: '100%', background: '#131313',
+              width: '100%', background: T.card,
               border: '1.5px dashed rgba(255,255,255,0.08)',
               borderRadius: 4, padding: '20px 16px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -454,23 +445,22 @@ function LogInner() {
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="#555555" strokeWidth="1.5">
+              stroke={T.faint} strokeWidth="1.5">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
             <span style={{
-              fontSize: 12, color: '#555555', letterSpacing: '0.06em',
-              textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+              fontSize: 12, color: T.faint, letterSpacing: '0.06em',
+              textTransform: 'uppercase', fontFamily: T.sans,
             }}>Photo or video (≤20s)</span>
           </button>
         )}
 
-        {/* Review */}
         <div style={{
-          fontSize: 10, color: '#A8A29E', letterSpacing: '0.1em',
+          fontSize: 10, color: T.muted, letterSpacing: '0.1em',
           textTransform: 'uppercase', marginBottom: 10,
-        }}>Your thoughts <span style={{ color: '#555555' }}>(optional)</span></div>
+        }}>Your thoughts <span style={{ color: T.faint }}>(optional)</span></div>
         <textarea
           value={review}
           onChange={e => setReview(e.target.value)}
@@ -478,39 +468,39 @@ function LogInner() {
           placeholder="What made this set special..."
           rows={3}
           style={{
-            width: '100%', background: '#131313',
+            width: '100%', background: T.card,
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: 4, padding: '12px 14px',
             color: '#ffffff', fontSize: 13,
-            fontFamily: "'Manrope', sans-serif",
+            fontFamily: T.sans,
             resize: 'none', outline: 'none',
             boxSizing: 'border-box', marginBottom: 28,
           }}
         />
 
         <div style={{
-          height: 2, background: '#D35400', borderRadius: 1,
+          height: 2, background: T.accent, borderRadius: 1,
           width: '60%', marginBottom: 28,
         }} />
 
         <button onClick={handleLog} disabled={!reaction || saving} style={{
-          width: '100%', background: reaction ? '#D35400' : '#1a1a1a',
+          width: '100%', background: reaction ? T.accent : T.cardInner,
           border: 'none', borderRadius: 4, padding: 14,
           textAlign: 'center', cursor: reaction ? 'pointer' : 'not-allowed',
           transition: 'background 0.2s ease',
         }}>
           <span style={{
-            fontSize: 12, fontWeight: 700, color: reaction ? '#fff' : '#A8A29E',
+            fontSize: 12, fontWeight: 700, color: reaction ? '#fff' : T.muted,
             letterSpacing: '0.1em', textTransform: 'uppercase',
-            fontFamily: "'Manrope', sans-serif",
+            fontFamily: T.sans,
           }}>{saving ? 'Saving...' : isRerate ? 'Update rating' : 'Log this show'}</span>
         </button>
 
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <button onClick={() => setSelectedArtist(null)} style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 11, color: '#555555', letterSpacing: '0.06em',
-            textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif",
+            fontSize: 11, color: T.faint, letterSpacing: '0.06em',
+            textTransform: 'uppercase', fontFamily: T.sans,
           }}>Cancel</button>
         </div>
       </div>
