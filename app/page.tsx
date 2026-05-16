@@ -424,7 +424,7 @@ export default function LandingPage() {
                 Gigl<span style={{ color: T.accent }}>/</span>
               </div>
               <div style={{ fontSize: 10, color: T.faint, letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 48 }}>
-                Live music · Festival season · Your rankings
+                Be the critic
               </div>
             </div>
             <div style={{ flex: 1 }}>
@@ -462,7 +462,7 @@ export default function LandingPage() {
 
         {/* Slide 3 — Feed */}
         <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
-          <SlideShell label="02 / Feed" line1="See what everyone" line2="is ranking." sub="A live activity feed of every rated set. Find the show you almost skipped before the headliner goes on.">
+          <SlideShell label="02 / Feed" line1="See what everyone" line2="is ranking." sub="A live activity feed of every rated set. Find the show you almost skipped before the headliner goes on. Follow your friends.">
             <FeedMock />
           </SlideShell>
         </div>
