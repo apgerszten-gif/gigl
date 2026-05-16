@@ -7,13 +7,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: '#D4537E',
-        'brand-dark': '#0c0c0e',
-        'card': '#1a1a1d',
+        paper:  '#EDE3D0',
+        cream:  '#FAF3E2',
+        ink:    '#4A3528',
+        sienna: '#B85827',
+        terra:  '#D4845A',
+        taupe:  '#8B7560',
+        faint:  '#B8A898',
       },
       fontFamily: {
-        sans: ['DM Sans', 'sans-serif'],
-        serif: ['DM Serif Display', 'serif'],
+        display: ['Space Grotesk', 'sans-serif'],
+        sans:    ['Inter', 'sans-serif'],
       },
     },
   },

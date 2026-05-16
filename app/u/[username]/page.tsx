@@ -17,14 +17,6 @@ function isVideoUrl(url: string): boolean {
   return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
 }
 
-function scoreColor(score: string) {
-  const n = parseFloat(score)
-  if (n >= 9) return '#F5A623'
-  if (n >= 7.5) return T.accent
-  if (n >= 6) return '#e0a060'
-  return 'rgba(255,255,255,0.3)'
-}
-
 export default async function PublicProfile({ params }: { params: { username: string } }) {
   const { data: profile } = await supabase
     .from('profiles')
@@ -47,83 +39,82 @@ export default async function PublicProfile({ params }: { params: { username: st
   return (
     <div style={{
       minHeight: '100vh', background: T.bg,
-      fontFamily: T.sans, color: '#ffffff',
+      fontFamily: T.sans, color: '#4A3528',
       maxWidth: 430, margin: '0 auto',
     }}>
-      {/* Top bar */}
+
+      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{
-        padding: '20px 24px 16px',
-        position: 'sticky', top: 0, background: T.bgRgba, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 10,
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        padding: '18px 24px 14px',
+        position: 'sticky', top: 0, zIndex: 10,
+        background: T.bgRgba,
+        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(74,53,40,0.12)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <a href="/feed" style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          padding: 0, display: 'flex', alignItems: 'center',
-          textDecoration: 'none',
+          display: 'flex', alignItems: 'center', textDecoration: 'none',
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke={T.muted} strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </a>
-        <div style={{
-          fontFamily: T.serif,
-          fontSize: 22, fontWeight: 700, color: T.accent,
-          letterSpacing: '0.04em',
-        }}>Gigl</div>
+        <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
+          Gigl<span style={{ color: T.accent }}>/</span>
+        </div>
         <div style={{ width: 18 }} />
       </div>
 
-      {/* Profile header */}
+      {/* ── Profile header ───────────────────────────────────────────────────── */}
       <div style={{ padding: '20px 24px 0' }}>
-        <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
-          Festival Season 2026
-        </div>
         <div style={{
-          fontFamily: T.serif,
-          fontSize: 28, fontWeight: 700, lineHeight: 1.1,
-          letterSpacing: '-0.02em', marginBottom: 8,
+          fontSize: 10, color: T.accent, letterSpacing: '0.14em',
+          textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
+        }}>Festival Season 2026</div>
+        <div style={{
+          fontFamily: T.serif, fontSize: 28, fontWeight: 700,
+          lineHeight: 1.1, letterSpacing: '-1px', marginBottom: 8, color: '#4A3528',
         }}>
           {profile.display_name}&apos;s<br />
-          <span style={{ color: T.accent, fontStyle: 'italic' }}>rankings.</span>
+          <span>rankings</span><span style={{ color: T.accent }}>.</span>
         </div>
         <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>@{profile.username}</div>
       </div>
 
-      {/* Stats bar */}
+      {/* ── Stats bar ────────────────────────────────────────────────────────── */}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-        borderTop: '1px solid rgba(255,255,255,0.04)',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        borderTop: '1px solid rgba(74,53,40,0.1)',
+        borderBottom: '1px solid rgba(74,53,40,0.1)',
         background: T.bg,
       }}>
         {[
           { label: 'Sets logged', value: (shows?.length || 0).toString() },
-          { label: 'Avg score', value: avgScore },
-          { label: 'Festival', value: '2026' },
+          { label: 'Avg score',   value: avgScore },
+          { label: 'Festival',    value: '2026' },
         ].map((stat, i) => (
           <div key={i} style={{
             padding: '14px 0', textAlign: 'center',
-            borderRight: i < 2 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+            borderRight: i < 2 ? '1px solid rgba(74,53,40,0.1)' : 'none',
           }}>
             <div style={{
-              fontFamily: T.serif,
-              fontSize: 18, fontWeight: 700,
-              color: i === 1 ? T.accent : '#ffffff',
+              fontFamily: T.serif, fontSize: 18, fontWeight: 700,
+              color: i === 1 ? T.accent : '#4A3528',
             }}>{stat.value}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3 }}>
-              {stat.label}
-            </div>
+            <div style={{
+              fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em',
+              color: T.muted, marginTop: 3, fontWeight: 600,
+            }}>{stat.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Rankings */}
+      {/* ── Rankings ────────────────────────────────────────────────────────── */}
       <div style={{ padding: '16px 24px 100px' }}>
-        <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-          Their rankings
-        </div>
+        <div style={{
+          fontSize: 10, color: T.muted, letterSpacing: '0.12em',
+          textTransform: 'uppercase', marginBottom: 12, fontWeight: 600,
+        }}>Their rankings</div>
 
         {(!shows || shows.length === 0) ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -132,11 +123,17 @@ export default async function PublicProfile({ params }: { params: { username: st
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {shows.map((show, i) => {
-              const score = eloToDisplay(show.elo)
+              const score    = eloToDisplay(show.elo)
               const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
-              const photoUrl = resolvePhotoUrl(show.photo_url)
+              const photoUrl  = resolvePhotoUrl(show.photo_url)
+              const isTop     = i === 0
               return (
-                <div key={show.id} style={{ background: T.card, borderRadius: 4, overflow: 'hidden' }}>
+                <div key={show.id} style={{
+                  background: T.card, borderRadius: 5,
+                  border: T.cardBorder,
+                  boxShadow: isTop ? T.cardShadow : 'none',
+                  overflow: 'hidden',
+                }}>
                   {photoUrl && (
                     isVideoUrl(photoUrl) ? (
                       <VideoPlayer src={photoUrl} style={{ maxHeight: 220, objectFit: 'cover' }} />
@@ -147,29 +144,30 @@ export default async function PublicProfile({ params }: { params: { username: st
                   )}
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{
-                      width: 44, height: 44, background: T.cardInner, flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4,
+                      width: 44, height: 44, flexShrink: 0, borderRadius: 4,
+                      background: T.accent, border: '1.5px solid #4A3528',
+                      boxShadow: isTop ? T.cardShadow : 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <span style={{
-                        fontFamily: T.serif,
-                        fontSize: 16, fontWeight: 700,
-                        color: scoreColor(score), lineHeight: 1,
-                      }}>{score}</span>
+                      <span style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: '#FAF3E2', lineHeight: 1 }}>
+                        {score}
+                      </span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        fontFamily: T.serif,
-                        fontSize: 15, fontWeight: 600, color: '#ffffff',
+                        fontFamily: T.serif, fontSize: 15, fontWeight: 700,
+                        color: '#4A3528', letterSpacing: '-0.3px',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}>{show.artist_name}</div>
-                      <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>
-                        {show.stage} · {show.day}
-                      </div>
-                      <div style={{ fontSize: 10, color: T.accent, marginTop: 2 }}>{rankLabel}</div>
+                      <div style={{
+                        fontSize: 10, color: T.muted, letterSpacing: '0.06em',
+                        textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
+                      }}>{show.stage} · {show.day}</div>
+                      <div style={{ fontSize: 10, color: T.accent, marginTop: 2, fontWeight: 600 }}>{rankLabel}</div>
                     </div>
                   </div>
                   {show.review && (
-                    <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                    <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(74,53,40,0.65)', fontStyle: 'italic', lineHeight: 1.55 }}>
                       &ldquo;{show.review}&rdquo;
                     </div>
                   )}
@@ -178,9 +176,9 @@ export default async function PublicProfile({ params }: { params: { username: st
                       {show.tags.map((tag: string) => (
                         <span key={tag} style={{
                           fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                          background: T.accentDim, color: T.accentMuted,
-                          border: `1px solid ${T.accentBorder}`,
-                          fontFamily: T.sans,
+                          background: T.accentDim, color: T.accent,
+                          border: `1.5px solid ${T.accentBorder}`,
+                          fontFamily: T.sans, fontWeight: 600,
                         }}>{tag}</span>
                       ))}
                     </div>
@@ -193,12 +191,12 @@ export default async function PublicProfile({ params }: { params: { username: st
 
         <div style={{ marginTop: 32, textAlign: 'center' }}>
           <p style={{ fontSize: 11, color: T.faint, marginBottom: 12 }}>Want to rank your festival sets?</p>
-          <a href="/auth" style={{
-            display: 'inline-block', background: T.accent,
-            color: '#fff', borderRadius: 4, padding: '12px 24px',
+          <a href="/" style={{
+            display: 'inline-block',
+            background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
+            color: '#FAF3E2', borderRadius: 5, padding: '12px 24px',
             fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
-            textTransform: 'uppercase', textDecoration: 'none',
-            fontFamily: T.sans,
+            textTransform: 'uppercase', textDecoration: 'none', fontFamily: T.sans,
           }}>Join Gigl →</a>
         </div>
       </div>

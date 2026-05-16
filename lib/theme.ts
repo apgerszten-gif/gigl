@@ -1,64 +1,102 @@
 export interface FestivalTheme {
-  accent: string
-  accentDim: string
-  accentBorder: string
-  accentMuted: string
-  accentDeep: string
-  accentGlow: string
-  bg: string
-  bgRgba: string
-  card: string
-  cardAlt: string
-  cardInner: string
-  muted: string
-  faint: string
-  serif: string
-  sans: string
-  logoUrl?: string
+  // Accent palette
+  accent:       string   // primary CTA / active state / high-score badges
+  accentDim:    string   // subtle tinted fills
+  accentBorder: string   // tinted borders
+  accentMuted:  string   // muted accent text
+  accentDeep:   string   // text colour on top of filled-accent surfaces (e.g. button labels)
+  accentGlow:   string   // shadow / glow tint (soft for light theme)
+
+  // Surfaces
+  bg:        string   // page background
+  bgRgba:    string   // sticky-header backdrop with opacity
+  card:      string   // raised card surface
+  cardAlt:   string   // alternating list row tint
+  cardInner: string   // inset / inner surface (goes back toward bg)
+
+  // Text
+  muted:  string   // secondary / metadata text
+  faint:  string   // very muted — dividers, timestamps, placeholders
+
+  // Typography (prop names kept stable to avoid page-wide rename)
+  serif: string   // display font — Space Grotesk (weights 500, 700)
+  sans:  string   // body / UI font — Inter (weights 400–700)
+
+  // Riso card treatment
+  cardBorder: string   // e.g. '1.5px solid #4A3528'
+  cardShadow: string   // hard-edge shadow, applied to primary items only
+
+  // Festival logo
+  logoFilter: string   // CSS filter applied to <img> festival logos
+  logoUrl?:   string
 }
 
-const roo = (a: number) => `rgba(232,160,32,${a})`
-const ora = (a: number) => `rgba(211,84,0,${a})`
+// ── Colour helpers ─────────────────────────────────────────────────────────────
+
+const sia = (a: number) => `rgba(184,88,39,${a})`    // burnt sienna
+const roo = (a: number) => `rgba(200,137,10,${a})`   // Bonnaroo amber
+
+// ── Shared fonts ───────────────────────────────────────────────────────────────
 
 const FONTS = {
-  serif: "'Noto Serif', Georgia, serif",
-  sans:  "'Manrope', sans-serif",
+  serif: "'Space Grotesk', sans-serif",  // display / headings
+  sans:  "'Inter', sans-serif",          // body / UI
 }
+
+// ── Warm Riso Zine (default) ───────────────────────────────────────────────────
 
 export const DEFAULT_THEME: FestivalTheme = {
-  accent:       '#D35400',
-  accentDim:    ora(0.12),
-  accentBorder: ora(0.2),
-  accentMuted:  ora(0.65),
-  accentDeep:   '#2a1a00',
-  accentGlow:   ora(0.4),
-  bg:           '#000000',
-  bgRgba:       'rgba(0,0,0,0.75)',
-  card:         '#131313',
-  cardAlt:      '#0d0d0d',
-  cardInner:    '#1a1a1a',
-  muted:        '#A8A29E',
-  faint:        '#555555',
+  accent:       '#B85827',
+  accentDim:    sia(0.12),
+  accentBorder: sia(0.28),
+  accentMuted:  sia(0.70),
+  accentDeep:   '#FAF3E2',    // cream text on sienna fills
+  accentGlow:   sia(0.20),
+
+  bg:        '#EDE3D0',
+  bgRgba:    'rgba(237,227,208,0.92)',
+  card:      '#FAF3E2',
+  cardAlt:   '#F5EDD8',
+  cardInner: '#EDE3D0',
+
+  muted:  '#8B7560',
+  faint:  '#B8A898',
+
+  cardBorder: '1.5px solid #4A3528',
+  cardShadow: '2px 2px 0 #4A3528',
+  logoFilter: 'brightness(0)',   // renders logo in dark ink on light bg
+
   ...FONTS,
 }
 
+// ── Bonnaroo (amber accent, same paper bg) ─────────────────────────────────────
+
 export const BONNAROO_THEME: FestivalTheme = {
-  accent:       '#E8A020',
+  accent:       '#C8890A',
   accentDim:    roo(0.12),
-  accentBorder: roo(0.22),
-  accentMuted:  roo(0.60),
-  accentDeep:   '#1A1200',
-  accentGlow:   roo(0.4),
-  bg:           '#0A0800',
-  bgRgba:       'rgba(10,8,0,0.80)',
-  card:         '#141008',
-  cardAlt:      '#0E0C04',
-  cardInner:    '#1C1608',
-  muted:        '#B8A87A',
-  faint:        '#5C5040',
-  logoUrl:      'https://cdn.prod.website-files.com/671f413b248a1b1d2376796a/671f6058bca3066c21d7e386_Bonnaroo-Logo-24.png',
+  accentBorder: roo(0.28),
+  accentMuted:  roo(0.70),
+  accentDeep:   '#FAF3E2',
+  accentGlow:   roo(0.20),
+
+  bg:        '#EDE3D0',
+  bgRgba:    'rgba(237,227,208,0.92)',
+  card:      '#FAF3E2',
+  cardAlt:   '#F5EDD8',
+  cardInner: '#EDE3D0',
+
+  muted:  '#8B7560',
+  faint:  '#B8A898',
+
+  cardBorder: '1.5px solid #4A3528',
+  cardShadow: '2px 2px 0 #4A3528',
+  logoFilter: 'brightness(0)',
+  logoUrl:    'https://cdn.prod.website-files.com/671f413b248a1b1d2376796a/671f6058bca3066c21d7e386_Bonnaroo-Logo-24.png',
+
   ...FONTS,
 }
+
+// ── Registry ───────────────────────────────────────────────────────────────────
 
 const FESTIVAL_THEMES: Record<string, FestivalTheme> = {
   'bonnaroo-2026': BONNAROO_THEME,
