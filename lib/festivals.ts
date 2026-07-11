@@ -33,7 +33,7 @@ const LOLLAPALOOZA: Festival = {
   days: ['thursday', 'friday', 'saturday', 'sunday'],
   dayDates: { thursday: 'Jul 30', friday: 'Jul 31', saturday: 'Aug 1', sunday: 'Aug 2' },
   stages: ['Bud Light Main Stage', 'T-Mobile Stage', 'BMI Stage', 'Pepsi Stage'],
-  emoji: '🌊',
+  emoji: '🌭',
   headliners: ['SZA', 'Kendrick Lamar', 'Billie Eilish'],
   artists: [
     // Bud Light Main Stage

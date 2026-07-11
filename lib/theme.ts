@@ -96,28 +96,10 @@ export const BONNAROO_THEME: FestivalTheme = {
   ...FONTS,
 }
 
-// ── Lollapalooza / Outside Lands (default palette, festival logo) ─────────────
-
-export const LOLLAPALOOZA_THEME: FestivalTheme = {
-  ...DEFAULT_THEME,
-  logoUrl:    'https://upload.wikimedia.org/wikipedia/commons/c/cd/Lollapalooza_logo.svg',
-  // This mark is a layered white/orange/teal wordmark, not a flat single-tone
-  // logo — brightness(0) crushes the white cutout details to black along with
-  // everything else and destroys the letterforms. Show it in its real colors.
-  logoFilter: 'none',
-}
-
-export const OUTSIDE_LANDS_THEME: FestivalTheme = {
-  ...DEFAULT_THEME,
-  logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Outside_Lands_Music_and_Arts_Festival_2019.png',
-}
-
 // ── Registry ───────────────────────────────────────────────────────────────────
 
 const FESTIVAL_THEMES: Record<string, FestivalTheme> = {
-  'bonnaroo-2026':      BONNAROO_THEME,
-  'lollapalooza-2026':  LOLLAPALOOZA_THEME,
-  'outside-lands-2026': OUTSIDE_LANDS_THEME,
+  'bonnaroo-2026': BONNAROO_THEME,
 }
 
 export function getTheme(festivalId: string | null): FestivalTheme {
