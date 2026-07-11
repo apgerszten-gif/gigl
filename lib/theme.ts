@@ -100,7 +100,11 @@ export const BONNAROO_THEME: FestivalTheme = {
 
 export const LOLLAPALOOZA_THEME: FestivalTheme = {
   ...DEFAULT_THEME,
-  logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/cd/Lollapalooza_logo.svg',
+  logoUrl:    'https://upload.wikimedia.org/wikipedia/commons/c/cd/Lollapalooza_logo.svg',
+  // This mark is a layered white/orange/teal wordmark, not a flat single-tone
+  // logo — brightness(0) crushes the white cutout details to black along with
+  // everything else and destroys the letterforms. Show it in its real colors.
+  logoFilter: 'none',
 }
 
 export const OUTSIDE_LANDS_THEME: FestivalTheme = {
