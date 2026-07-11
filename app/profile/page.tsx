@@ -107,6 +107,7 @@ export default function ProfilePage() {
 
   async function signOut() {
     await supabase.auth.signOut()
+    localStorage.removeItem(LOCAL_STORAGE_KEY)
     router.push('/')
   }
 

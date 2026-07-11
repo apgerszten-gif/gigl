@@ -110,7 +110,7 @@ export default function RankingsPage() {
           </div>
         )}
         <button
-          onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
+          onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             padding: '4px 8px', color: T.muted,
