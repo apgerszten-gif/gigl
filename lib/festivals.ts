@@ -1,5 +1,3 @@
-import { ARTISTS } from './artists'
-
 export interface FestivalArtist {
   id: string
   name: string
@@ -21,78 +19,6 @@ export interface Festival {
   emoji: string
   headliners: string[]               // preview list for the picker card
   artists: FestivalArtist[]
-}
-
-// ── Coachella 2026 ────────────────────────────────────────────────────────────
-
-const COACHELLA: Festival = {
-  id: 'coachella-2026',
-  name: 'Coachella 2026',
-  shortName: 'Coachella',
-  city: 'Indio',
-  state: 'CA',
-  dates: 'Apr 11–13 & Apr 17–19, 2026',
-  days: ['friday', 'saturday', 'sunday'],
-  dayDates: { friday: 'Apr 17', saturday: 'Apr 18', sunday: 'Apr 19' },
-  stages: ['Coachella Stage', 'Outdoor Theatre', 'Mojave', 'Gobi', 'Sonora', 'Sahara', 'Yuma', 'Do LaB'],
-  emoji: '🌴',
-  headliners: ['Sabrina Carpenter', 'Justin Bieber', 'KAROL G'],
-  artists: ARTISTS as FestivalArtist[],
-}
-
-// ── Bonnaroo 2026 ─────────────────────────────────────────────────────────────
-
-const BONNAROO: Festival = {
-  id: 'bonnaroo-2026',
-  name: 'Bonnaroo 2026',
-  shortName: 'Bonnaroo',
-  city: 'Manchester',
-  state: 'TN',
-  dates: 'Jun 11–14, 2026',
-  days: ['thursday', 'friday', 'saturday', 'sunday'],
-  dayDates: { thursday: 'Jun 11', friday: 'Jun 12', saturday: 'Jun 13', sunday: 'Jun 14' },
-  stages: ['Great Stage', 'Which Stage', 'What Stage', 'This Tent', 'Other Tent'],
-  emoji: '🌾',
-  headliners: ['Post Malone', 'Hozier', 'Tyler, the Creator'],
-  artists: [
-    // Great Stage
-    { id: 'bonnaroo-post-malone',        name: 'Post Malone',          stage: 'Great Stage',  day: 'thursday', headliner: true },
-    { id: 'bonnaroo-hozier',             name: 'Hozier',               stage: 'Great Stage',  day: 'friday',   headliner: true },
-    { id: 'bonnaroo-tyler-the-creator',  name: 'Tyler, the Creator',   stage: 'Great Stage',  day: 'saturday', headliner: true },
-    { id: 'bonnaroo-olivia-rodrigo',     name: 'Olivia Rodrigo',       stage: 'Great Stage',  day: 'sunday',   headliner: true },
-    { id: 'bonnaroo-zach-bryan',         name: 'Zach Bryan',           stage: 'Great Stage',  day: 'friday' },
-    { id: 'bonnaroo-noah-kahan',         name: 'Noah Kahan',           stage: 'Great Stage',  day: 'saturday' },
-    { id: 'bonnaroo-maggie-rogers',      name: 'Maggie Rogers',        stage: 'Great Stage',  day: 'thursday' },
-
-    // Which Stage
-    { id: 'bonnaroo-rufus-du-sol',       name: 'Rüfüs Du Sol',         stage: 'Which Stage',  day: 'friday' },
-    { id: 'bonnaroo-khruangbin',         name: 'Khruangbin',           stage: 'Which Stage',  day: 'saturday' },
-    { id: 'bonnaroo-lcd-soundsystem',    name: 'LCD Soundsystem',      stage: 'Which Stage',  day: 'sunday' },
-    { id: 'bonnaroo-bleachers',          name: 'Bleachers',            stage: 'Which Stage',  day: 'thursday' },
-    { id: 'bonnaroo-jungle',             name: 'Jungle',               stage: 'Which Stage',  day: 'friday' },
-    { id: 'bonnaroo-fleet-foxes',        name: 'Fleet Foxes',          stage: 'Which Stage',  day: 'saturday' },
-
-    // What Stage
-    { id: 'bonnaroo-fred-again',         name: 'Fred Again..',         stage: 'What Stage',   day: 'friday' },
-    { id: 'bonnaroo-four-tet',           name: 'Four Tet',             stage: 'What Stage',   day: 'saturday' },
-    { id: 'bonnaroo-kaytranada',         name: 'Kaytranada',           stage: 'What Stage',   day: 'thursday' },
-    { id: 'bonnaroo-bonobo',             name: 'Bonobo',               stage: 'What Stage',   day: 'sunday' },
-
-    // This Tent
-    { id: 'bonnaroo-caroline-polachek',  name: 'Caroline Polachek',    stage: 'This Tent',    day: 'friday' },
-    { id: 'bonnaroo-japanese-breakfast', name: 'Japanese Breakfast',   stage: 'This Tent',    day: 'saturday' },
-    { id: 'bonnaroo-alex-g',             name: 'Alex G',               stage: 'This Tent',    day: 'thursday' },
-    { id: 'bonnaroo-ethel-cain',         name: 'Ethel Cain',           stage: 'This Tent',    day: 'sunday' },
-    { id: 'bonnaroo-alvvays',            name: 'Alvvays',              stage: 'This Tent',    day: 'friday' },
-    { id: 'bonnaroo-waxahatchee',        name: 'Waxahatchee',          stage: 'This Tent',    day: 'saturday' },
-
-    // Other Tent
-    { id: 'bonnaroo-billy-strings',      name: 'Billy Strings',        stage: 'Other Tent',   day: 'saturday' },
-    { id: 'bonnaroo-goose',              name: 'Goose',                stage: 'Other Tent',   day: 'friday' },
-    { id: 'bonnaroo-mt-joy',             name: 'Mt. Joy',              stage: 'Other Tent',   day: 'thursday' },
-    { id: 'bonnaroo-rainbow-kitten',     name: 'Rainbow Kitten Surprise', stage: 'Other Tent', day: 'sunday' },
-    { id: 'bonnaroo-sylvan-esso',        name: 'Sylvan Esso',          stage: 'Other Tent',   day: 'saturday' },
-  ],
 }
 
 // ── Lollapalooza 2026 ─────────────────────────────────────────────────────────
@@ -185,7 +111,7 @@ const OUTSIDE_LANDS: Festival = {
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 
-export const FESTIVALS: Festival[] = [COACHELLA, BONNAROO, LOLLAPALOOZA, OUTSIDE_LANDS]
+export const FESTIVALS: Festival[] = [LOLLAPALOOZA, OUTSIDE_LANDS]
 
 export function getFestival(id: string): Festival | null {
   return FESTIVALS.find(f => f.id === id) ?? null
