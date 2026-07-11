@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { DEFAULT_THEME, FestivalTheme, getTheme } from '@/lib/theme'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 
@@ -9,11 +10,12 @@ export const useTheme = () => useContext(ThemeCtx)
 
 export function FestivalThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<FestivalTheme>(DEFAULT_THEME)
+  const pathname = usePathname()
 
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
     setTheme(getTheme(id))
-  }, [])
+  }, [pathname])
 
   return <ThemeCtx.Provider value={theme}>{children}</ThemeCtx.Provider>
 }
