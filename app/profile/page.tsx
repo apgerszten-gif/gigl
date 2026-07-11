@@ -199,10 +199,14 @@ export default function ProfilePage() {
 
       {/* ── Profile header ───────────────────────────────────────────────────── */}
       <div style={{ padding: '20px 24px 0' }}>
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
-        }}>{festivalLabel}</div>
+        {T.logoUrl ? (
+          <img src={T.logoUrl} alt="Festival" style={{ height: 16, objectFit: 'contain', filter: T.logoFilter, marginBottom: 8, display: 'block' }} />
+        ) : (
+          <div style={{
+            fontSize: 10, color: T.accent, letterSpacing: '0.14em',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
+          }}>{festivalLabel}</div>
+        )}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{
             fontFamily: T.serif, fontSize: 28, fontWeight: 700,
