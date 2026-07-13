@@ -190,6 +190,17 @@ function FeedInner() {
               letterSpacing: '0.08em', textTransform: 'uppercase',
             }}
           >Rankings</button>
+          <button
+            onClick={() => router.push('/groups')}
+            style={{
+              flex: 1, padding: '8px 0',
+              background: T.card,
+              border: 'none', borderLeft: '2px solid #4A3528',
+              color: '#4A3528', fontSize: 11, cursor: 'pointer',
+              fontFamily: T.sans, fontWeight: 600,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}
+          >Groups</button>
         </div>
       </div>
 
