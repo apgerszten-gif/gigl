@@ -58,6 +58,7 @@ function LogInner() {
   const [review, setReview]               = useState('')
   const [saving, setSaving]               = useState(false)
   const [saved, setSaved]                 = useState(false)
+  const [firstShow, setFirstShow]         = useState(false)
   const [loggedMap, setLoggedMap]         = useState<Map<string, ExistingLog>>(new Map())
   const [loadingLogged, setLoadingLogged] = useState(true)
 
@@ -163,8 +164,22 @@ function LogInner() {
 
     if (error) { alert('Error saving: ' + error.message); setSaving(false); return }
 
+    setFirstShow(!isRerate && loggedMap.size === 0)
+    setLoggedMap(prev => new Map(prev).set(artist.id, {
+      emoji: reaction, photo_url: photoUrl, review: review.trim() || null,
+    }))
+
     setSaving(false)
     setSaved(true)
+  }
+
+  function logAnotherShow() {
+    setSelectedArtist(null)
+    setReaction(null)
+    setPhoto(null)
+    setPhotoPreview(null)
+    setReview('')
+    setSaved(false)
   }
 
   // ── Artist picker ──────────────────────────────────────────────────────────
@@ -328,8 +343,8 @@ function LogInner() {
     )
   }
 
-  // ── Saved: compare now or later ─────────────────────────────────────────────
-  if (saved) {
+  // ── Saved: first show has nothing to compare against yet ────────────────────
+  if (saved && firstShow) {
     return (
       <div style={{
         minHeight: '100vh', background: T.bg,
@@ -349,7 +364,55 @@ function LogInner() {
             lineHeight: 1.2, color: '#4A3528', marginBottom: 10,
           }}>{artist.name} is saved.</div>
           <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
-            Compare it against your other rated sets now, or save it for later — you can always run comparisons from your profile.
+            That&apos;s your first set — nothing to compare it against yet. Log a few more and Gigl will start ranking them head-to-head.
+          </div>
+        </div>
+
+        <button onClick={logAnotherShow} style={{
+          width: '100%', background: T.accent,
+          border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
+          borderRadius: 5, padding: 16, cursor: 'pointer',
+        }}>
+          <span style={{
+            fontSize: 12, fontWeight: 700, color: '#FAF3E2',
+            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
+          }}>Log another show →</span>
+        </button>
+      </div>
+    )
+  }
+
+  // ── Saved: compare now or later ─────────────────────────────────────────────
+  if (saved) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: T.bg,
+        fontFamily: T.sans, color: '#4A3528',
+        maxWidth: 430, margin: '0 auto',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        padding: '24px',
+      }}>
+        <div style={{ marginBottom: 28 }}>
+          <div style={{
+            fontSize: 10, color: T.accent, letterSpacing: '0.14em',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
+          }}>Step 1 complete ✓</div>
+          <div style={{
+            fontFamily: T.serif, fontSize: 26, fontWeight: 700,
+            lineHeight: 1.2, color: '#4A3528',
+          }}>{artist.name} is saved.</div>
+        </div>
+
+        <div style={{
+          background: T.card, border: T.cardBorder, borderRadius: 5,
+          padding: '16px 18px', marginBottom: 24,
+        }}>
+          <div style={{
+            fontSize: 10, color: T.muted, letterSpacing: '0.14em',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
+          }}>Step 2</div>
+          <div style={{ fontSize: 14, color: '#4A3528', fontFamily: T.sans, lineHeight: 1.6 }}>
+            Compare it head-to-head against your other rated sets — this is how Gigl actually scores every show, and it only takes a few taps.
           </div>
         </div>
 
@@ -372,8 +435,11 @@ function LogInner() {
           <span style={{
             fontSize: 12, fontWeight: 700, color: T.muted,
             letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
-          }}>Compare later</span>
+          }}>Do this later</span>
         </button>
+        <div style={{ textAlign: 'center', fontSize: 11, color: T.faint, marginTop: 10 }}>
+          You can always finish comparing from your profile.
+        </div>
       </div>
     )
   }
