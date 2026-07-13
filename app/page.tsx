@@ -264,6 +264,33 @@ function ProfileMock() {
   )
 }
 
+// ── Mock: Groups callout ──────────────────────────────────────────────────────
+
+function GroupsCallout() {
+  return (
+    <div style={{
+      border: `1.5px dashed ${T.accent}`, borderRadius: 5,
+      padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+    }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="1.8" style={{ flexShrink: 0 }}>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+      <div>
+        <div style={{
+          fontSize: 10, color: T.accent, letterSpacing: '0.1em',
+          textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 3,
+        }}>Groups</div>
+        <div style={{ fontSize: 12, color: T.muted, fontFamily: T.sans, lineHeight: 1.5 }}>
+          Start one with friends — see just their ratings, nobody else&apos;s.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Embedded sign-up form ─────────────────────────────────────────────────────
 
 function SignUpSlide() {
@@ -366,7 +393,7 @@ function SignUpSlide() {
 
 // ── Carousel ──────────────────────────────────────────────────────────────────
 
-const TOTAL_SLIDES = 7
+const TOTAL_SLIDES = 4
 
 export default function LandingPage() {
   const router = useRouter()
@@ -453,42 +480,29 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Slide 2 — Log */}
+        {/* Slide 2 — Log & feed */}
         <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
-          <SlideShell label="01 / Log" line1="Log the set while" line2="it's still ringing." sub="Rate a show the moment it ends. Add a photo, write what you felt, tag the vibe — your very own concert diary.">
-            <LogMock />
+          <SlideShell label="01 / Log & feed" line1="Log it. Show it off." line2="See what everyone else thinks." sub="Rate a show the second it ends, then see what your crew and everyone else is ranking, live.">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <LogMock />
+              <FeedMock />
+              <GroupsCallout />
+            </div>
           </SlideShell>
         </div>
 
-        {/* Slide 3 — Feed */}
+        {/* Slide 3 — Scores & you */}
         <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
-          <SlideShell label="02 / Feed" line1="See what everyone" line2="is ranking." sub="A live activity feed of every rated set. Find the show you almost skipped before the headliner goes on. Follow your friends.">
-            <FeedMock />
+          <SlideShell label="02 / Scores & you" line1="The crowd decides." line2="Your festival, on record." sub="A live leaderboard for every artist — plus every show you've seen, tracked as your own.">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <RankingsMock />
+              <ArtistMock />
+              <ProfileMock />
+            </div>
           </SlideShell>
         </div>
 
-        {/* Slide 4 — Rankings */}
-        <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
-          <SlideShell label="03 / Rankings" line1="The crowd scores" line2="every artist." sub="Real-time leaderboard updated as logs come in. Filter by day. See who delivered — and who didn't.">
-            <RankingsMock />
-          </SlideShell>
-        </div>
-
-        {/* Slide 5 — Artist */}
-        <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
-          <SlideShell label="04 / Artist" line1="Every artist," line2="scored by the crowd." sub="Tap any artist to see their score, breakdown, top reactions, and reviews from everyone who caught the set.">
-            <ArtistMock />
-          </SlideShell>
-        </div>
-
-        {/* Slide 6 — Profile */}
-        <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
-          <SlideShell label="05 / Profile" line1="Your festival," line2="on record." sub="Every show you've seen, tracked. Your ratings, your stats, your top picks — all in one place.">
-            <ProfileMock />
-          </SlideShell>
-        </div>
-
-        {/* Slide 7 — Sign Up */}
+        {/* Slide 4 — Sign Up */}
         <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
           <SignUpSlide />
         </div>
