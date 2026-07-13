@@ -109,13 +109,6 @@ function FeedMock() {
           photo: 'https://upload.wikimedia.org/wikipedia/commons/7/78/Jungle-band-by-moncboy.jpg',
           top: true,
         },
-        {
-          name: 'Magdalena Bay', score: '9.4', stage: 'The Tent · Night 3',
-          user: '@nachtfalke', review: '"best set of the weekend, no contest"',
-          tags: ['#unexpected-setlist'], time: '12m ago',
-          photo: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Magdalena_Bay_at_Union_Transfer.jpg',
-          top: false,
-        },
       ].map((item, i) => (
         <div key={i} style={{
           background: T.card, borderRadius: 5, overflow: 'hidden',
@@ -495,9 +488,27 @@ export default function LandingPage() {
         <div style={{ minWidth: '100%', height: '100%', overflowY: 'auto' }}>
           <SlideShell label="02 / Scores & you" line1="The crowd decides." line2="Your festival, on record." sub="A live leaderboard for every artist — plus every show you've seen, tracked as your own.">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <RankingsMock />
-              <ArtistMock />
-              <ProfileMock />
+              <div>
+                <div style={{
+                  fontSize: 9, color: T.faint, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 8,
+                }}>Leaderboard</div>
+                <RankingsMock />
+              </div>
+              <div style={{ borderTop: '1px dashed rgba(74,53,40,0.15)', paddingTop: 20 }}>
+                <div style={{
+                  fontSize: 9, color: T.faint, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 8,
+                }}>Artist page</div>
+                <ArtistMock />
+              </div>
+              <div style={{ borderTop: '1px dashed rgba(74,53,40,0.15)', paddingTop: 20 }}>
+                <div style={{
+                  fontSize: 9, color: T.faint, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 8,
+                }}>Your profile</div>
+                <ProfileMock />
+              </div>
             </div>
           </SlideShell>
         </div>

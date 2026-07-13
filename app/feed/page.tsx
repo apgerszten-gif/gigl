@@ -269,7 +269,11 @@ function FeedInner() {
                     boxShadow: isTop && showScore && !isPending ? T.cardShadow : 'none',
                   }}>
                     {isPending || !showScore ? (
-                      <span style={{ fontSize: 16 }}>🔒</span>
+                      <span
+                        title="Log 4 shows to unlock scores"
+                        onClick={() => alert('Log 4 shows to unlock scores')}
+                        style={{ fontSize: 16, cursor: 'pointer' }}
+                      >🔒</span>
                     ) : (
                       <span style={{
                         fontFamily: T.serif, fontSize: 17, fontWeight: 700,

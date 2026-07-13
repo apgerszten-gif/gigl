@@ -57,6 +57,7 @@ function LogInner() {
   const [photoPreview, setPhotoPreview]   = useState<string | null>(null)
   const [review, setReview]               = useState('')
   const [saving, setSaving]               = useState(false)
+  const [saved, setSaved]                 = useState(false)
   const [loggedMap, setLoggedMap]         = useState<Map<string, ExistingLog>>(new Map())
   const [loadingLogged, setLoadingLogged] = useState(true)
 
@@ -163,7 +164,7 @@ function LogInner() {
     if (error) { alert('Error saving: ' + error.message); setSaving(false); return }
 
     setSaving(false)
-    router.push(`/battle?newArtistId=${artist.id}`)
+    setSaved(true)
   }
 
   // ── Artist picker ──────────────────────────────────────────────────────────
@@ -323,6 +324,56 @@ function LogInner() {
             </div>
           )}
         </div>
+      </div>
+    )
+  }
+
+  // ── Saved: compare now or later ─────────────────────────────────────────────
+  if (saved) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: T.bg,
+        fontFamily: T.sans, color: '#4A3528',
+        maxWidth: 430, margin: '0 auto',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        padding: '24px',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>✓</div>
+          <div style={{
+            fontSize: 10, color: T.accent, letterSpacing: '0.14em',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
+          }}>Logged</div>
+          <div style={{
+            fontFamily: T.serif, fontSize: 26, fontWeight: 700,
+            lineHeight: 1.2, color: '#4A3528', marginBottom: 10,
+          }}>{artist.name} is saved.</div>
+          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
+            Compare it against your other rated sets now, or save it for later — you can always run comparisons from your profile.
+          </div>
+        </div>
+
+        <button onClick={() => router.push(`/battle?newArtistId=${artist.id}`)} style={{
+          width: '100%', background: T.accent,
+          border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
+          borderRadius: 5, padding: 16, cursor: 'pointer', marginBottom: 10,
+        }}>
+          <span style={{
+            fontSize: 12, fontWeight: 700, color: '#FAF3E2',
+            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
+          }}>Compare now →</span>
+        </button>
+
+        <button onClick={() => router.push(`/feed?pending=${artist.id}`)} style={{
+          width: '100%', background: 'none',
+          border: '1px solid rgba(74,53,40,0.2)',
+          borderRadius: 5, padding: 16, cursor: 'pointer',
+        }}>
+          <span style={{
+            fontSize: 12, fontWeight: 700, color: T.muted,
+            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
+          }}>Compare later</span>
+        </button>
       </div>
     )
   }
