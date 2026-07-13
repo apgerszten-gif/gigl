@@ -280,6 +280,37 @@ export default function ProfilePage() {
         </button>
       </div>
 
+      {/* ── Groups button ────────────────────────────────────────────────────── */}
+      <div style={{ padding: '8px 24px 8px' }}>
+        <button onClick={() => router.push('/groups')} style={{
+          width: '100%',
+          background: T.card,
+          border: T.cardBorder,
+          borderRadius: 5,
+          padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 12,
+          cursor: 'pointer', fontFamily: T.sans,
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            background: T.accentDim,
+            border: `1px solid ${T.accentBorder}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="1.8">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#4A3528' }}>My groups</div>
+            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>See just your crew&apos;s ratings</div>
+          </div>
+        </button>
+      </div>
+
       {/* ── Rankings list ────────────────────────────────────────────────────── */}
       <div style={{ padding: '8px 24px 120px' }}>
         <div style={{
