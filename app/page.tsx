@@ -257,33 +257,6 @@ function ProfileMock() {
   )
 }
 
-// ── Mock: Groups callout ──────────────────────────────────────────────────────
-
-function GroupsCallout() {
-  return (
-    <div style={{
-      border: `1.5px dashed ${T.accent}`, borderRadius: 5,
-      padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
-    }}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="1.8" style={{ flexShrink: 0 }}>
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-      <div>
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.1em',
-          textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 3,
-        }}>Groups</div>
-        <div style={{ fontSize: 12, color: T.muted, fontFamily: T.sans, lineHeight: 1.5 }}>
-          Start one with friends — see just their ratings, nobody else&apos;s.
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Embedded sign-up form ─────────────────────────────────────────────────────
 
 function SignUpSlide() {
@@ -479,7 +452,6 @@ export default function LandingPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <LogMock />
               <FeedMock />
-              <GroupsCallout />
             </div>
           </SlideShell>
         </div>

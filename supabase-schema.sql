@@ -87,32 +87,3 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
-
--- Groups: private crews who only see each other's ratings
-create table public.groups (
-  id uuid default gen_random_uuid() primary key,
-  name text not null,
-  invite_code text unique not null,
-  created_by uuid references public.profiles(id) on delete cascade not null,
-  created_at timestamp with time zone default now()
-);
-
--- Group membership
-create table public.group_members (
-  group_id uuid references public.groups(id) on delete cascade,
-  user_id uuid references public.profiles(id) on delete cascade,
-  joined_at timestamp with time zone default now(),
-  primary key (group_id, user_id)
-);
-
-alter table public.groups enable row level security;
-alter table public.group_members enable row level security;
-
--- Groups: anyone can read (needed to look up a group by invite code), only the creator can insert
-create policy "groups_read" on public.groups for select using (true);
-create policy "groups_insert" on public.groups for insert with check (auth.uid() = created_by);
-
--- Group members: anyone can read (needed to filter feeds by membership), users manage their own membership
-create policy "group_members_read" on public.group_members for select using (true);
-create policy "group_members_insert" on public.group_members for insert with check (auth.uid() = user_id);
-create policy "group_members_delete" on public.group_members for delete using (auth.uid() = user_id);
