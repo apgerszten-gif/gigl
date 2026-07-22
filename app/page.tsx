@@ -313,18 +313,18 @@ function SignUpSlide() {
           <div style={{ background: T.card, borderRadius: 5, padding: '14px 16px', border: T.cardBorder }}>
             <div style={{ fontSize: 9, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 6 }}>Username</div>
             <input value={username} onChange={e => setUsername(e.target.value)} placeholder="how you'll appear in the feed"
-              style={{ width: '100%', background: 'none', border: 'none', outline: 'none', color: T.ink, fontSize: 14, fontFamily: T.sans }} />
+              style={{ width: '100%', background: 'none', border: 'none', outline: 'none', color: T.ink, fontSize: 16, fontFamily: T.sans }} />
           </div>
         )}
         <div style={{ background: T.card, borderRadius: 5, padding: '14px 16px', border: T.cardBorder }}>
           <div style={{ fontSize: 9, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 6 }}>Email</div>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com"
-            style={{ width: '100%', background: 'none', border: 'none', outline: 'none', color: T.ink, fontSize: 14, fontFamily: T.sans }} />
+            style={{ width: '100%', background: 'none', border: 'none', outline: 'none', color: T.ink, fontSize: 16, fontFamily: T.sans }} />
         </div>
         <div style={{ background: T.card, borderRadius: 5, padding: '14px 16px', border: T.cardBorder }}>
           <div style={{ fontSize: 9, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700, marginBottom: 6 }}>Password</div>
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-            style={{ width: '100%', background: 'none', border: 'none', outline: 'none', color: T.ink, fontSize: 14, fontFamily: T.sans }} />
+            style={{ width: '100%', background: 'none', border: 'none', outline: 'none', color: T.ink, fontSize: 16, fontFamily: T.sans }} />
         </div>
       </div>
 

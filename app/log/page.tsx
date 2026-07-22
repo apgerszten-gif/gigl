@@ -230,7 +230,7 @@ function LogInner() {
               placeholder="Search artists..."
               style={{
                 background: 'none', border: 'none', outline: 'none',
-                color: '#4A3528', fontSize: 14, fontFamily: T.sans, width: '100%',
+                color: '#4A3528', fontSize: 16, fontFamily: T.sans, width: '100%',
               }}
             />
           </div>

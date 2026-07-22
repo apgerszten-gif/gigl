@@ -113,7 +113,7 @@ export default function AuthPage() {
               placeholder="how you'll appear in the feed"
               style={{
                 width: '100%', background: 'none', border: 'none', outline: 'none',
-                color: ink, fontSize: 15, fontFamily: sans,
+                color: ink, fontSize: 16, fontFamily: sans,
               }}
             />
           </div>
@@ -135,7 +135,7 @@ export default function AuthPage() {
             placeholder="your@email.com"
             style={{
               width: '100%', background: 'none', border: 'none', outline: 'none',
-              color: ink, fontSize: 15, fontFamily: sans,
+              color: ink, fontSize: 16, fontFamily: sans,
             }}
           />
         </div>
@@ -156,7 +156,7 @@ export default function AuthPage() {
             placeholder="••••••••"
             style={{
               width: '100%', background: 'none', border: 'none', outline: 'none',
-              color: ink, fontSize: 15, fontFamily: sans,
+              color: ink, fontSize: 16, fontFamily: sans,
             }}
           />
         </div>
