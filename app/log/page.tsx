@@ -354,18 +354,11 @@ function LogInner() {
         padding: '24px',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>✓</div>
-          <div style={{
-            fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-          }}>Logged</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
           <div style={{
             fontFamily: T.serif, fontSize: 26, fontWeight: 700,
-            lineHeight: 1.2, color: '#4A3528', marginBottom: 10,
-          }}>{artist.name} is saved.</div>
-          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
-            That&apos;s your first set — nothing to compare it against yet. Log a few more and Gigl will start ranking them head-to-head.
-          </div>
+            lineHeight: 1.3, color: '#4A3528',
+          }}>Congrats! You rated your first show. Onwards.</div>
         </div>
 
         <button onClick={logAnotherShow} style={{
