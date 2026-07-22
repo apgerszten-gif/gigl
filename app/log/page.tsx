@@ -364,12 +364,22 @@ function LogInner() {
         <button onClick={logAnotherShow} style={{
           width: '100%', background: T.accent,
           border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-          borderRadius: 5, padding: 16, cursor: 'pointer',
+          borderRadius: 5, padding: 16, cursor: 'pointer', marginBottom: 10,
         }}>
           <span style={{
             fontSize: 12, fontWeight: 700, color: '#FAF3E2',
             letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
           }}>Log another show →</span>
+        </button>
+
+        <button onClick={() => router.push('/feed')} style={{
+          width: '100%', background: 'none', border: 'none',
+          padding: 8, cursor: 'pointer',
+        }}>
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: T.muted,
+            letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans,
+          }}>Skip to feed</span>
         </button>
       </div>
     )

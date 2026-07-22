@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { FESTIVALS, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
@@ -11,10 +11,13 @@ export default function SelectFestivalPage() {
   const supabase = createClient()
   const T = useTheme()
 
+  const [isSwitching, setIsSwitching] = useState(false)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) router.replace('/')
     })
+    setIsSwitching(!!localStorage.getItem(LOCAL_STORAGE_KEY))
   }, [])
 
   function select(id: string) {
@@ -37,6 +40,20 @@ export default function SelectFestivalPage() {
         padding: '52px 24px 32px',
         borderBottom: '1px solid rgba(74,53,40,0.1)',
       }}>
+        {isSwitching && (
+          <button
+            onClick={() => router.push('/feed')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 0, marginBottom: 20, display: 'flex', alignItems: 'center',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+        )}
+
         <div style={{
           fontFamily: T.serif, fontSize: 26, fontWeight: 700,
           color: '#4A3528', letterSpacing: '-0.5px', marginBottom: 20,

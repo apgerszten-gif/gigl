@@ -124,20 +124,26 @@ function FeedInner() {
         borderBottom: '1px solid rgba(74,53,40,0.12)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        {T.logoUrl ? (
-          <img
-            src={T.logoUrl}
-            alt="Festival"
-            style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }}
-          />
-        ) : (
-          <div style={{
-            fontFamily: T.serif, fontSize: 22, fontWeight: 700,
-            color: '#4A3528', letterSpacing: '-0.5px',
-          }}>
-            Gigl<span style={{ color: T.accent }}>/</span>
-          </div>
-        )}
+        <button
+          onClick={() => router.push('/select-festival')}
+          title="Switch festival"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+        >
+          {T.logoUrl ? (
+            <img
+              src={T.logoUrl}
+              alt="Festival"
+              style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }}
+            />
+          ) : (
+            <div style={{
+              fontFamily: T.serif, fontSize: 22, fontWeight: 700,
+              color: '#4A3528', letterSpacing: '-0.5px',
+            }}>
+              Gigl<span style={{ color: T.accent }}>/</span>
+            </div>
+          )}
+        </button>
         <button
           onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
           style={{
