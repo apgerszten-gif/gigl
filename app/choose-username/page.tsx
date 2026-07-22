@@ -43,8 +43,9 @@ export default function ChooseUsernamePage() {
     if (!user) { router.replace('/'); return }
 
     const { error: upsertError } = await supabase.from('profiles').upsert({
-      id:       user.id,
-      username: cleaned,
+      id:           user.id,
+      username:     cleaned,
+      username_set: true,
     })
     if (upsertError) { setError(upsertError.message); setLoading(false); return }
 

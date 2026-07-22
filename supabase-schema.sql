@@ -74,11 +74,12 @@ create policy "follows_delete" on public.follows for delete using (auth.uid() = 
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, username, display_name)
+  insert into public.profiles (id, username, display_name, username_set)
   values (
     new.id,
     split_part(new.email, '@', 1),
-    split_part(new.email, '@', 1)
+    split_part(new.email, '@', 1),
+    false
   );
   return new;
 end;
@@ -87,3 +88,12 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Tracks whether a user has confirmed/chosen their own username, vs still
+-- carrying the placeholder the trigger above auto-fills from their email
+-- prefix. Defaults to true so existing rows aren't retroactively forced
+-- through the username step; handle_new_user() explicitly sets it false
+-- for every new signup going forward. Email/password signup flips it to
+-- true immediately (username is typed before submit); Google sign-in
+-- flips it to true only after the user passes through /choose-username.
+alter table public.profiles add column username_set boolean not null default true;

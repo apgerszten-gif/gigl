@@ -23,16 +23,18 @@ export default function AuthCallbackPage() {
         return
       }
 
-      const { user } = session
-      const isFirstSignIn = !!user.created_at && !!user.last_sign_in_at &&
-        Math.abs(new Date(user.last_sign_in_at).getTime() - new Date(user.created_at).getTime()) < 5000
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username_set')
+        .eq('id', session.user.id)
+        .single()
 
-      const hasFestival = localStorage.getItem(LOCAL_STORAGE_KEY)
-
-      if (isFirstSignIn) {
+      if (!profile || profile.username_set === false) {
         router.replace('/choose-username')
         return
       }
+
+      const hasFestival = localStorage.getItem(LOCAL_STORAGE_KEY)
       router.replace(hasFestival ? '/feed' : '/select-festival')
     }
     run()

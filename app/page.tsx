@@ -279,6 +279,7 @@ function SignUpSlide() {
         await supabase.from('profiles').upsert({
           id: data.user.id,
           username: username.trim().toLowerCase().replace(/\s+/g, '_'),
+          username_set: true,
         })
       }
     } else {
@@ -400,8 +401,18 @@ export default function LandingPage() {
   const touchStartY = useRef<number | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace('/feed')
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username_set')
+        .eq('id', session.user.id)
+        .single()
+      if (!profile || profile.username_set === false) {
+        router.replace('/choose-username')
+        return
+      }
+      router.replace('/feed')
     })
   }, [])
 

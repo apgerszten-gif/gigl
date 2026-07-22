@@ -34,8 +34,9 @@ export default function AuthPage() {
       if (signUpError) { setError(signUpError.message); setLoading(false); return }
       if (data.user) {
         await supabase.from('profiles').upsert({
-          id:       data.user.id,
-          username: username.trim().toLowerCase().replace(/\s+/g, '_'),
+          id:           data.user.id,
+          username:     username.trim().toLowerCase().replace(/\s+/g, '_'),
+          username_set: true,
         })
       }
     } else {
