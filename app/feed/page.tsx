@@ -124,26 +124,20 @@ function FeedInner() {
         borderBottom: '1px solid rgba(74,53,40,0.12)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <button
-          onClick={() => router.push('/select-festival')}
-          title="Switch festival"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-        >
-          {T.logoUrl ? (
-            <img
-              src={T.logoUrl}
-              alt="Festival"
-              style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }}
-            />
-          ) : (
-            <div style={{
-              fontFamily: T.serif, fontSize: 22, fontWeight: 700,
-              color: '#4A3528', letterSpacing: '-0.5px',
-            }}>
-              Gigl<span style={{ color: T.accent }}>/</span>
-            </div>
-          )}
-        </button>
+        {T.logoUrl ? (
+          <img
+            src={T.logoUrl}
+            alt="Festival"
+            style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }}
+          />
+        ) : (
+          <div style={{
+            fontFamily: T.serif, fontSize: 22, fontWeight: 700,
+            color: '#4A3528', letterSpacing: '-0.5px',
+          }}>
+            Gigl<span style={{ color: T.accent }}>/</span>
+          </div>
+        )}
         <button
           onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
           style={{
@@ -156,10 +150,21 @@ function FeedInner() {
 
       {/* ── Feed header ──────────────────────────────────────────────────────── */}
       <div style={{ padding: '20px 24px 8px' }}>
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
-        }}>{festivalName ?? 'Festival Season 2026'}</div>
+        <button
+          onClick={() => router.push('/select-festival')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4,
+          }}
+        >
+          <span style={{
+            fontSize: 10, color: T.accent, letterSpacing: '0.14em',
+            textTransform: 'uppercase', fontWeight: 700,
+          }}>{festivalName ?? 'Festival Season 2026'}</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
 
         <div style={{
           fontFamily: T.serif,
