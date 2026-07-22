@@ -122,6 +122,58 @@ export default function SelectFestivalPage() {
           </button>
         ))}
 
+        {/* ── Venues tile — disabled / coming soon ──────────────────────────── */}
+        <div
+          aria-disabled="true"
+          style={{
+            background: T.card,
+            border: `1.5px dashed ${T.muted}`,
+            borderRadius: 5,
+            padding: '18px 20px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 16,
+            textAlign: 'left',
+            width: '100%',
+          }}
+        >
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'rgba(139,117,96,0.12)',
+            border: '1px solid rgba(139,117,96,0.28)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, marginTop: 2,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+              <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />
+            </svg>
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontFamily: T.serif, fontSize: 18, fontWeight: 700,
+              color: T.muted, letterSpacing: '-0.5px', marginBottom: 3, lineHeight: 1.2,
+            }}>Venues</div>
+
+            <div style={{
+              fontSize: 10, color: T.faint, letterSpacing: '0.08em',
+              textTransform: 'uppercase', fontFamily: T.sans,
+              fontWeight: 600,
+            }}>
+              Coming soon
+            </div>
+          </div>
+
+          <div style={{ flexShrink: 0, marginTop: 4 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" />
+              <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+              <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+            </svg>
+          </div>
+        </div>
+
         <div style={{
           textAlign: 'center', marginTop: 16,
           fontSize: 11, color: T.faint, letterSpacing: '0.08em',
