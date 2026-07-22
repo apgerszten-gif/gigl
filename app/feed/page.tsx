@@ -138,14 +138,24 @@ function FeedInner() {
             Gigl<span style={{ color: T.accent }}>/</span>
           </div>
         )}
-        <button
-          onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '4px 8px', color: T.muted,
-            fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em',
-          }}
-        >sign out</button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+          <button
+            onClick={() => router.push('/select-festival')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '2px 8px', color: T.accent,
+              fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
+            }}
+          >switch festival</button>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '2px 8px', color: T.muted,
+              fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em',
+            }}
+          >sign out</button>
+        </div>
       </div>
 
       {/* ── Feed header ──────────────────────────────────────────────────────── */}
