@@ -440,7 +440,7 @@ export default function LandingPage() {
     <div
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      style={{ height: '100vh', overflow: 'hidden', position: 'relative', background: T.bg }}
+      style={{ height: '100dvh', overflow: 'hidden', position: 'relative', background: T.bg }}
     >
       {/* Track */}
       <div style={{
@@ -481,9 +481,12 @@ export default function LandingPage() {
                 </span>
               </button>
             </div>
-            <div style={{ textAlign: 'center', paddingTop: 32 }}>
-              <div style={{ fontSize: 18, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 5 }}>Swipe to sign up</div>
-              <div style={{ color: T.faint, fontSize: 16, animation: 'nudge 2s ease-in-out infinite' }}>→</div>
+            <div style={{ textAlign: 'center', paddingTop: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 18, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700 }}>Swipe to sign up</div>
+              <div style={{ display: 'flex', gap: 2 }}>
+                <span style={{ color: T.accent, fontSize: 26, lineHeight: 1, fontWeight: 700, animation: 'nudge 1.3s ease-in-out infinite' }}>›</span>
+                <span style={{ color: T.accent, fontSize: 26, lineHeight: 1, fontWeight: 700, animation: 'nudge 1.3s ease-in-out infinite 0.15s' }}>›</span>
+              </div>
             </div>
           </div>
         </div>
@@ -552,8 +555,8 @@ export default function LandingPage() {
 
       <style>{`
         @keyframes nudge {
-          0%, 100% { transform: translateX(0);   opacity: 0.35; }
-          50%       { transform: translateX(5px); opacity: 0.7; }
+          0%, 100% { transform: translateX(0);    opacity: 0.5; }
+          50%       { transform: translateX(9px); opacity: 1; }
         }
       `}</style>
     </div>
