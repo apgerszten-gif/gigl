@@ -28,16 +28,15 @@ function SlideShell({ label, line1, line2, sub, children }: {
 }) {
   return (
     <div style={{ padding: '52px 24px 90px', minHeight: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.16em',
-          textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
-        }}>{label}</div>
-        <div style={{ display: 'flex', gap: 2 }}>
-          <span style={{ color: T.accent, fontSize: 16, lineHeight: 1, fontWeight: 700, animation: 'nudge 1.3s ease-in-out infinite' }}>›</span>
-          <span style={{ color: T.accent, fontSize: 16, lineHeight: 1, fontWeight: 700, animation: 'nudge 1.3s ease-in-out infinite 0.15s' }}>›</span>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 2, marginBottom: 14 }}>
+        <span style={{ color: T.accent, fontSize: 26, lineHeight: 1, fontWeight: 700, animation: 'nudge 1.3s ease-in-out infinite' }}>›</span>
+        <span style={{ color: T.accent, fontSize: 26, lineHeight: 1, fontWeight: 700, animation: 'nudge 1.3s ease-in-out infinite 0.15s' }}>›</span>
       </div>
+      <div style={{
+        fontSize: 10, color: T.accent, letterSpacing: '0.16em',
+        textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
+        marginBottom: 8,
+      }}>{label}</div>
       <div style={{
         fontFamily: T.serif, fontSize: 28, fontWeight: 700,
         lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 8, color: T.ink,
