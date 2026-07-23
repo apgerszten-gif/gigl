@@ -190,14 +190,6 @@ export default function SelectFestivalPage() {
             </svg>
           </div>
         </div>
-
-        <div style={{
-          textAlign: 'center', marginTop: 16,
-          fontSize: 11, color: T.faint, letterSpacing: '0.08em',
-          fontFamily: T.sans, lineHeight: 1.6,
-        }}>
-          More festivals coming soon
-        </div>
       </div>
     </div>
   )
