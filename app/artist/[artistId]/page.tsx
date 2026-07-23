@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase'
-import { eloToDisplay } from '@/lib/elo'
 import { notFound } from 'next/navigation'
 import { DEFAULT_THEME as T } from '@/lib/theme'
+import { computeShowScore } from '@/lib/rating'
+import { StarDisplay } from '@/components/StarDisplay'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -22,19 +23,11 @@ function dayLabel(d: string) {
   return 'Sun Apr 19'
 }
 
-function scoreColor(score: string) {
-  const n = parseFloat(score)
-  if (n >= 7.5) return T.accent
-  if (n >= 6)   return '#D4845A'
-  return T.faint
-}
-
 export default async function ArtistPage({ params }: { params: { artistId: string } }) {
   const { data: logs } = await supabase
     .from('logged_shows')
-    .select('user_id, elo, review, tags, photo_url, artist_name, stage, day')
+    .select('user_id, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, artist_name, stage, day')
     .eq('artist_id', params.artistId)
-    .order('elo', { ascending: false })
 
   if (!logs || logs.length === 0) notFound()
 
@@ -49,14 +42,18 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   const stage      = logs[0]?.stage ?? ''
   const day        = logs[0]?.day   ?? ''
 
-  const scores   = logs.map(l => parseFloat(eloToDisplay(l.elo)))
-  const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
-  const highScore = Math.max(...scores).toFixed(1)
+  const rated = logs
+    .filter(l => l.performance_rating != null && l.venue_rating != null && l.vibe_rating != null)
+    .map(l => ({ ...l, score: computeShowScore(l.performance_rating!, l.venue_rating!, l.vibe_rating!) }))
+    .sort((a, b) => b.score - a.score)
 
-  const loved   = logs.filter(l => l.elo >= 1550).length
-  const ok      = logs.filter(l => l.elo >= 1450 && l.elo < 1550).length
-  const skip    = logs.filter(l => l.elo < 1450).length
-  const reviews = logs.filter(l => l.review)
+  const avgScore  = rated.length > 0 ? rated.reduce((a, l) => a + l.score, 0) / rated.length : 0
+  const highScore = rated.length > 0 ? Math.max(...rated.map(l => l.score)).toFixed(1) : '—'
+
+  const loved   = rated.filter(l => l.score >= 4).length
+  const ok      = rated.filter(l => l.score >= 2.5 && l.score < 4).length
+  const skip    = rated.filter(l => l.score < 2.5).length
+  const reviews = rated.filter(l => l.review)
 
   const photos = logs
     .map(l => resolvePhotoUrl(l.photo_url))
@@ -99,12 +96,15 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
         }}>
           {stage}{day ? ` · ${dayLabel(day)}` : ''}
         </div>
-        <div style={{
-          fontFamily: T.serif, fontSize: 30, fontWeight: 700,
-          lineHeight: 1.1, letterSpacing: '-1px', marginBottom: 20, color: '#4A3528',
-        }}>
-          {artistName}<br />
-          <span style={{ fontSize: 22 }}>by the numbers</span><span style={{ color: T.accent, fontSize: 22 }}>.</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div style={{
+            fontFamily: T.serif, fontSize: 30, fontWeight: 700,
+            lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',
+          }}>
+            {artistName}<br />
+            <span style={{ fontSize: 22 }}>by the numbers</span><span style={{ color: T.accent, fontSize: 22 }}>.</span>
+          </div>
+          {rated.length > 0 && <StarDisplay score={avgScore} size={16} accent={T.accent} />}
         </div>
       </div>
 
@@ -127,25 +127,20 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
         borderBottom: '1px solid rgba(74,53,40,0.1)',
         background: T.bg,
       }}>
-        {[
-          { label: 'Ratings',   value: logs.length.toString() },
-          { label: 'Avg score', value: avgScore },
-          { label: 'Top score', value: highScore },
-        ].map((stat, i) => (
-          <div key={i} style={{
-            padding: '14px 0', textAlign: 'center',
-            borderRight: i < 2 ? '1px solid rgba(74,53,40,0.1)' : 'none',
-          }}>
-            <div style={{
-              fontFamily: T.serif, fontSize: 18, fontWeight: 700,
-              color: i === 1 ? T.accent : '#4A3528',
-            }}>{stat.value}</div>
-            <div style={{
-              fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em',
-              color: T.muted, marginTop: 3, fontWeight: 600,
-            }}>{stat.label}</div>
-          </div>
-        ))}
+        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{rated.length}</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Ratings</div>
+        </div>
+        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {rated.length > 0
+            ? <StarDisplay score={avgScore} size={13} accent={T.accent} />
+            : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
+        </div>
+        <div style={{ padding: '14px 0', textAlign: 'center' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{highScore}</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Top score</div>
+        </div>
       </div>
 
       {/* ── Reaction breakdown ───────────────────────────────────────────────── */}
@@ -165,7 +160,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
               <div style={{ flex: 1, height: 6, background: T.cardInner, borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(74,53,40,0.1)' }}>
                 <div style={{
                   height: '100%', borderRadius: 3, background: row.color,
-                  width: logs.length > 0 ? `${(row.count / logs.length) * 100}%` : '0%',
+                  width: rated.length > 0 ? `${(row.count / rated.length) * 100}%` : '0%',
                   transition: 'width 0.4s ease',
                 }} />
               </div>
@@ -184,7 +179,6 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           }}>What people are saying</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {reviews.map((log, i) => {
-              const score    = eloToDisplay(log.elo)
               const username = usernameMap[log.user_id] ?? 'anonymous'
               return (
                 <div key={i} style={{
@@ -194,22 +188,11 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                   padding: '14px 16px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <div style={{
-                      width: 36, height: 36, flexShrink: 0, borderRadius: 4,
-                      background: T.accent, border: '1.5px solid #4A3528',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <span style={{
-                        fontFamily: T.serif, fontSize: 14, fontWeight: 700,
-                        color: '#FAF3E2', lineHeight: 1,
-                      }}>{score}</span>
-                    </div>
-                    <div>
-                      <a href={`/u/${username}`} style={{
-                        fontSize: 12, fontWeight: 600, color: '#4A3528',
-                        textDecoration: 'none', fontFamily: T.sans,
-                      }}>@{username}</a>
-                    </div>
+                    <StarDisplay score={log.score} size={13} accent={T.accent} />
+                    <a href={`/u/${username}`} style={{
+                      fontSize: 12, fontWeight: 600, color: '#4A3528',
+                      textDecoration: 'none', fontFamily: T.sans,
+                    }}>@{username}</a>
                   </div>
                   <div style={{ fontSize: 13, color: 'rgba(74,53,40,0.7)', fontStyle: 'italic', lineHeight: 1.55 }}>
                     &ldquo;{log.review}&rdquo;

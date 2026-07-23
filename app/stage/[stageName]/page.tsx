@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase'
-import { eloToDisplay } from '@/lib/elo'
 import { notFound } from 'next/navigation'
 import { DEFAULT_THEME as T } from '@/lib/theme'
+import { computeShowScore } from '@/lib/rating'
+import { StarDisplay } from '@/components/StarDisplay'
 
 function dayLabel(d: string) {
   if (!d) return ''
@@ -13,17 +14,18 @@ export default async function StagePage({ params }: { params: { stageName: strin
 
   const { data: logs } = await supabase
     .from('logged_shows')
-    .select('artist_id, artist_name, elo, day')
+    .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, day')
     .eq('stage', stageName)
 
   if (!logs || logs.length === 0) notFound()
 
   const map: Record<string, { name: string; scores: number[]; day: string }> = {}
   logs.forEach(l => {
+    if (l.performance_rating == null || l.venue_rating == null || l.vibe_rating == null) return
     if (!map[l.artist_id]) {
       map[l.artist_id] = { name: l.artist_name ?? 'Unknown', scores: [], day: l.day ?? '' }
     }
-    map[l.artist_id].scores.push(parseFloat(eloToDisplay(l.elo)))
+    map[l.artist_id].scores.push(computeShowScore(l.performance_rating, l.venue_rating, l.vibe_rating))
   })
 
   const rows = Object.entries(map)
@@ -36,7 +38,9 @@ export default async function StagePage({ params }: { params: { stageName: strin
     }))
     .sort((a, b) => b.avgScore - a.avgScore)
 
-  const totalRatings = logs.length
+  if (rows.length === 0) notFound()
+
+  const totalRatings = rows.reduce((sum, r) => sum + r.count, 0)
 
   return (
     <div style={{
@@ -113,31 +117,21 @@ export default async function StagePage({ params }: { params: { stageName: strin
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontFamily: T.serif, fontSize: 14, fontWeight: 700,
-                  color: '#4A3528', letterSpacing: '-0.3px',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>{row.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <span style={{
+                    fontFamily: T.serif, fontSize: 14, fontWeight: 700,
+                    color: '#4A3528', letterSpacing: '-0.3px',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    minWidth: 0,
+                  }}>{row.name}</span>
+                  <StarDisplay score={row.avgScore} size={11} accent={T.accent} />
+                </div>
                 <div style={{
                   fontSize: 9, color: T.muted, letterSpacing: '0.06em',
-                  textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
+                  textTransform: 'uppercase', fontWeight: 600,
                 }}>
                   {row.day ? dayLabel(row.day) + ' · ' : ''}{row.count} {row.count === 1 ? 'rating' : 'ratings'}
                 </div>
-              </div>
-
-              {/* Score badge */}
-              <div style={{
-                width: 40, height: 40, flexShrink: 0, borderRadius: 4,
-                background: T.accent,
-                border: '1.5px solid #4A3528',
-                boxShadow: i === 0 ? T.cardShadow : 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{
-                  fontFamily: T.serif, fontSize: 14, fontWeight: 700,
-                  color: '#FAF3E2', lineHeight: 1,
-                }}>{row.avgScore.toFixed(1)}</span>
               </div>
             </a>
           ))}

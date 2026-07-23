@@ -97,3 +97,12 @@ create trigger on_auth_user_created
 -- true immediately (username is typed before submit); Google sign-in
 -- flips it to true only after the user passes through /choose-username.
 alter table public.profiles add column username_set boolean not null default true;
+
+-- Replaces the emoji-reaction + head-to-head ELO battle system with three
+-- direct 1-5 star sub-ratings per show, averaged into the display score
+-- (see lib/rating.ts). Nullable since existing rows predate this and the
+-- old system (app/battle, app/rank, lib/elo.ts) is left in the codebase
+-- rather than deleted, in case it's ever needed again.
+alter table public.logged_shows add column performance_rating smallint;
+alter table public.logged_shows add column venue_rating smallint;
+alter table public.logged_shows add column vibe_rating smallint;

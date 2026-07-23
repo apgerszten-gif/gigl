@@ -1,8 +1,9 @@
 import { supabase } from '@/lib/supabase'
-import { eloToDisplay } from '@/lib/elo'
 import { notFound } from 'next/navigation'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { DEFAULT_THEME as T } from '@/lib/theme'
+import { showScore } from '@/lib/rating'
+import { StarDisplay } from '@/components/StarDisplay'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -26,15 +27,16 @@ export default async function PublicProfile({ params }: { params: { username: st
 
   if (!profile) notFound()
 
-  const { data: shows } = await supabase
+  const { data: showsRaw } = await supabase
     .from('logged_shows')
     .select('*')
     .eq('user_id', profile.id)
-    .order('elo', { ascending: false })
 
-  const avgScore = shows && shows.length > 0
-    ? (shows.reduce((acc, s) => acc + parseFloat(eloToDisplay(s.elo)), 0) / shows.length).toFixed(1)
-    : '—'
+  const shows = (showsRaw ?? []).slice().sort((a, b) => showScore(b) - showScore(a))
+  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.vibe_rating != null)
+  const avgScore = ratedShows.length > 0
+    ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
+    : 0
 
   return (
     <div style={{
@@ -88,25 +90,20 @@ export default async function PublicProfile({ params }: { params: { username: st
         borderBottom: '1px solid rgba(74,53,40,0.1)',
         background: T.bg,
       }}>
-        {[
-          { label: 'Sets logged', value: (shows?.length || 0).toString() },
-          { label: 'Avg score',   value: avgScore },
-          { label: 'Festival',    value: '2026' },
-        ].map((stat, i) => (
-          <div key={i} style={{
-            padding: '14px 0', textAlign: 'center',
-            borderRight: i < 2 ? '1px solid rgba(74,53,40,0.1)' : 'none',
-          }}>
-            <div style={{
-              fontFamily: T.serif, fontSize: 18, fontWeight: 700,
-              color: i === 1 ? T.accent : '#4A3528',
-            }}>{stat.value}</div>
-            <div style={{
-              fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em',
-              color: T.muted, marginTop: 3, fontWeight: 600,
-            }}>{stat.label}</div>
-          </div>
-        ))}
+        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{shows.length}</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Sets logged</div>
+        </div>
+        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {ratedShows.length > 0
+            ? <StarDisplay score={avgScore} size={13} accent={T.accent} />
+            : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
+        </div>
+        <div style={{ padding: '14px 0', textAlign: 'center' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>2026</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Festival</div>
+        </div>
       </div>
 
       {/* ── Rankings ────────────────────────────────────────────────────────── */}
@@ -116,14 +113,15 @@ export default async function PublicProfile({ params }: { params: { username: st
           textTransform: 'uppercase', marginBottom: 12, fontWeight: 600,
         }}>Their rankings</div>
 
-        {(!shows || shows.length === 0) ? (
+        {shows.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
             <div style={{ fontSize: 13, color: T.faint }}>No sets logged yet</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {shows.map((show, i) => {
-              const score    = eloToDisplay(show.elo)
+              const score     = showScore(show)
+              const hasScore  = show.performance_rating != null && show.venue_rating != null && show.vibe_rating != null
               const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
               const photoUrl  = resolvePhotoUrl(show.photo_url)
               const isTop     = i === 0
@@ -143,22 +141,16 @@ export default async function PublicProfile({ params }: { params: { username: st
                     )
                   )}
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{
-                      width: 44, height: 44, flexShrink: 0, borderRadius: 4,
-                      background: T.accent, border: '1.5px solid #4A3528',
-                      boxShadow: isTop ? T.cardShadow : 'none',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <span style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: '#FAF3E2', lineHeight: 1 }}>
-                        {score}
-                      </span>
-                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontFamily: T.serif, fontSize: 15, fontWeight: 700,
-                        color: '#4A3528', letterSpacing: '-0.3px',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}>{show.artist_name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                        <span style={{
+                          fontFamily: T.serif, fontSize: 15, fontWeight: 700,
+                          color: '#4A3528', letterSpacing: '-0.3px',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          minWidth: 0,
+                        }}>{show.artist_name}</span>
+                        {hasScore && <StarDisplay score={score} size={12} accent={T.accent} />}
+                      </div>
                       <div style={{
                         fontSize: 10, color: T.muted, letterSpacing: '0.06em',
                         textTransform: 'uppercase', marginTop: 2, fontWeight: 600,

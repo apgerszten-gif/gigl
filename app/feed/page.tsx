@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
-import { eloToDisplay } from '@/lib/elo'
+import { computeShowScore } from '@/lib/rating'
+import { StarDisplay } from '@/components/StarDisplay'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { useTheme } from '@/components/FestivalThemeProvider'
 
-const SCORE_THRESHOLD = 4
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
 function isVideoUrl(url: string): boolean {
@@ -23,10 +23,11 @@ function resolvePhotoUrl(url: string | null): string | null {
 }
 
 interface GlobalLog {
-  artist_id:   string
-  artist_name: string
-  emoji:       string
-  elo:         number
+  artist_id:          string
+  artist_name:        string
+  performance_rating: number | null
+  venue_rating:        number | null
+  vibe_rating:          number | null
   created_at:  string
   user_id:     string
   stage:       string
@@ -40,14 +41,11 @@ interface GlobalLog {
 function FeedInner() {
   const router     = useRouter()
   const supabase   = createClient()
-  const searchParams   = useSearchParams()
-  const pendingArtistId = searchParams.get('pending')
   const T = useTheme()
 
   const [globalFeed, setGlobalFeed]       = useState<GlobalLog[]>([])
   const [loading, setLoading]             = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [userLogCounts, setUserLogCounts] = useState<Record<string, number>>({})
   const [festivalName, setFestivalName]   = useState<string | null>(null)
 
   useEffect(() => {
@@ -67,15 +65,11 @@ function FeedInner() {
 
     const { data: logs } = await supabase
       .from('logged_shows')
-      .select('artist_id, artist_name, emoji, elo, created_at, user_id, stage, day, photo_url, review, tags')
+      .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, review, tags')
       .order('created_at', { ascending: false })
       .limit(200)
 
     if (!logs) { setLoading(false); return }
-
-    const counts: Record<string, number> = {}
-    logs.forEach(l => { counts[l.user_id] = (counts[l.user_id] ?? 0) + 1 })
-    setUserLogCounts(counts)
 
     const userIds = logs.map(l => l.user_id).filter((id, i, arr) => arr.indexOf(id) === i)
     const { data: profiles } = await supabase
@@ -240,12 +234,13 @@ function FeedInner() {
             const name      = item.artist_name ?? 'Unknown'
             const stageName = item.stage       ?? ''
             const day       = item.day         ?? ''
-            const isPending = item.artist_id === pendingArtistId && item.user_id === currentUserId
             const isMe      = item.user_id === currentUserId
             const username  = item.username ?? 'anonymous'
-            const userCount = userLogCounts[item.user_id] ?? 0
-            const showScore = userCount >= SCORE_THRESHOLD && !isPending
             const isTop     = i === 0
+            const hasScore  = item.performance_rating != null && item.venue_rating != null && item.vibe_rating != null
+            const score     = hasScore
+              ? computeShowScore(item.performance_rating!, item.venue_rating!, item.vibe_rating!)
+              : null
 
             return (
               <div
@@ -254,7 +249,7 @@ function FeedInner() {
                   background: T.card,
                   borderRadius: 5,
                   overflow: 'hidden',
-                  border: isPending ? `1.5px solid ${T.accent}` : T.cardBorder,
+                  border: T.cardBorder,
                   boxShadow: isTop ? T.cardShadow : 'none',
                 }}
               >
@@ -277,48 +272,23 @@ function FeedInner() {
                 {/* Info row */}
                 <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
 
-                  {/* Score badge */}
-                  <div
-                    onClick={() => {
-                      if (isPending || !showScore) alert('Log 4 shows to unlock scores')
-                      else router.push(`/artist/${item.artist_id}`)
-                    }}
-                    title={isPending || !showScore ? 'Log 4 shows to unlock scores' : undefined}
-                    style={{
-                      width: 48, height: 48, flexShrink: 0, borderRadius: 4,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: isPending || !showScore ? T.cardInner : T.accent,
-                      border: isPending || !showScore
-                        ? '1px solid rgba(74,53,40,0.15)'
-                        : '1.5px solid #4A3528',
-                      boxShadow: isTop && showScore && !isPending ? T.cardShadow : 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {isPending || !showScore ? (
-                      <span style={{ fontSize: 16 }}>🔒</span>
-                    ) : (
-                      <span style={{
-                        fontFamily: T.serif, fontSize: 17, fontWeight: 700,
-                        color: '#FAF3E2', lineHeight: 1,
-                      }}>
-                        {eloToDisplay(item.elo)}
-                      </span>
-                    )}
-                  </div>
-
                   {/* Text info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       onClick={() => router.push(`/artist/${item.artist_id}`)}
                       style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        marginBottom: 2, cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{
                         fontFamily: T.serif, fontSize: 15, fontWeight: 700,
                         color: '#4A3528', letterSpacing: '-0.3px',
-                        marginBottom: 2,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        cursor: 'pointer',
-                      }}
-                    >{name}</div>
+                        minWidth: 0,
+                      }}>{name}</span>
+                      {score !== null && <StarDisplay score={score} size={12} accent={T.accent} />}
+                    </div>
                     <div
                       onClick={() => stageName && router.push(`/stage/${encodeURIComponent(stageName)}`)}
                       style={{

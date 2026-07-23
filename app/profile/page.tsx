@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { eloToDisplay } from '@/lib/elo'
+import { showScore } from '@/lib/rating'
+import { StarDisplay } from '@/components/StarDisplay'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
@@ -32,24 +33,18 @@ function resolvePhotoUrl(url: string | null): string | null {
   return `${SUPABASE_STORAGE}/${url}`
 }
 
-function scoreColor(score: string, accent: string) {
-  const n = parseFloat(score)
-  if (n >= 7.5) return accent
-  if (n >= 6)   return '#D4845A'
-  return 'rgba(74,53,40,0.35)'
-}
-
 interface Show {
-  id:          string
-  artist_id:   string
-  artist_name: string
-  stage:       string
-  day:         string
-  emoji:       string
-  elo:         number
-  review:      string | null
-  tags:        string[] | null
-  photo_url:   string | null
+  id:                  string
+  artist_id:           string
+  artist_name:         string
+  stage:               string
+  day:                 string
+  performance_rating:  number | null
+  venue_rating:        number | null
+  vibe_rating:         number | null
+  review:              string | null
+  tags:                string[] | null
+  photo_url:           string | null
 }
 
 interface Profile {
@@ -89,10 +84,10 @@ export default function ProfilePage() {
       if (!user) { router.push('/'); return }
       const [{ data: prof }, { data: showData }] = await Promise.all([
         supabase.from('profiles').select('username, display_name').eq('id', user.id).single(),
-        supabase.from('logged_shows').select('*').eq('user_id', user.id).order('elo', { ascending: false }),
+        supabase.from('logged_shows').select('*').eq('user_id', user.id),
       ])
       setProfile(prof)
-      setShows(showData || [])
+      setShows((showData || []).slice().sort((a, b) => showScore(b) - showScore(a)))
       setLoading(false)
     }
     load()
@@ -167,9 +162,10 @@ export default function ProfilePage() {
     }
   }
 
-  const avgScore = shows.length > 0
-    ? (shows.reduce((acc, s) => acc + parseFloat(eloToDisplay(s.elo)), 0) / shows.length).toFixed(1)
-    : '—'
+  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.vibe_rating != null)
+  const avgScore = ratedShows.length > 0
+    ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
+    : 0
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -227,25 +223,20 @@ export default function ProfilePage() {
         borderBottom: '1px solid rgba(74,53,40,0.1)',
         background: T.bg,
       }}>
-        {[
-          { label: 'Sets logged', value: shows.length.toString() },
-          { label: 'Avg score',   value: avgScore },
-          { label: 'Festival',    value: '2026' },
-        ].map((stat, i) => (
-          <div key={i} style={{
-            padding: '14px 0', textAlign: 'center',
-            borderRight: i < 2 ? '1px solid rgba(74,53,40,0.1)' : 'none',
-          }}>
-            <div style={{
-              fontFamily: T.serif, fontSize: 18, fontWeight: 700,
-              color: i === 1 ? T.accent : '#4A3528',
-            }}>{stat.value}</div>
-            <div style={{
-              fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em',
-              color: T.muted, marginTop: 3, fontWeight: 600,
-            }}>{stat.label}</div>
-          </div>
-        ))}
+        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{shows.length}</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Sets logged</div>
+        </div>
+        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {ratedShows.length > 0
+            ? <StarDisplay score={avgScore} size={13} accent={T.accent} />
+            : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
+        </div>
+        <div style={{ padding: '14px 0', textAlign: 'center' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>2026</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Festival</div>
+        </div>
       </div>
 
       {/* ── Share button ─────────────────────────────────────────────────────── */}
@@ -330,7 +321,8 @@ export default function ProfilePage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {shows.map((show, i) => {
-              const score     = eloToDisplay(show.elo)
+              const score     = showScore(show)
+              const hasScore  = show.performance_rating != null && show.venue_rating != null && show.vibe_rating != null
               const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
               const isEditing = editingId === show.id
               const isTop     = i === 0
@@ -352,23 +344,16 @@ export default function ProfilePage() {
 
                   {/* Info row */}
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{
-                      width: 44, height: 44, flexShrink: 0, borderRadius: 4,
-                      background: T.accent, border: '1.5px solid #4A3528',
-                      boxShadow: isTop ? T.cardShadow : 'none',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <span style={{
-                        fontFamily: T.serif, fontSize: 16, fontWeight: 700,
-                        color: '#FAF3E2', lineHeight: 1,
-                      }}>{score}</span>
-                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontFamily: T.serif, fontSize: 15, fontWeight: 700,
-                        color: '#4A3528', letterSpacing: '-0.3px',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}>{show.artist_name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                        <span style={{
+                          fontFamily: T.serif, fontSize: 15, fontWeight: 700,
+                          color: '#4A3528', letterSpacing: '-0.3px',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          minWidth: 0,
+                        }}>{show.artist_name}</span>
+                        {hasScore && <StarDisplay score={score} size={12} accent={T.accent} />}
+                      </div>
                       <div style={{
                         fontSize: 10, color: T.muted, letterSpacing: '0.06em',
                         textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
@@ -483,11 +468,19 @@ export default function ProfilePage() {
                         }}>{editSaving ? 'Saving...' : 'Save'}</button>
                       </div>
                       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <button onClick={() => router.push(`/battle?newArtistId=${show.artist_id}`)} style={{
+                        <button onClick={() => {
+                          const params = new URLSearchParams({
+                            artistId:   show.artist_id,
+                            artistName: show.artist_name,
+                            stage:      show.stage,
+                            day:        show.day,
+                          })
+                          router.push(`/log-show?${params.toString()}`)
+                        }} style={{
                           flex: 1, padding: '10px 0', borderRadius: 5,
                           background: 'rgba(74,53,40,0.05)', border: '1px solid rgba(74,53,40,0.15)',
                           color: T.muted, fontSize: 11, cursor: 'pointer', fontFamily: T.sans,
-                        }}>↺ Rerun battles</button>
+                        }}>↺ Update ratings</button>
                         {confirmDeleteId === show.id ? (
                           <>
                             <button onClick={() => setConfirmDeleteId(null)} style={{
