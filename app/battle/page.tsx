@@ -2,15 +2,16 @@
 
 import { useEffect, useState, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ARTISTS } from '@/lib/artists'
 import { createClient } from '@/lib/supabase/client'
 import { newRatings } from '@/lib/elo'
 import { useTheme } from '@/components/FestivalThemeProvider'
 
 interface LoggedArtist {
-  artist_id: string
-  elo:       number
-  emoji:     string
+  artist_id:   string
+  elo:         number
+  emoji:       string
+  artist_name: string
+  stage:       string
 }
 
 const BUCKET_LABEL: Record<string, string> = {
@@ -44,7 +45,7 @@ function BattleInner() {
 
     const { data } = await supabase
       .from('logged_shows')
-      .select('artist_id, elo, emoji')
+      .select('artist_id, elo, emoji, artist_name, stage')
       .eq('user_id', user.id)
       .order('elo', { ascending: false })
 
@@ -124,7 +125,7 @@ function BattleInner() {
       if (!u) return
       const { data: freshLogs } = await supabase
         .from('logged_shows')
-        .select('artist_id, elo, emoji')
+        .select('artist_id, elo, emoji, artist_name, stage')
         .eq('user_id', u.id)
         .order('elo', { ascending: false })
 
@@ -137,10 +138,6 @@ function BattleInner() {
         pickPair(freshBucket, usedOpponents.current)
       }
     }, 700)
-  }
-
-  function getArtist(id: string) {
-    return ARTISTS.find(a => a.id === id)
   }
 
   if (loading) return null
@@ -201,8 +198,6 @@ function BattleInner() {
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
               {pair.map(log => {
-                const artist   = getArtist(log.artist_id)
-                if (!artist) return null
                 const isNew    = log.artist_id === newArtistId
                 const isWinner = picked === log.artist_id
                 const isLoser  = picked !== null && picked !== log.artist_id
@@ -253,12 +248,12 @@ function BattleInner() {
                         <div style={{
                           fontFamily: T.serif, fontSize: 15, fontWeight: 700,
                           color: '#4A3528', letterSpacing: '-0.3px',
-                        }}>{artist.name}</div>
+                        }}>{log.artist_name}</div>
                         <div style={{
                           fontSize: 9, color: T.muted, letterSpacing: '0.06em',
                           textTransform: 'uppercase', fontFamily: T.sans,
                           marginTop: 2, fontWeight: 600,
-                        }}>{artist.stage}</div>
+                        }}>{log.stage}</div>
                       </div>
                     </div>
                     <div style={{ padding: 12 }}>

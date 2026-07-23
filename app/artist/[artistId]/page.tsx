@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase'
 import { eloToDisplay } from '@/lib/elo'
-import { ARTISTS } from '@/lib/artists'
 import { notFound } from 'next/navigation'
 import { DEFAULT_THEME as T } from '@/lib/theme'
 
@@ -31,8 +30,6 @@ function scoreColor(score: string) {
 }
 
 export default async function ArtistPage({ params }: { params: { artistId: string } }) {
-  const artist = ARTISTS.find(a => a.id === params.artistId)
-
   const { data: logs } = await supabase
     .from('logged_shows')
     .select('user_id, elo, review, tags, photo_url, artist_name, stage, day')
@@ -48,9 +45,9 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   const usernameMap: Record<string, string> = {}
   profiles?.forEach(p => { usernameMap[p.id] = p.username })
 
-  const artistName = artist?.name ?? logs[0]?.artist_name ?? 'Unknown'
-  const stage      = artist?.stage ?? logs[0]?.stage ?? ''
-  const day        = artist?.day   ?? logs[0]?.day   ?? ''
+  const artistName = logs[0]?.artist_name ?? 'Unknown'
+  const stage      = logs[0]?.stage ?? ''
+  const day        = logs[0]?.day   ?? ''
 
   const scores   = logs.map(l => parseFloat(eloToDisplay(l.elo)))
   const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)

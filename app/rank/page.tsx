@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ARTISTS } from '@/lib/artists'
 import { createClient } from '@/lib/supabase/client'
 import { eloToDisplay } from '@/lib/elo'
 import { useTheme } from '@/components/FestivalThemeProvider'
@@ -10,8 +9,10 @@ import { useTheme } from '@/components/FestivalThemeProvider'
 const SCORE_THRESHOLD = 4
 
 interface LoggedArtist {
-  artist_id: string
-  elo:       number
+  artist_id:   string
+  elo:         number
+  artist_name: string
+  stage:       string
 }
 
 export default function RankPage() {
@@ -29,7 +30,7 @@ export default function RankPage() {
 
       const { data } = await supabase
         .from('logged_shows')
-        .select('artist_id, elo')
+        .select('artist_id, elo, artist_name, stage')
         .eq('user_id', user.id)
         .order('elo', { ascending: false })
 
@@ -38,10 +39,6 @@ export default function RankPage() {
     }
     fetchLogs()
   }, [])
-
-  function getArtist(id: string) {
-    return ARTISTS.find(a => a.id === id)
-  }
 
   const hasEnoughForScores = logs.length >= SCORE_THRESHOLD
 
@@ -113,8 +110,6 @@ export default function RankPage() {
             overflow: 'hidden',
           }}>
             {logs.map((log, i) => {
-              const artist = getArtist(log.artist_id)
-              if (!artist) return null
               const isTop3 = i < 3
               return (
                 <div key={log.artist_id} style={{
@@ -139,11 +134,11 @@ export default function RankPage() {
                     <div style={{
                       fontFamily: T.serif, fontSize: 14, fontWeight: 700,
                       color: '#4A3528', letterSpacing: '-0.3px', marginBottom: 2,
-                    }}>{artist.name}</div>
+                    }}>{log.artist_name}</div>
                     <div style={{
                       fontSize: 9, color: T.muted, letterSpacing: '0.06em',
                       textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
-                    }}>{artist.stage}</div>
+                    }}>{log.stage}</div>
                   </div>
 
                   <div style={{

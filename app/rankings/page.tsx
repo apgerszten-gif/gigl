@@ -234,7 +234,13 @@ export default function RankingsPage() {
                     fontSize: 9, color: T.muted, letterSpacing: '0.06em',
                     textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
                   }}>
-                    {row.stage}{row.day ? ` · ${dayLabel(row.day)}` : ''} · {row.count} {row.count === 1 ? 'rating' : 'ratings'}
+                    {row.stage && (
+                      <span
+                        onClick={e => { e.stopPropagation(); router.push(`/stage/${encodeURIComponent(row.stage)}`) }}
+                        style={{ cursor: 'pointer' }}
+                      >{row.stage}</span>
+                    )}
+                    {row.day ? ` · ${dayLabel(row.day)}` : ''} · {row.count} {row.count === 1 ? 'rating' : 'ratings'}
                   </div>
                 </div>
 

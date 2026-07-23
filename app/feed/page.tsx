@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ARTISTS } from '@/lib/artists'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { eloToDisplay } from '@/lib/elo'
@@ -238,10 +237,9 @@ function FeedInner() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {globalFeed.map((item, i) => {
-            const artist    = ARTISTS.find(a => a.id === item.artist_id)
-            const name      = artist?.name      ?? item.artist_name ?? 'Unknown'
-            const stageName = artist?.stage     ?? item.stage       ?? ''
-            const day       = artist?.day       ?? item.day         ?? ''
+            const name      = item.artist_name ?? 'Unknown'
+            const stageName = item.stage       ?? ''
+            const day       = item.day         ?? ''
             const isPending = item.artist_id === pendingArtistId && item.user_id === currentUserId
             const isMe      = item.user_id === currentUserId
             const username  = item.username ?? 'anonymous'
@@ -280,21 +278,25 @@ function FeedInner() {
                 <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
 
                   {/* Score badge */}
-                  <div style={{
-                    width: 48, height: 48, flexShrink: 0, borderRadius: 4,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isPending || !showScore ? T.cardInner : T.accent,
-                    border: isPending || !showScore
-                      ? '1px solid rgba(74,53,40,0.15)'
-                      : '1.5px solid #4A3528',
-                    boxShadow: isTop && showScore && !isPending ? T.cardShadow : 'none',
-                  }}>
+                  <div
+                    onClick={() => {
+                      if (isPending || !showScore) alert('Log 4 shows to unlock scores')
+                      else router.push(`/artist/${item.artist_id}`)
+                    }}
+                    title={isPending || !showScore ? 'Log 4 shows to unlock scores' : undefined}
+                    style={{
+                      width: 48, height: 48, flexShrink: 0, borderRadius: 4,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: isPending || !showScore ? T.cardInner : T.accent,
+                      border: isPending || !showScore
+                        ? '1px solid rgba(74,53,40,0.15)'
+                        : '1.5px solid #4A3528',
+                      boxShadow: isTop && showScore && !isPending ? T.cardShadow : 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
                     {isPending || !showScore ? (
-                      <span
-                        title="Log 4 shows to unlock scores"
-                        onClick={() => alert('Log 4 shows to unlock scores')}
-                        style={{ fontSize: 16, cursor: 'pointer' }}
-                      >🔒</span>
+                      <span style={{ fontSize: 16 }}>🔒</span>
                     ) : (
                       <span style={{
                         fontFamily: T.serif, fontSize: 17, fontWeight: 700,
@@ -317,11 +319,15 @@ function FeedInner() {
                         cursor: 'pointer',
                       }}
                     >{name}</div>
-                    <div style={{
-                      fontSize: 10, color: T.muted,
-                      letterSpacing: '0.08em', textTransform: 'uppercase',
-                      fontFamily: T.sans, fontWeight: 600, marginBottom: 2,
-                    }}>
+                    <div
+                      onClick={() => stageName && router.push(`/stage/${encodeURIComponent(stageName)}`)}
+                      style={{
+                        fontSize: 10, color: T.muted,
+                        letterSpacing: '0.08em', textTransform: 'uppercase',
+                        fontFamily: T.sans, fontWeight: 600, marginBottom: 2,
+                        cursor: stageName ? 'pointer' : 'default',
+                      }}
+                    >
                       {stageName}{day ? ` · ${dayLabel(day)}` : ''}
                     </div>
                     <div
