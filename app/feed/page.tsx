@@ -100,7 +100,7 @@ function FeedInner() {
 
   return (
     <div style={{
-      height: '100vh',
+      height: '100dvh',
       display: 'flex', flexDirection: 'column',
       background: T.bg,
       fontFamily: T.sans,
@@ -354,7 +354,7 @@ function FeedInner() {
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '8px 32px 4px',
+        padding: '8px 32px calc(10px + env(safe-area-inset-bottom))',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         {/* Home */}
