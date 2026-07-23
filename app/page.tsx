@@ -458,7 +458,7 @@ export default function LandingPage() {
               <div style={{ fontFamily: T.serif, fontSize: 42, fontWeight: 700, color: T.ink, letterSpacing: '-0.5px', marginBottom: 4 }}>
                 Gigl<span style={{ color: T.accent }}>/</span>
               </div>
-              <div style={{ fontSize: 10, color: T.faint, letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 48 }}>
+              <div style={{ fontSize: 10, color: T.muted, letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 48 }}>
                 Be the critic
               </div>
             </div>
@@ -482,7 +482,7 @@ export default function LandingPage() {
               </button>
             </div>
             <div style={{ textAlign: 'center', paddingTop: 32 }}>
-              <div style={{ fontSize: 9, color: T.faint, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 5 }}>Swipe to explore</div>
+              <div style={{ fontSize: 18, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 5 }}>Swipe to sign up</div>
               <div style={{ color: T.faint, fontSize: 16, animation: 'nudge 2s ease-in-out infinite' }}>→</div>
             </div>
           </div>
