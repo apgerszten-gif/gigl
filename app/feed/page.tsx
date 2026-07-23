@@ -100,115 +100,110 @@ function FeedInner() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
+      display: 'flex', flexDirection: 'column',
       background: T.bg,
       fontFamily: T.sans,
       color: '#4A3528',
       maxWidth: 430,
       margin: '0 auto',
+      overflow: 'hidden',
     }}>
 
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '18px 24px 14px',
-        position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        {T.logoUrl ? (
-          <img
-            src={T.logoUrl}
-            alt="Festival"
-            style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }}
-          />
-        ) : (
-          <div style={{
-            fontFamily: T.serif, fontSize: 22, fontWeight: 700,
-            color: '#4A3528', letterSpacing: '-0.5px',
-          }}>
-            Gigl<span style={{ color: T.accent }}>/</span>
+      {/* ── Top: combined identity row + tab toggle ─────────────────────────── */}
+      <div style={{ flex: '0 0 auto' }}>
+
+        {/* Logo · festival pill · switch/sign-out — one row */}
+        <div style={{
+          padding: '10px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          borderBottom: '1px solid rgba(74,53,40,0.12)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            {T.logoUrl ? (
+              <img
+                src={T.logoUrl}
+                alt="Festival"
+                style={{ height: 18, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
+              />
+            ) : (
+              <div style={{
+                fontFamily: T.serif, fontSize: 17, fontWeight: 700,
+                color: '#4A3528', letterSpacing: '-0.5px', flexShrink: 0,
+              }}>
+                Gigl<span style={{ color: T.accent }}>/</span>
+              </div>
+            )}
+
+            <button
+              onClick={() => router.push('/select-festival')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                display: 'flex', alignItems: 'center', gap: 3, minWidth: 0,
+              }}
+            >
+              <span style={{
+                fontSize: 10, color: T.accent, letterSpacing: '0.1em',
+                textTransform: 'uppercase', fontWeight: 700,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>{festivalName ?? 'Festival Season 2026'}</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" style={{ flexShrink: 0 }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
           </div>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-          <button
-            onClick={() => router.push('/select-festival')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: '2px 8px', color: T.accent,
-              fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
-            }}
-          >switch festival</button>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: '2px 8px', color: T.muted,
-              fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em',
-            }}
-          >sign out</button>
-        </div>
-      </div>
 
-      {/* ── Feed header ──────────────────────────────────────────────────────── */}
-      <div style={{ padding: '20px 24px 8px' }}>
-        <button
-          onClick={() => router.push('/select-festival')}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-            display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4,
-          }}
-        >
-          <span style={{
-            fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-            textTransform: 'uppercase', fontWeight: 700,
-          }}>{festivalName ?? 'Festival Season 2026'}</span>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-
-        <div style={{
-          fontFamily: T.serif,
-          fontSize: 28, fontWeight: 700, lineHeight: 1.1,
-          letterSpacing: '-1px', marginBottom: 16, color: '#4A3528',
-        }}>
-          What everyone&apos;s<br />
-          <span>ranking</span><span style={{ color: T.accent }}>.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <button
+              onClick={() => router.push('/select-festival')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                color: T.accent, fontSize: 9, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
+              }}
+            >switch</button>
+            <span style={{ fontSize: 9, color: T.faint }}>·</span>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                color: T.muted, fontSize: 9, fontFamily: T.sans, letterSpacing: '0.06em',
+              }}
+            >sign out</button>
+          </div>
         </div>
 
-        {/* Activity / Rankings tab toggle — split pill */}
-        <div style={{
-          display: 'flex',
-          border: '2px solid #4A3528',
-          borderRadius: 5,
-          overflow: 'hidden',
-          marginBottom: 8,
-        }}>
-          <button style={{
-            flex: 1, padding: '8px 0',
-            background: '#4A3528', border: 'none',
-            color: '#FAF3E2', fontSize: 11, cursor: 'default',
-            fontFamily: T.sans, fontWeight: 700,
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-          }}>Activity</button>
-          <button
-            onClick={() => router.push('/rankings')}
-            style={{
-              flex: 1, padding: '8px 0',
-              background: T.card,
-              border: 'none', borderLeft: '2px solid #4A3528',
-              color: '#4A3528', fontSize: 11, cursor: 'pointer',
-              fontFamily: T.sans, fontWeight: 600,
+        {/* Activity / Rankings tab toggle — slim pill */}
+        <div style={{ padding: '8px 20px' }}>
+          <div style={{
+            display: 'flex',
+            border: '2px solid #4A3528',
+            borderRadius: 5,
+            overflow: 'hidden',
+          }}>
+            <button style={{
+              flex: 1, padding: '5px 0',
+              background: '#4A3528', border: 'none',
+              color: '#FAF3E2', fontSize: 9, cursor: 'default',
+              fontFamily: T.sans, fontWeight: 700,
               letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}
-          >Rankings</button>
+            }}>Activity</button>
+            <button
+              onClick={() => router.push('/rankings')}
+              style={{
+                flex: 1, padding: '5px 0',
+                background: T.card,
+                border: 'none', borderLeft: '2px solid #4A3528',
+                color: '#4A3528', fontSize: 9, cursor: 'pointer',
+                fontFamily: T.sans, fontWeight: 600,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}
+            >Rankings</button>
+          </div>
         </div>
       </div>
 
-      {/* ── Feed list ────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 24px 100px' }}>
+      {/* ── Feed list — fills all remaining space, scrolls independently ────── */}
+      <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '0 20px 12px' }}>
         {loading && (
           <div style={{
             textAlign: 'center', padding: 40,
@@ -229,7 +224,7 @@ function FeedInner() {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {globalFeed.map((item, i) => {
             const name      = item.artist_name ?? 'Unknown'
             const stageName = item.stage       ?? ''
@@ -241,6 +236,9 @@ function FeedInner() {
             const score     = hasScore
               ? computeShowScore(item.performance_rating!, item.venue_rating!, item.vibe_rating!)
               : null
+            const hasTags    = !!item.tags && item.tags.length > 0
+            const isFeatured = hasScore || hasTags || !!item.review
+            const infoPadding = isFeatured ? '12px 14px' : '8px 14px'
 
             return (
               <div
@@ -250,7 +248,7 @@ function FeedInner() {
                   borderRadius: 5,
                   overflow: 'hidden',
                   border: T.cardBorder,
-                  boxShadow: isTop ? T.cardShadow : 'none',
+                  boxShadow: isFeatured && isTop ? T.cardShadow : 'none',
                 }}
               >
                 {/* Photo / Video */}
@@ -258,19 +256,19 @@ function FeedInner() {
                   isVideoUrl(resolvePhotoUrl(item.photo_url)!) ? (
                     <VideoPlayer
                       src={resolvePhotoUrl(item.photo_url)!}
-                      style={{ maxHeight: 220, objectFit: 'cover' }}
+                      style={{ maxHeight: 200, objectFit: 'cover' }}
                     />
                   ) : (
                     <img
                       src={resolvePhotoUrl(item.photo_url)!}
                       alt={name}
-                      style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }}
+                      style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
                     />
                   )
                 )}
 
                 {/* Info row */}
-                <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
+                <div style={{ padding: infoPadding, display: 'flex', gap: 12, alignItems: 'center' }}>
 
                   {/* Text info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -282,17 +280,17 @@ function FeedInner() {
                       }}
                     >
                       <span style={{
-                        fontFamily: T.serif, fontSize: 15, fontWeight: 700,
+                        fontFamily: T.serif, fontSize: 14, fontWeight: 700,
                         color: '#4A3528', letterSpacing: '-0.3px',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         minWidth: 0,
                       }}>{name}</span>
-                      {score !== null && <StarDisplay score={score} size={18} accent={T.accent} />}
+                      {score !== null && <StarDisplay score={score} size={16} accent={T.accent} />}
                     </div>
                     <div
                       onClick={() => stageName && router.push(`/stage/${encodeURIComponent(stageName)}`)}
                       style={{
-                        fontSize: 10, color: T.muted,
+                        fontSize: 9, color: T.muted,
                         letterSpacing: '0.08em', textTransform: 'uppercase',
                         fontFamily: T.sans, fontWeight: 600, marginBottom: 2,
                         cursor: stageName ? 'pointer' : 'default',
@@ -303,7 +301,7 @@ function FeedInner() {
                     <div
                       onClick={() => router.push(isMe ? '/profile' : `/u/${username}`)}
                       style={{
-                        fontSize: 11, fontFamily: T.sans,
+                        fontSize: 10, fontFamily: T.sans,
                         color: isMe ? T.accent : T.muted,
                         fontWeight: isMe ? 600 : 400,
                         cursor: 'pointer',
@@ -313,7 +311,7 @@ function FeedInner() {
 
                   {/* Timestamp */}
                   <div style={{
-                    fontSize: 10, color: T.faint, letterSpacing: '0.06em',
+                    fontSize: 9, color: T.faint, letterSpacing: '0.06em',
                     textTransform: 'uppercase', fontFamily: T.sans, flexShrink: 0,
                   }}>
                     {timeAgo(item.created_at)}
@@ -323,20 +321,20 @@ function FeedInner() {
                 {/* Review quote */}
                 {item.review && (
                   <div style={{
-                    padding: '0 16px 10px',
-                    fontSize: 12, color: 'rgba(74,53,40,0.65)',
-                    fontStyle: 'italic', lineHeight: 1.55, fontFamily: T.sans,
+                    padding: '0 14px 8px',
+                    fontSize: 11, color: 'rgba(74,53,40,0.65)',
+                    fontStyle: 'italic', lineHeight: 1.5, fontFamily: T.sans,
                   }}>
                     &ldquo;{item.review}&rdquo;
                   </div>
                 )}
 
                 {/* Vibe tags */}
-                {item.tags && item.tags.length > 0 && (
-                  <div style={{ padding: '0 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {item.tags.map(tag => (
+                {hasTags && (
+                  <div style={{ padding: '0 14px 10px', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {item.tags!.map(tag => (
                       <span key={tag} style={{
-                        fontSize: 10, padding: '3px 10px', borderRadius: 20,
+                        fontSize: 9, padding: '2px 9px', borderRadius: 20,
                         background: T.accentDim, color: T.accent,
                         border: `1.5px solid ${T.accentBorder}`,
                         fontFamily: T.sans, fontWeight: 600, letterSpacing: '0.04em',
@@ -352,52 +350,51 @@ function FeedInner() {
 
       {/* ── Bottom nav ───────────────────────────────────────────────────────── */}
       <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 430,
+        flex: '0 0 auto',
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '12px 32px 16px',
+        padding: '8px 32px 4px',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         {/* Home */}
         <button style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={T.accent} stroke="none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={T.accent} stroke="none">
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />
             <rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
           <span style={{
-            fontSize: 9, color: T.accent, letterSpacing: '0.08em',
+            fontSize: 7, color: T.accent, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700,
           }}>Home</span>
         </button>
 
         {/* Log FAB */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <div
             onClick={() => router.push('/log')}
             style={{
-              width: 42, height: 42,
+              width: 34, height: 34,
               background: T.accent, borderRadius: '50%',
               border: '1.5px solid #4A3528',
               boxShadow: '2px 2px 0 #4A3528',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: -18, cursor: 'pointer',
+              marginTop: -14, cursor: 'pointer',
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="#FAF3E2" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
           <span style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
+            fontSize: 7, color: T.muted, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
           }}>Log</span>
         </div>
@@ -407,15 +404,15 @@ function FeedInner() {
           onClick={() => router.push('/profile')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
             stroke={T.muted} strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <span style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
+            fontSize: 7, color: T.muted, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
           }}>You</span>
         </button>
