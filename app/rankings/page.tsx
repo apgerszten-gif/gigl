@@ -263,37 +263,37 @@ export default function RankingsPage() {
           background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={T.accent} stroke="none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={T.accent} stroke="none">
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />
             <rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
-          <span style={{ fontSize: 9, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700 }}>Home</span>
+          <span style={{ fontSize: 8, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700 }}>Home</span>
         </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <div onClick={() => router.push('/log')} style={{
-            width: 42, height: 42, background: T.accent, borderRadius: '50%',
+            width: 38, height: 38, background: T.accent, borderRadius: '50%',
             border: '1.5px solid #4A3528', boxShadow: '2px 2px 0 #4A3528',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginTop: -18, cursor: 'pointer',
+            marginTop: -16, cursor: 'pointer',
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
-          <span style={{ fontSize: 9, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>Log</span>
+          <span style={{ fontSize: 8, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>Log</span>
         </div>
 
         <button onClick={() => router.push('/profile')} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
-          <span style={{ fontSize: 9, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>You</span>
+          <span style={{ fontSize: 8, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>You</span>
         </button>
       </div>
     </div>

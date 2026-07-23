@@ -354,47 +354,47 @@ function FeedInner() {
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '8px 32px calc(10px + env(safe-area-inset-bottom))',
+        padding: '12px 32px calc(10px + env(safe-area-inset-bottom))',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         {/* Home */}
         <button style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
         }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill={T.accent} stroke="none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={T.accent} stroke="none">
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />
             <rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
           <span style={{
-            fontSize: 7, color: T.accent, letterSpacing: '0.08em',
+            fontSize: 8, color: T.accent, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700,
           }}>Home</span>
         </button>
 
         {/* Log FAB */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <div
             onClick={() => router.push('/log')}
             style={{
-              width: 34, height: 34,
+              width: 38, height: 38,
               background: T.accent, borderRadius: '50%',
               border: '1.5px solid #4A3528',
               boxShadow: '2px 2px 0 #4A3528',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: -14, cursor: 'pointer',
+              marginTop: -16, cursor: 'pointer',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
               stroke="#FAF3E2" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
           <span style={{
-            fontSize: 7, color: T.muted, letterSpacing: '0.08em',
+            fontSize: 8, color: T.muted, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
           }}>Log</span>
         </div>
@@ -404,15 +404,15 @@ function FeedInner() {
           onClick={() => router.push('/profile')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
             stroke={T.muted} strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <span style={{
-            fontSize: 7, color: T.muted, letterSpacing: '0.08em',
+            fontSize: 8, color: T.muted, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
           }}>You</span>
         </button>
