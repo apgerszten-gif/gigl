@@ -361,7 +361,7 @@ function LogShowInner() {
             fontSize: 9, color: T.muted, letterSpacing: '0.12em',
             textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
           }}>Tags</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 8, overflowX: 'auto' }}>
             {tagOptions.map(tag => {
               const active = selectedTags.includes(tag)
               return (
@@ -370,11 +370,13 @@ function LogShowInner() {
                   type="button"
                   onClick={() => toggleTag(tag)}
                   style={{
+                    flexShrink: 0,
                     fontSize: 11, padding: '6px 12px', borderRadius: 20,
                     background: active ? T.accent : 'none',
                     color: active ? '#FAF3E2' : T.muted,
                     border: active ? `1.5px solid #4A3528` : `1.5px solid rgba(74,53,40,0.25)`,
                     fontFamily: T.sans, fontWeight: 600, cursor: 'pointer',
+                    whiteSpace: 'nowrap',
                   }}
                 >{tag}</button>
               )
@@ -392,6 +394,7 @@ function LogShowInner() {
                 onBlur={commitCustomTag}
                 placeholder="Tag name"
                 style={{
+                  flexShrink: 0,
                   fontSize: 11, padding: '6px 12px', borderRadius: 20,
                   border: `1.5px solid ${T.accent}`, outline: 'none',
                   background: 'none', color: '#4A3528',
@@ -403,10 +406,12 @@ function LogShowInner() {
                 type="button"
                 onClick={() => setAddingTag(true)}
                 style={{
+                  flexShrink: 0,
                   fontSize: 11, padding: '6px 12px', borderRadius: 20,
                   background: 'none', color: T.muted,
                   border: '1.5px dashed rgba(74,53,40,0.3)',
                   fontFamily: T.sans, fontWeight: 600, cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 }}
               >+ custom</button>
             )}

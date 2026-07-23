@@ -229,7 +229,7 @@ export default function ProfilePage() {
         </div>
         <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {ratedShows.length > 0
-            ? <StarDisplay score={avgScore} size={13} accent={T.accent} />
+            ? <StarDisplay score={avgScore} size={20} accent={T.accent} />
             : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
         </div>
@@ -352,7 +352,7 @@ export default function ProfilePage() {
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           minWidth: 0,
                         }}>{show.artist_name}</span>
-                        {hasScore && <StarDisplay score={score} size={12} accent={T.accent} />}
+                        {hasScore && <StarDisplay score={score} size={18} accent={T.accent} />}
                       </div>
                       <div style={{
                         fontSize: 10, color: T.muted, letterSpacing: '0.06em',

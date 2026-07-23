@@ -104,7 +104,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
             {artistName}<br />
             <span style={{ fontSize: 22 }}>by the numbers</span><span style={{ color: T.accent, fontSize: 22 }}>.</span>
           </div>
-          {rated.length > 0 && <StarDisplay score={avgScore} size={16} accent={T.accent} />}
+          {rated.length > 0 && <StarDisplay score={avgScore} size={24} accent={T.accent} />}
         </div>
       </div>
 
@@ -133,7 +133,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
         </div>
         <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {rated.length > 0
-            ? <StarDisplay score={avgScore} size={13} accent={T.accent} />
+            ? <StarDisplay score={avgScore} size={20} accent={T.accent} />
             : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
         </div>
@@ -188,7 +188,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                   padding: '14px 16px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <StarDisplay score={log.score} size={13} accent={T.accent} />
+                    <StarDisplay score={log.score} size={20} accent={T.accent} />
                     <a href={`/u/${username}`} style={{
                       fontSize: 12, fontWeight: 600, color: '#4A3528',
                       textDecoration: 'none', fontFamily: T.sans,

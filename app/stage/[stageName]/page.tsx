@@ -124,7 +124,7 @@ export default async function StagePage({ params }: { params: { stageName: strin
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     minWidth: 0,
                   }}>{row.name}</span>
-                  <StarDisplay score={row.avgScore} size={11} accent={T.accent} />
+                  <StarDisplay score={row.avgScore} size={17} accent={T.accent} />
                 </div>
                 <div style={{
                   fontSize: 9, color: T.muted, letterSpacing: '0.06em',

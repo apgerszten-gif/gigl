@@ -287,7 +287,7 @@ function FeedInner() {
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         minWidth: 0,
                       }}>{name}</span>
-                      {score !== null && <StarDisplay score={score} size={12} accent={T.accent} />}
+                      {score !== null && <StarDisplay score={score} size={18} accent={T.accent} />}
                     </div>
                     <div
                       onClick={() => stageName && router.push(`/stage/${encodeURIComponent(stageName)}`)}

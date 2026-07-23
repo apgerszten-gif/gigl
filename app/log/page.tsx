@@ -217,7 +217,7 @@ function LogInner() {
                       textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
                     }}>{a.stage}</div>
                   </div>
-                  {existing && <StarDisplay score={existing.score} size={11} accent={T.accent} />}
+                  {existing && <StarDisplay score={existing.score} size={17} accent={T.accent} />}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2">
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
