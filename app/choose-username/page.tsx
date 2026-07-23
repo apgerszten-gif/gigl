@@ -93,7 +93,7 @@ export default function ChooseUsernamePage() {
           fontFamily: serif, fontSize: 34, fontWeight: 700,
           lineHeight: 1.1, letterSpacing: '-1px', color: ink,
         }}>
-          How should we<br />bill you<span style={{ color: sienna }}>?</span>
+          What&apos;s your<br />stage name<span style={{ color: sienna }}>?</span>
         </div>
       </div>
 
