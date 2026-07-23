@@ -115,20 +115,20 @@ function FeedInner() {
 
         {/* Logo · festival pill · switch/sign-out — one row */}
         <div style={{
-          padding: '10px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          padding: '11px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
           borderBottom: '1px solid rgba(74,53,40,0.12)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
             {T.logoUrl ? (
               <img
                 src={T.logoUrl}
                 alt="Festival"
-                style={{ height: 18, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
+                style={{ height: 20, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
               />
             ) : (
               <div style={{
-                fontFamily: T.serif, fontSize: 17, fontWeight: 700,
+                fontFamily: T.serif, fontSize: 19, fontWeight: 700,
                 color: '#4A3528', letterSpacing: '-0.5px', flexShrink: 0,
               }}>
                 Gigl<span style={{ color: T.accent }}>/</span>
@@ -143,37 +143,37 @@ function FeedInner() {
               }}
             >
               <span style={{
-                fontSize: 10, color: T.accent, letterSpacing: '0.1em',
+                fontSize: 11, color: T.accent, letterSpacing: '0.1em',
                 textTransform: 'uppercase', fontWeight: 700,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               }}>{festivalName ?? 'Festival Season 2026'}</span>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" style={{ flexShrink: 0 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" style={{ flexShrink: 0 }}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
             <button
               onClick={() => router.push('/select-festival')}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                color: T.accent, fontSize: 9, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
+                color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
               }}
             >switch</button>
-            <span style={{ fontSize: 9, color: T.faint }}>·</span>
+            <span style={{ fontSize: 10, color: T.faint }}>·</span>
             <button
               onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                color: T.muted, fontSize: 9, fontFamily: T.sans, letterSpacing: '0.06em',
+                color: T.muted, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em',
               }}
             >sign out</button>
           </div>
         </div>
 
         {/* Activity / Rankings tab toggle — slim pill */}
-        <div style={{ padding: '8px 20px' }}>
+        <div style={{ padding: '9px 20px' }}>
           <div style={{
             display: 'flex',
             border: '2px solid #4A3528',
@@ -181,19 +181,19 @@ function FeedInner() {
             overflow: 'hidden',
           }}>
             <button style={{
-              flex: 1, padding: '5px 0',
+              flex: 1, padding: '6px 0',
               background: '#4A3528', border: 'none',
-              color: '#FAF3E2', fontSize: 9, cursor: 'default',
+              color: '#FAF3E2', fontSize: 10, cursor: 'default',
               fontFamily: T.sans, fontWeight: 700,
               letterSpacing: '0.08em', textTransform: 'uppercase',
             }}>Activity</button>
             <button
               onClick={() => router.push('/rankings')}
               style={{
-                flex: 1, padding: '5px 0',
+                flex: 1, padding: '6px 0',
                 background: T.card,
                 border: 'none', borderLeft: '2px solid #4A3528',
-                color: '#4A3528', fontSize: 9, cursor: 'pointer',
+                color: '#4A3528', fontSize: 10, cursor: 'pointer',
                 fontFamily: T.sans, fontWeight: 600,
                 letterSpacing: '0.08em', textTransform: 'uppercase',
               }}

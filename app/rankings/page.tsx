@@ -89,77 +89,99 @@ export default function RankingsPage() {
       maxWidth: 430, margin: '0 auto',
     }}>
 
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
+      {/* ── Top bar: logo · festival pill · switch/sign-out — one row ────────── */}
       <div style={{
-        padding: '18px 24px 14px',
+        padding: '11px 20px',
         position: 'sticky', top: 0, zIndex: 10,
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
       }}>
-        {T.logoUrl ? (
-          <img src={T.logoUrl} alt="Festival" style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }} />
-        ) : (
-          <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
-            Gigl<span style={{ color: T.accent }}>/</span>
-          </div>
-        )}
-        <button
-          onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '4px 8px', color: T.muted,
-            fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em',
-          }}
-        >sign out</button>
-      </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+          {T.logoUrl ? (
+            <img
+              src={T.logoUrl}
+              alt="Festival"
+              style={{ height: 20, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
+            />
+          ) : (
+            <div style={{
+              fontFamily: T.serif, fontSize: 19, fontWeight: 700,
+              color: '#4A3528', letterSpacing: '-0.5px', flexShrink: 0,
+            }}>
+              Gigl<span style={{ color: T.accent }}>/</span>
+            </div>
+          )}
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '20px 24px 8px' }}>
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
-        }}>{festivalLabel}</div>
-
-        <div style={{
-          fontFamily: T.serif, fontSize: 28, fontWeight: 700,
-          lineHeight: 1.1, letterSpacing: '-1px', marginBottom: 16, color: '#4A3528',
-        }}>
-          Artist<br />
-          <span>rankings</span><span style={{ color: T.accent }}>.</span>
+          <button
+            onClick={() => router.push('/select-festival')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              display: 'flex', alignItems: 'center', gap: 3, minWidth: 0,
+            }}
+          >
+            <span style={{
+              fontSize: 11, color: T.accent, letterSpacing: '0.1em',
+              textTransform: 'uppercase', fontWeight: 700,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{festivalLabel}</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" style={{ flexShrink: 0 }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
         </div>
 
-        {/* Activity / Rankings tab toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+          <button
+            onClick={() => router.push('/select-festival')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
+            }}
+          >switch</button>
+          <span style={{ fontSize: 10, color: T.faint }}>·</span>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              color: T.muted, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em',
+            }}
+          >sign out</button>
+        </div>
+      </div>
+
+      {/* ── Activity / Rankings tab toggle — slim pill ────────────────────────── */}
+      <div style={{ padding: '9px 20px 8px' }}>
         <div style={{
           display: 'flex',
           border: '2px solid #4A3528',
           borderRadius: 5,
           overflow: 'hidden',
-          marginBottom: 12,
+          marginBottom: 8,
         }}>
           <button
             onClick={() => router.push('/feed')}
             style={{
-              flex: 1, padding: '8px 0',
+              flex: 1, padding: '6px 0',
               background: T.card, border: 'none',
               borderRight: '2px solid #4A3528',
-              color: '#4A3528', fontSize: 11, cursor: 'pointer',
+              color: '#4A3528', fontSize: 10, cursor: 'pointer',
               fontFamily: T.sans, fontWeight: 600,
               letterSpacing: '0.08em', textTransform: 'uppercase',
             }}
           >Activity</button>
           <button style={{
-            flex: 1, padding: '8px 0',
+            flex: 1, padding: '6px 0',
             background: '#4A3528', border: 'none',
-            color: '#FAF3E2', fontSize: 11, cursor: 'default',
+            color: '#FAF3E2', fontSize: 10, cursor: 'default',
             fontFamily: T.sans, fontWeight: 700,
             letterSpacing: '0.08em', textTransform: 'uppercase',
           }}>Rankings</button>
         </div>
 
-        {/* Day filter */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        {/* Day filter — the dates, right below the header/tabs and above the list */}
+        <div style={{ display: 'flex', gap: 6 }}>
           {days.map(d => (
             <button key={d} onClick={() => setFilter(d)} style={{
               flex: 1, padding: '6px 0', borderRadius: 4,
