@@ -2,12 +2,12 @@ import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { DEFAULT_THEME as T } from '@/lib/theme'
 import { computeShowScore } from '@/lib/rating'
+import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
-function resolvePhotoUrl(url: string | null): string | null {
-  if (!url) return null
+function resolvePhotoUrl(url: string): string {
   if (url.startsWith('http')) return url
   return `${SUPABASE_STORAGE}/${url}`
 }
@@ -26,7 +26,7 @@ function dayLabel(d: string) {
 export default async function ArtistPage({ params }: { params: { artistId: string } }) {
   const { data: logs } = await supabase
     .from('logged_shows')
-    .select('user_id, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, artist_name, stage, day')
+    .select('user_id, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, media_urls, artist_name, stage, day')
     .eq('artist_id', params.artistId)
 
   if (!logs || logs.length === 0) notFound()
@@ -56,8 +56,8 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   const reviews = rated.filter(l => l.review)
 
   const photos = logs
-    .map(l => resolvePhotoUrl(l.photo_url))
-    .filter((u): u is string => !!u && !isVideoUrl(u))
+    .flatMap(l => resolveMediaUrls(l).map(resolvePhotoUrl))
+    .filter(u => !isVideoUrl(u))
     .filter((u, i, arr) => arr.indexOf(u) === i)
     .slice(0, 3)
 

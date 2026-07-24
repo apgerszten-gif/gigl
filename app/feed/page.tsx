@@ -5,19 +5,14 @@ import { useRouter } from 'next/navigation'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
+import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
-import { VideoPlayer } from '@/components/VideoPlayer'
+import { MediaGrid } from '@/components/MediaGrid'
 import { useTheme } from '@/components/FestivalThemeProvider'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
-function isVideoUrl(url: string): boolean {
-  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
-  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
-}
-
-function resolvePhotoUrl(url: string | null): string | null {
-  if (!url) return null
+function resolvePhotoUrl(url: string): string {
   if (url.startsWith('http')) return url
   return `${SUPABASE_STORAGE}/${url}`
 }
@@ -34,6 +29,7 @@ interface GlobalLog {
   day:         string
   username:    string | null
   photo_url:   string | null
+  media_urls:  string[] | null
   review:      string | null
   tags:        string[] | null
 }
@@ -65,7 +61,7 @@ function FeedInner() {
 
     const { data: logs } = await supabase
       .from('logged_shows')
-      .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, review, tags')
+      .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
       .order('created_at', { ascending: false })
       .limit(200)
 
@@ -252,20 +248,7 @@ function FeedInner() {
                 }}
               >
                 {/* Photo / Video */}
-                {resolvePhotoUrl(item.photo_url) && (
-                  isVideoUrl(resolvePhotoUrl(item.photo_url)!) ? (
-                    <VideoPlayer
-                      src={resolvePhotoUrl(item.photo_url)!}
-                      style={{ maxHeight: 200, objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <img
-                      src={resolvePhotoUrl(item.photo_url)!}
-                      alt={name}
-                      style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }}
-                    />
-                  )
-                )}
+                <MediaGrid urls={resolveMediaUrls(item).map(resolvePhotoUrl)} maxHeight={200} />
 
                 {/* Info row */}
                 <div style={{ padding: infoPadding, display: 'flex', gap: 12, alignItems: 'center' }}>

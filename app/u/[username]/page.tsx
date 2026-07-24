@@ -1,21 +1,16 @@
 import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
-import { VideoPlayer } from '@/components/VideoPlayer'
 import { DEFAULT_THEME as T } from '@/lib/theme'
 import { showScore } from '@/lib/rating'
+import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
+import { MediaGrid } from '@/components/MediaGrid'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
-function resolvePhotoUrl(url: string | null): string | null {
-  if (!url) return null
+function resolvePhotoUrl(url: string): string {
   if (url.startsWith('http')) return url
   return `${SUPABASE_STORAGE}/${url}`
-}
-
-function isVideoUrl(url: string): boolean {
-  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
-  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
 }
 
 export default async function PublicProfile({ params }: { params: { username: string } }) {
@@ -123,7 +118,6 @@ export default async function PublicProfile({ params }: { params: { username: st
               const score     = showScore(show)
               const hasScore  = show.performance_rating != null && show.venue_rating != null && show.vibe_rating != null
               const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
-              const photoUrl  = resolvePhotoUrl(show.photo_url)
               const isTop     = i === 0
               return (
                 <div key={show.id} style={{
@@ -132,14 +126,7 @@ export default async function PublicProfile({ params }: { params: { username: st
                   boxShadow: isTop ? T.cardShadow : 'none',
                   overflow: 'hidden',
                 }}>
-                  {photoUrl && (
-                    isVideoUrl(photoUrl) ? (
-                      <VideoPlayer src={photoUrl} style={{ maxHeight: 220, objectFit: 'cover' }} />
-                    ) : (
-                      <img src={photoUrl} alt={show.artist_name}
-                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
-                    )
-                  )}
+                  <MediaGrid urls={resolveMediaUrls(show).map(resolvePhotoUrl)} maxHeight={220} />
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>

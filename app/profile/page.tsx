@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { showScore } from '@/lib/rating'
+import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
+import { MediaGrid } from '@/components/MediaGrid'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
@@ -45,6 +47,7 @@ interface Show {
   review:              string | null
   tags:                string[] | null
   photo_url:           string | null
+  media_urls:          string[] | null
 }
 
 interface Profile {
@@ -138,13 +141,19 @@ export default function ProfilePage() {
     }
 
     const update: Record<string, unknown> = { review, tags }
-    if (photoUrl !== undefined) update.photo_url = photoUrl
+    if (photoUrl !== undefined) {
+      // This editor only exposes a single photo/video slot, so replacing it
+      // here replaces the whole media_urls array too — attaching more than
+      // one item happens on the full log screen instead.
+      update.photo_url  = photoUrl
+      update.media_urls = photoUrl ? [photoUrl] : null
+    }
 
     const { error } = await supabase.from('logged_shows').update(update).eq('id', showId)
     if (!error) {
       setShows(prev => prev.map(s =>
         s.id === showId
-          ? { ...s, review, tags, ...(photoUrl !== undefined ? { photo_url: photoUrl as string | null } : {}) }
+          ? { ...s, review, tags, ...(photoUrl !== undefined ? { photo_url: photoUrl as string | null, media_urls: photoUrl ? [photoUrl] : null } : {}) }
           : s
       ))
       setEditingId(null)
@@ -333,14 +342,7 @@ export default function ProfilePage() {
                   boxShadow: isTop ? T.cardShadow : 'none',
                   overflow: 'hidden',
                 }}>
-                  {resolvePhotoUrl(show.photo_url) && (
-                    isVideoUrl(resolvePhotoUrl(show.photo_url)!) ? (
-                      <VideoPlayer src={resolvePhotoUrl(show.photo_url)!} style={{ maxHeight: 220, objectFit: 'cover' }} />
-                    ) : (
-                      <img src={resolvePhotoUrl(show.photo_url)!} alt={show.artist_name}
-                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
-                    )
-                  )}
+                  <MediaGrid urls={resolveMediaUrls(show).map(u => resolvePhotoUrl(u)!)} maxHeight={220} />
 
                   {/* Info row */}
                   <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>

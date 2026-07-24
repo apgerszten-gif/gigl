@@ -106,3 +106,9 @@ alter table public.profiles add column username_set boolean not null default tru
 alter table public.logged_shows add column performance_rating smallint;
 alter table public.logged_shows add column venue_rating smallint;
 alter table public.logged_shows add column vibe_rating smallint;
+
+-- Supports attaching multiple media items per log (max 1 video + 2 photos,
+-- enforced client-side in app/log-show). photo_url is kept in sync as
+-- media_urls[0] for any old code path that still reads the single column;
+-- reads should prefer media_urls via lib/media.ts's resolveMediaUrls().
+alter table public.logged_shows add column media_urls text[];

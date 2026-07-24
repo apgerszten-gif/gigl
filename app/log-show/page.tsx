@@ -5,6 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
+import { resolveMediaUrls } from '@/lib/media'
+
+const MAX_VIDEOS = 1
+const MAX_PHOTOS = 2
 
 const PRESET_TAGS = [
   'Surprise guest', 'Crowd surf', 'Sing along', 'Unreleased music',
@@ -147,7 +151,7 @@ function LogShowInner() {
 
       const { data } = await supabase
         .from('logged_shows')
-        .select('id, stage, day, performance_rating, venue_rating, vibe_rating, review, tags, photo_url')
+        .select('id, stage, day, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, media_urls')
         .eq('user_id', user.id)
         .eq('artist_id', artistId)
         .maybeSingle()
@@ -164,9 +168,9 @@ function LogShowInner() {
           setSelectedTags(data.tags)
           setTagOptions(prev => Array.from(new Set([...prev, ...data.tags])))
         }
-        if (data.photo_url) {
-          const isVideo = isVideoUrl(data.photo_url)
-          setMedia([{ url: data.photo_url, isVideo }])
+        const existingUrls = resolveMediaUrls(data)
+        if (existingUrls.length > 0) {
+          setMedia(existingUrls.map(url => ({ url, isVideo: isVideoUrl(url) })))
         }
       }
       setLoadingExisting(false)
@@ -196,12 +200,20 @@ function LogShowInner() {
     const files = e.target.files
     if (!files) return
 
+    let videoCount = media.filter(m => m.isVideo).length
+    let photoCount = media.filter(m => !m.isVideo).length
+
     const items: MediaItem[] = []
     for (const file of Array.from(files)) {
       const isVideo = file.type.startsWith('video/')
       if (isVideo) {
+        if (videoCount >= MAX_VIDEOS) { alert(`You can only attach ${MAX_VIDEOS} video.`); continue }
         const duration = await getVideoDuration(file)
         if (duration > 20) { alert('Videos must be 20 seconds or less.'); continue }
+        videoCount++
+      } else {
+        if (photoCount >= MAX_PHOTOS) { alert(`You can only attach ${MAX_PHOTOS} photos.`); continue }
+        photoCount++
       }
       items.push({ url: URL.createObjectURL(file), isVideo, file })
     }
@@ -214,6 +226,9 @@ function LogShowInner() {
   }
 
   const canSave = performance > 0 && venue > 0 && vibe > 0
+  const mediaVideoCount = media.filter(m => m.isVideo).length
+  const mediaPhotoCount = media.filter(m => !m.isVideo).length
+  const mediaFull = mediaVideoCount >= MAX_VIDEOS && mediaPhotoCount >= MAX_PHOTOS
 
   async function handleSave() {
     if (!canSave || saving) return
@@ -222,24 +237,23 @@ function LogShowInner() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
 
-    // Only the first media item is persisted for now — logged_shows has a
-    // single photo_url column, not an array. The picker above still lets
-    // you attach several; extending storage to keep all of them is a
-    // separate follow-up.
-    let photoUrl: string | null = media[0]?.url ?? null
-    const firstNewFile = media[0]?.file
-    if (firstNewFile) {
-      const ext = firstNewFile.name.split('.').pop()
-      const path = `${user.id}/${artistId}-${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('show-photos')
-        .upload(path, firstNewFile, { upsert: true })
+    const mediaUrls: string[] = []
+    for (const item of media) {
+      if (item.file) {
+        const ext = item.file.name.split('.').pop()
+        const path = `${user.id}/${artistId}-${Date.now()}-${mediaUrls.length}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('show-photos')
+          .upload(path, item.file, { upsert: true })
 
-      if (uploadError) {
-        alert('Media upload error: ' + uploadError.message)
-      } else {
+        if (uploadError) {
+          alert('Media upload error: ' + uploadError.message)
+          continue
+        }
         const { data: urlData } = supabase.storage.from('show-photos').getPublicUrl(path)
-        photoUrl = urlData.publicUrl
+        mediaUrls.push(urlData.publicUrl)
+      } else {
+        mediaUrls.push(item.url)
       }
     }
 
@@ -256,7 +270,8 @@ function LogShowInner() {
       vibe_rating:         vibe,
       review:              thoughts.trim() || null,
       tags:                selectedTags.length > 0 ? selectedTags : null,
-      photo_url:           photoUrl,
+      photo_url:           mediaUrls[0] ?? null,
+      media_urls:          mediaUrls.length > 0 ? mediaUrls : null,
       emoji:               deriveLegacyEmoji(score),
     }, { onConflict: 'user_id,artist_id' })
 
@@ -423,7 +438,7 @@ function LogShowInner() {
           <div style={{
             fontSize: 9, color: T.muted, letterSpacing: '0.12em',
             textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-          }}>Media</div>
+          }}>Media <span style={{ color: T.faint, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>· up to 1 video + 2 photos</span></div>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
             {media.map((item, i) => (
               <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
@@ -459,22 +474,19 @@ function LogShowInner() {
               style={{ display: 'none' }}
               onChange={handleMediaSelect}
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                width: 64, height: 64, flexShrink: 0, borderRadius: 5,
-                background: 'none', border: '1.5px dashed rgba(74,53,40,0.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: T.faint, fontSize: 20,
-              }}
-            >+</button>
+            {!mediaFull && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  width: 64, height: 64, flexShrink: 0, borderRadius: 5,
+                  background: 'none', border: '1.5px dashed rgba(74,53,40,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: T.faint, fontSize: 20,
+                }}
+              >+</button>
+            )}
           </div>
-          {media.length > 1 && (
-            <div style={{ fontSize: 10, color: T.faint, marginTop: 6 }}>
-              Only the first item is saved for now — multi-media storage is coming.
-            </div>
-          )}
         </div>
 
         {/* ── Save ────────────────────────────────────────────────────────────── */}
