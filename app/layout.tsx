@@ -3,7 +3,7 @@ import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 
 export const metadata: Metadata = {
-  title: 'Gigl — be the critic',
+  title: 'Gigl — be the critic.',
   description: 'Log and rank your Coachella sets',
   manifest: '/manifest.json',
 }
