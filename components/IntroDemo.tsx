@@ -7,7 +7,9 @@ import { useTheme } from '@/components/FestivalThemeProvider'
 import { StarDisplay } from '@/components/StarDisplay'
 
 const DURATION_MS = 10000
-const SCENE_COUNT = 5
+const SCENE_COUNT = 4
+
+const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'
 
 // ── Mock data (fictional — this is the very first thing a new visitor sees,
 // so we invent a lineup rather than borrowing real artists' names/likeness) ──
@@ -22,18 +24,12 @@ const RANKING_ROWS = [
 ]
 
 const LOG_ARTISTS = [
-  { name: 'Nova Wilder',    stage: 'Sunset Stage', tapped: false },
-  { name: 'The Salt Flats', stage: 'North Field',  tapped: true },
-  { name: 'Glass Coyote',   stage: 'Main Stage',   tapped: false },
-  { name: 'Midnight Radio', stage: 'The Grove',    tapped: false },
-  { name: 'Paper Static',   stage: 'East Tent',    tapped: false },
-  { name: 'Halogen Youth',  stage: 'Sunset Stage', tapped: false },
-]
-
-const RATE_TAGS = [
-  { label: 'Crowd surf',    active: true },
-  { label: 'Sing along',    active: false },
-  { label: 'Cool lighting', active: false },
+  { name: 'Nova Wilder',    stage: 'Sunset Stage' },
+  { name: 'The Salt Flats', stage: 'North Field' },
+  { name: 'Glass Coyote',   stage: 'Main Stage' },
+  { name: 'Midnight Radio', stage: 'The Grove' },
+  { name: 'Paper Static',   stage: 'East Tent' },
+  { name: 'Halogen Youth',  stage: 'Sunset Stage' },
 ]
 
 const REACTION_BARS = [
@@ -55,11 +51,55 @@ function SceneWrapper({ children }: { children: React.ReactNode }) {
   )
 }
 
+// A brief tap indicator, absolutely positioned relative to its own
+// `position: relative` parent, timed to a fixed point on the demo's clock.
+function TapDot({ delay }: { delay: number }) {
+  return (
+    <div style={{
+      position: 'absolute', top: '50%', left: '50%',
+      width: 24, height: 24,
+      borderRadius: '50%', background: 'rgba(74,53,40,0.35)',
+      border: '2px solid rgba(74,53,40,0.55)',
+      opacity: 0, pointerEvents: 'none', zIndex: 5,
+      animation: `tapDotPulse 0.6s ease-out ${delay}s forwards`,
+    }} />
+  )
+}
+
+// Stars that pop in one at a time (as if being tapped in), rather than
+// rendering fully-formed the way the static StarDisplay does.
+function TapStars({ count, size, accent, delay, stagger = 0.12 }: {
+  count: number; size: number; accent: string; delay: number; stagger?: number
+}) {
+  return (
+    <div style={{ display: 'inline-flex', gap: 2 }}>
+      {[0, 1, 2, 3, 4].map(i => (
+        <span key={i} style={{ position: 'relative', width: size, height: size, display: 'inline-block', flexShrink: 0 }}>
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5" style={{ display: 'block' }}>
+            <polygon points={STAR_POINTS} />
+          </svg>
+          {i < count && (
+            <span style={{
+              position: 'absolute', top: 0, left: 0, width: size, height: size,
+              opacity: 0, transform: 'scale(0.4)',
+              animation: `starPop 0.25s ease-out ${delay + i * stagger}s forwards`,
+            }}>
+              <svg width={size} height={size} viewBox="0 0 24 24" fill={accent} stroke={accent} strokeWidth="1.5" style={{ display: 'block' }}>
+                <polygon points={STAR_POINTS} />
+              </svg>
+            </span>
+          )}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 // ── Scene 1: Rankings ─────────────────────────────────────────────────────────
 
 function RankingsScene({ T }: { T: ReturnType<typeof useTheme> }) {
   return (
-    <div style={{ padding: '28px 24px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
+    <div style={{ padding: '28px 24px', height: '100%', boxSizing: 'border-box', background: T.bg, overflow: 'hidden' }}>
       <div style={{
         fontSize: 10, color: T.accent, letterSpacing: '0.14em',
         textTransform: 'uppercase', fontWeight: 700, marginBottom: 4, fontFamily: T.sans,
@@ -70,7 +110,7 @@ function RankingsScene({ T }: { T: ReturnType<typeof useTheme> }) {
       }}>
         The crowd decides<span style={{ color: T.accent }}>.</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, animation: 'scene1Scroll 1.6s ease-in-out 0.2s forwards' }}>
         {RANKING_ROWS.map((r, i) => (
           <div key={r.name} style={{
             background: i % 2 === 0 ? T.card : T.cardAlt,
@@ -118,40 +158,49 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
       </div>
       <div style={{ display: 'flex', border: '2px solid #4A3528', borderRadius: 5, overflow: 'hidden', marginBottom: 14 }}>
         {['FRI', 'SAT', 'SUN'].map((d, i) => (
-          <div key={d} style={{
-            flex: 1, padding: '6px 0', textAlign: 'center',
-            background: i === 1 ? '#4A3528' : T.card,
-            borderLeft: i > 0 ? '2px solid #4A3528' : 'none',
-            color: i === 1 ? '#FAF3E2' : T.muted,
-            fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', fontFamily: T.sans,
-          }}>{d}</div>
+          <div key={d} style={{ position: 'relative', flex: 1, borderLeft: i > 0 ? '2px solid #4A3528' : 'none' }}>
+            <div style={{
+              padding: '6px 0', textAlign: 'center',
+              background: T.card, color: T.muted,
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', fontFamily: T.sans,
+              ...(i === 1 ? { animation: 'dayTabActivate 0.2s ease-out 2.7s forwards' } : {}),
+            }}>{d}</div>
+            {i === 1 && <TapDot delay={2.6} />}
+          </div>
         ))}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {LOG_ARTISTS.map((a, i) => (
-          <div key={a.name} style={{
-            background: a.tapped ? T.accentDim : (i % 2 === 0 ? T.card : T.cardAlt),
-            border: a.tapped ? `1.5px solid ${T.accent}` : T.cardBorder,
-            borderRadius: i === 0 ? '5px 5px 3px 3px' : i === LOG_ARTISTS.length - 1 ? '3px 3px 5px 5px' : 3,
-            padding: '10px 12px',
-            display: 'flex', alignItems: 'center', gap: 10,
-          }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: T.serif, fontSize: 12, fontWeight: 700, color: '#4A3528' }}>{a.name}</div>
-              <div style={{ fontSize: 8, color: T.muted, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>{a.stage}</div>
-            </div>
-            {a.tapped && (
-              <div style={{
-                width: 18, height: 18, borderRadius: '50%', background: T.accent,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+        {LOG_ARTISTS.map((a, i) => {
+          const isTapped = i === 1
+          return (
+            <div key={a.name} style={{
+              position: 'relative',
+              background: i % 2 === 0 ? T.card : T.cardAlt,
+              borderWidth: 1.5, borderStyle: 'solid', borderColor: '#4A3528',
+              borderRadius: i === 0 ? '5px 5px 3px 3px' : i === LOG_ARTISTS.length - 1 ? '3px 3px 5px 5px' : 3,
+              padding: '10px 12px',
+              display: 'flex', alignItems: 'center', gap: 10,
+              ...(isTapped ? { animation: 'rowTapActivate 0.3s ease-out 3.7s forwards' } : {}),
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: T.serif, fontSize: 12, fontWeight: 700, color: '#4A3528' }}>{a.name}</div>
+                <div style={{ fontSize: 8, color: T.muted, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>{a.stage}</div>
               </div>
-            )}
-          </div>
-        ))}
+              {isTapped && (
+                <div style={{
+                  width: 18, height: 18, borderRadius: '50%', background: T.accent,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  opacity: 0, animation: 'fadeIn 0.25s ease-out 3.8s forwards',
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+              )}
+              {isTapped && <TapDot delay={3.6} />}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -160,6 +209,11 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
 // ── Scene 3: Rate the show ──────────────────────────────────────────────────────
 
 function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
+  const rows = [
+    { label: 'Performance', count: 5, dotDelay: 5.4, starDelay: 5.5 },
+    { label: 'Venue',       count: 4, dotDelay: 6.15, starDelay: 6.25 },
+    { label: 'Vibe',        count: 5, dotDelay: 6.85, starDelay: 6.95 },
+  ]
   return (
     <div style={{ padding: '28px 24px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
       <div style={{
@@ -172,23 +226,28 @@ function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
       }}>North Field · Sat</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-        {[{ label: 'Performance', score: 5 }, { label: 'Venue', score: 4 }, { label: 'Vibe', score: 5 }].map(row => (
-          <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {rows.map(row => (
+          <div key={row.label} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontFamily: T.serif, fontSize: 14, fontWeight: 700, color: '#4A3528' }}>{row.label}</div>
-            <StarDisplay score={row.score} size={18} accent={T.accent} />
+            <TapStars count={row.count} size={18} accent={T.accent} delay={row.starDelay} />
+            <TapDot delay={row.dotDelay} />
           </div>
         ))}
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {RATE_TAGS.map(tag => (
+        {[{ label: 'Crowd surf', active: true }, { label: 'Sing along', active: false }, { label: 'Cool lighting', active: false }].map(tag => (
           <div key={tag.label} style={{
+            position: 'relative',
             fontSize: 10, padding: '5px 11px', borderRadius: 20,
-            background: tag.active ? T.accent : 'none',
-            color: tag.active ? '#FAF3E2' : T.muted,
-            border: tag.active ? '1.5px solid #4A3528' : '1.5px solid rgba(74,53,40,0.25)',
+            background: 'none', color: T.muted,
+            border: '1.5px solid rgba(74,53,40,0.25)',
             fontFamily: T.sans, fontWeight: 600,
-          }}>{tag.label}</div>
+            ...(tag.active ? { animation: 'tagActivate 0.25s ease-out 7.65s forwards' } : {}),
+          }}>
+            {tag.label}
+            {tag.active && <TapDot delay={7.55} />}
+          </div>
         ))}
       </div>
 
@@ -196,6 +255,7 @@ function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
         background: T.card, borderRadius: 5, border: T.cardBorder,
         padding: '12px 14px', fontSize: 12, color: 'rgba(74,53,40,0.65)',
         fontStyle: 'italic', lineHeight: 1.5, fontFamily: T.sans,
+        opacity: 0, animation: 'fadeIn 0.4s ease-out 7.8s forwards',
       }}>
         &ldquo;best set of the whole weekend, never left the floor once&rdquo;
       </div>
@@ -243,7 +303,7 @@ function ScoreScene({ T }: { T: ReturnType<typeof useTheme> }) {
             <div style={{ flex: 1, height: 5, background: T.cardInner, borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(74,53,40,0.1)' }}>
               <div style={{
                 height: '100%', borderRadius: 3, background: T.accent,
-                width: 0, animation: `${row.keyframe} 1s ease-out 5.4s forwards`,
+                width: 0, animation: `${row.keyframe} 0.8s ease-out 8.5s forwards`,
               }} />
             </div>
             <div style={{ width: 22, fontSize: 10, color: T.muted, textAlign: 'right', flexShrink: 0 }}>{row.pct}%</div>
@@ -252,8 +312,11 @@ function ScoreScene({ T }: { T: ReturnType<typeof useTheme> }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {REVIEW_SNIPPETS.map(rev => (
-          <div key={rev.user} style={{ background: T.card, borderRadius: 5, border: T.cardBorder, padding: '9px 11px' }}>
+        {REVIEW_SNIPPETS.map((rev, i) => (
+          <div key={rev.user} style={{
+            background: T.card, borderRadius: 5, border: T.cardBorder, padding: '9px 11px',
+            opacity: 0, animation: `fadeIn 0.4s ease-out ${8.6 + i * 0.4}s forwards`,
+          }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <StarDisplay score={rev.score} size={11} accent={T.accent} />
               <span style={{ fontSize: 10, fontWeight: 600, color: '#4A3528', fontFamily: T.sans }}>{rev.user}</span>
@@ -263,66 +326,6 @@ function ScoreScene({ T }: { T: ReturnType<typeof useTheme> }) {
             </div>
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Scene 5: Sign up (mirrors the real /auth screen) ────────────────────────────
-
-function SignupScene({ T }: { T: ReturnType<typeof useTheme> }) {
-  return (
-    <div style={{ padding: '28px 24px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
-      <div style={{ fontFamily: T.serif, fontSize: 24, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px', marginBottom: 4 }}>
-        Gigl<span style={{ color: T.accent }}>/</span>
-      </div>
-      <div style={{ fontSize: 9, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: T.sans, marginBottom: 16, fontWeight: 600 }}>
-        Festival season · 2026
-      </div>
-      <div style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 16, color: '#4A3528' }}>
-        Rate the sets<span style={{ color: T.accent }}>.</span> Own the moment<span style={{ color: T.accent }}>.</span>
-      </div>
-
-      <div style={{
-        width: '100%', background: T.card, border: T.cardBorder, borderRadius: 5,
-        padding: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12,
-      }}>
-        <svg width="13" height="13" viewBox="0 0 18 18">
-          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-        </svg>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#4A3528', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-          Continue with Google
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-        <span style={{ fontSize: 9, color: T.faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>or</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-        {['Username', 'Email', 'Password'].map(label => (
-          <div key={label} style={{ background: T.card, borderRadius: 5, border: T.cardBorder, padding: '9px 12px' }}>
-            <div style={{ fontSize: 8, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{
-        width: '100%', background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-        borderRadius: 5, padding: 13, textAlign: 'center', marginBottom: 12,
-      }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#FAF3E2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-          Create account
-        </span>
-      </div>
-
-      <div style={{ textAlign: 'center', fontSize: 11, color: T.muted, fontFamily: T.sans }}>
-        Already have an account? <span style={{ color: T.accent, textDecoration: 'underline', textUnderlineOffset: 3 }}>Sign in</span>
       </div>
     </div>
   )
@@ -404,7 +407,7 @@ export default function IntroDemo() {
         touchAction: 'none',
       }}
     >
-      {/* Track — one continuous camera pan through all 5 scenes */}
+      {/* Track — one continuous camera pan through all 4 scenes */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
         height: `${SCENE_COUNT * 100}%`,
@@ -414,7 +417,6 @@ export default function IntroDemo() {
         <SceneWrapper><LogScene T={T} /></SceneWrapper>
         <SceneWrapper><RateScene T={T} /></SceneWrapper>
         <SceneWrapper><ScoreScene T={T} /></SceneWrapper>
-        <SceneWrapper><SignupScene T={T} /></SceneWrapper>
       </div>
 
       {/* Skip pill — always visible, above the track */}
@@ -448,19 +450,47 @@ export default function IntroDemo() {
       <style>{`
         @keyframes introPan {
           0%   { transform: translateY(0); }
-          14%  { transform: translateY(0); }
-          18%  { transform: translateY(-20%); }
-          32%  { transform: translateY(-20%); }
-          36%  { transform: translateY(-40%); }
-          50%  { transform: translateY(-40%); }
-          54%  { transform: translateY(-60%); }
-          68%  { transform: translateY(-60%); }
-          72%  { transform: translateY(-80%); }
-          100% { transform: translateY(-80%); }
+          20%  { transform: translateY(0); }
+          24%  { transform: translateY(-25%); }
+          48%  { transform: translateY(-25%); }
+          52%  { transform: translateY(-50%); }
+          80%  { transform: translateY(-50%); }
+          84%  { transform: translateY(-75%); }
+          100% { transform: translateY(-75%); }
         }
         @keyframes introHintPulse {
           0%, 100% { opacity: 0.55; transform: translateY(0); }
           50%       { opacity: 1;    transform: translateY(-4px); }
+        }
+        @keyframes tapDotPulse {
+          0%   { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+          30%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+        }
+        @keyframes starPop {
+          0%   { opacity: 0; transform: scale(0.4); }
+          60%  { opacity: 1; transform: scale(1.2); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes scene1Scroll {
+          from { transform: translateY(0); }
+          to   { transform: translateY(-16px); }
+        }
+        @keyframes dayTabActivate {
+          from { background-color: ${T.card}; color: ${T.muted}; }
+          to   { background-color: #4A3528; color: #FAF3E2; }
+        }
+        @keyframes rowTapActivate {
+          from { background-color: ${T.card}; border-color: #4A3528; }
+          to   { background-color: ${T.accentDim}; border-color: ${T.accent}; }
+        }
+        @keyframes tagActivate {
+          from { background-color: transparent; color: ${T.muted}; border-color: rgba(74,53,40,0.25); }
+          to   { background-color: ${T.accent}; color: #FAF3E2; border-color: #4A3528; }
         }
         @keyframes fillLoved { from { width: 0%; } to { width: 68%; } }
         @keyframes fillOk    { from { width: 0%; } to { width: 24%; } }
