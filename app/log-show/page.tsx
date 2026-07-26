@@ -6,6 +6,7 @@ import { useTheme } from '@/components/FestivalThemeProvider'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
+import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 
 const MAX_VIDEOS = 1
 const MAX_PHOTOS = 2
@@ -141,6 +142,7 @@ function LogShowInner() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [saving, setSaving] = useState(false)
+  const [celebration, setCelebration] = useState<{ username: string | null } | null>(null)
 
   // Prefill from an existing log for this artist, if one exists.
   useEffect(() => {
@@ -237,6 +239,15 @@ function LogShowInner() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
 
+    let isFirstShow = false
+    if (!existingId) {
+      const { count } = await supabase
+        .from('logged_shows')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      isFirstShow = (count ?? 0) === 0
+    }
+
     const mediaUrls: string[] = []
     for (const item of media) {
       if (item.file) {
@@ -276,6 +287,13 @@ function LogShowInner() {
     }, { onConflict: 'user_id,artist_id' })
 
     if (error) { alert('Error saving: ' + error.message); setSaving(false); return }
+
+    if (isFirstShow) {
+      const { data: profileRow } = await supabase.from('profiles').select('username').eq('id', user.id).single()
+      setCelebration({ username: profileRow?.username ?? null })
+      setSaving(false)
+      return
+    }
 
     router.push('/feed')
   }
@@ -507,6 +525,8 @@ function LogShowInner() {
           }}>{saving ? 'Saving...' : 'Save log'}</span>
         </button>
       </div>
+
+      {celebration && <FirstShowCelebration username={celebration.username} />}
     </div>
   )
 }
