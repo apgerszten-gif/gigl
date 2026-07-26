@@ -43,12 +43,20 @@ function FeedInner() {
   const [loading, setLoading]             = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [festivalName, setFestivalName]   = useState<string | null>(null)
+  const [showLogTip, setShowLogTip]       = useState(false)
 
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
     if (id) {
       const f = getFestival(id)
       if (f) setFestivalName(f.emoji + ' ' + f.shortName + ' ' + f.dates.slice(-4))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!localStorage.getItem('gigl_seen_log_tip')) {
+      localStorage.setItem('gigl_seen_log_tip', '1')
+      setShowLogTip(true)
     }
   }, [])
 
@@ -358,7 +366,42 @@ function FeedInner() {
         </button>
 
         {/* Log FAB */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          {showLogTip && (
+            <div style={{
+              position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+              marginBottom: 14, width: 190, zIndex: 30,
+            }}>
+              <div style={{
+                position: 'relative', background: T.card, border: T.cardBorder,
+                boxShadow: T.cardShadow, borderRadius: 6, padding: '10px 20px 10px 12px',
+              }}>
+                <button
+                  onClick={() => setShowLogTip(false)}
+                  aria-label="Dismiss"
+                  style={{
+                    position: 'absolute', top: 2, right: 4, background: 'none', border: 'none',
+                    cursor: 'pointer', color: T.faint, fontSize: 14, lineHeight: 1, padding: 4,
+                  }}
+                >×</button>
+                <div style={{ fontSize: 11, color: '#4A3528', lineHeight: 1.4, fontFamily: T.sans }}>
+                  <strong>Hey!</strong> Welcome to Gigl. Log and rate your first show here.
+                </div>
+                <div style={{
+                  position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)',
+                  width: 0, height: 0,
+                  borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
+                  borderTop: '8px solid #4A3528',
+                }} />
+                <div style={{
+                  position: 'absolute', bottom: -5.5, left: '50%', transform: 'translateX(-50%)',
+                  width: 0, height: 0,
+                  borderLeft: '6.5px solid transparent', borderRight: '6.5px solid transparent',
+                  borderTop: `6.5px solid ${T.card}`,
+                }} />
+              </div>
+            </div>
+          )}
           <div
             onClick={() => router.push('/log')}
             style={{
