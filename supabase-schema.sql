@@ -112,3 +112,8 @@ alter table public.logged_shows add column vibe_rating smallint;
 -- media_urls[0] for any old code path that still reads the single column;
 -- reads should prefer media_urls via lib/media.ts's resolveMediaUrls().
 alter table public.logged_shows add column media_urls text[];
+
+-- Tracks whether this account has ever been shown the first-visit tooltip
+-- pointing at the Log button on the feed page. Keyed to the account (not a
+-- browser-local flag) so it stays "seen" across devices/browsers once shown.
+alter table public.profiles add column has_seen_log_tip boolean not null default false;

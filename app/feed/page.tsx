@@ -53,19 +53,22 @@ function FeedInner() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!localStorage.getItem('gigl_seen_log_tip')) {
-      localStorage.setItem('gigl_seen_log_tip', '1')
-      setShowLogTip(true)
-    }
-  }, [])
-
   useEffect(() => { fetchFeed() }, [])
 
   async function fetchFeed() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
     setCurrentUserId(user.id)
+
+    const { data: profileRow } = await supabase
+      .from('profiles')
+      .select('has_seen_log_tip')
+      .eq('id', user.id)
+      .single()
+    if (profileRow && !profileRow.has_seen_log_tip) {
+      setShowLogTip(true)
+      await supabase.from('profiles').update({ has_seen_log_tip: true }).eq('id', user.id)
+    }
 
     const { data: logs } = await supabase
       .from('logged_shows')
