@@ -9,6 +9,7 @@ import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
 import { useTheme } from '@/components/FestivalThemeProvider'
+import { useAuth } from '@/components/AuthProvider'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -38,10 +39,10 @@ function FeedInner() {
   const router     = useRouter()
   const supabase   = createClient()
   const T = useTheme()
+  const { user, loading: authLoading } = useAuth()
 
   const [globalFeed, setGlobalFeed]       = useState<GlobalLog[]>([])
   const [loading, setLoading]             = useState(true)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [festivalName, setFestivalName]   = useState<string | null>(null)
   const [showLogTip, setShowLogTip]       = useState(false)
 
@@ -53,18 +54,22 @@ function FeedInner() {
     }
   }, [])
 
-  useEffect(() => { fetchFeed() }, [])
-
-  async function fetchFeed() {
-    const { data: { user } } = await supabase.auth.getUser()
+  useEffect(() => {
+    if (authLoading) return
     if (!user) { router.push('/'); return }
-    setCurrentUserId(user.id)
+    fetchFeed(user.id)
+  }, [authLoading, user])
 
-    const { data: profileRow, error: tipError } = await supabase
-      .from('profiles')
-      .select('has_seen_log_tip')
-      .eq('id', user.id)
-      .single()
+  async function fetchFeed(userId: string) {
+    const [{ data: profileRow, error: tipError }, { data: logs }] = await Promise.all([
+      supabase.from('profiles').select('has_seen_log_tip').eq('id', userId).single(),
+      supabase
+        .from('logged_shows')
+        .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
+        .order('created_at', { ascending: false })
+        .limit(200),
+    ])
+
     if (tipError) {
       console.error('has_seen_log_tip lookup failed:', tipError.message)
     } else if (profileRow && !profileRow.has_seen_log_tip) {
@@ -72,15 +77,9 @@ function FeedInner() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ has_seen_log_tip: true })
-        .eq('id', user.id)
+        .eq('id', userId)
       if (updateError) console.error('has_seen_log_tip update failed:', updateError.message)
     }
-
-    const { data: logs } = await supabase
-      .from('logged_shows')
-      .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
-      .order('created_at', { ascending: false })
-      .limit(200)
 
     if (!logs) { setLoading(false); return }
 
@@ -242,7 +241,7 @@ function FeedInner() {
             const name      = item.artist_name ?? 'Unknown'
             const stageName = item.stage       ?? ''
             const day       = item.day         ?? ''
-            const isMe      = item.user_id === currentUserId
+            const isMe      = item.user_id === user?.id
             const username  = item.username ?? 'anonymous'
             const isTop     = i === 0
             const hasScore  = item.performance_rating != null && item.venue_rating != null && item.vibe_rating != null

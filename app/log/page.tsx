@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getFestival, getArtistsByDay, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
+import { useAuth } from '@/components/AuthProvider'
 import { StarDisplay } from '@/components/StarDisplay'
 import { computeShowScore } from '@/lib/rating'
 
@@ -19,6 +20,7 @@ function LogInner() {
   const supabase     = createClient()
   const searchParams = useSearchParams()
   const T = useTheme()
+  const { user, loading: authLoading } = useAuth()
 
   const isRerate = searchParams.get('rerate') === '1'
 
@@ -39,14 +41,14 @@ function LogInner() {
   }, [])
 
   useEffect(() => {
-    async function fetchLogged() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+    if (authLoading) return
+    if (!user) { router.push('/'); return }
 
+    async function fetchLogged(userId: string) {
       const { data } = await supabase
         .from('logged_shows')
         .select('artist_id, performance_rating, venue_rating, vibe_rating')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (data) {
         const map = new Map<string, ExistingLog>()
@@ -61,8 +63,8 @@ function LogInner() {
       }
       setLoadingLogged(false)
     }
-    fetchLogged()
-  }, [])
+    fetchLogged(user.id)
+  }, [authLoading, user, router])
 
   const loggedIds       = new Set(loggedMap.keys())
   const festivalArtists = festival?.artists ?? []

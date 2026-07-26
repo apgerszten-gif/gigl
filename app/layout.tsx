@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
+import { AuthProvider } from '@/components/AuthProvider'
 
 export const metadata: Metadata = {
   title: 'Gigl — be the critic.',
@@ -24,11 +25,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className="bg-paper min-h-screen font-sans antialiased">
-        <FestivalThemeProvider>
-          <div className="max-w-md mx-auto min-h-screen">
-            {children}
-          </div>
-        </FestivalThemeProvider>
+        <AuthProvider>
+          <FestivalThemeProvider>
+            <div className="max-w-md mx-auto min-h-screen">
+              {children}
+            </div>
+          </FestivalThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )

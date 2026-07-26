@@ -10,6 +10,7 @@ import { MediaGrid } from '@/components/MediaGrid'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
+import { useAuth } from '@/components/AuthProvider'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
@@ -58,6 +59,7 @@ interface Profile {
 export default function ProfilePage() {
   const router = useRouter()
   const T = useTheme()
+  const { user, loading: authLoading } = useAuth()
 
   const [festivalLabel, setFestivalLabel]   = useState('Festival Season 2026')
   const [profile, setProfile]               = useState<Profile | null>(null)
@@ -82,19 +84,20 @@ export default function ProfilePage() {
   }, [])
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+    if (authLoading) return
+    if (!user) { router.push('/'); return }
+
+    async function load(userId: string) {
       const [{ data: prof }, { data: showData }] = await Promise.all([
-        supabase.from('profiles').select('username, display_name').eq('id', user.id).single(),
-        supabase.from('logged_shows').select('*').eq('user_id', user.id),
+        supabase.from('profiles').select('username, display_name').eq('id', userId).single(),
+        supabase.from('logged_shows').select('*').eq('user_id', userId),
       ])
       setProfile(prof)
       setShows((showData || []).slice().sort((a, b) => showScore(b) - showScore(a)))
       setLoading(false)
     }
-    load()
-  }, [router])
+    load(user.id)
+  }, [authLoading, user, router])
 
   async function copyLink() {
     if (!profile) return
@@ -136,7 +139,6 @@ export default function ProfilePage() {
     let photoUrl: string | null | undefined = undefined
 
     if (editPhotoFile) {
-      const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const ext  = editPhotoFile.name.split('.').pop()
         const path = `${user.id}/${artistId}-${Date.now()}.${ext}`

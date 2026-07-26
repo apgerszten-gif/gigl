@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { useAuth } from '@/components/AuthProvider'
 
 const ink    = '#4A3528'
 const cream  = '#FAF3E2'
@@ -17,6 +18,7 @@ const sans   = "'Inter', sans-serif"
 export default function ChooseUsernamePage() {
   const router   = useRouter()
   const supabase = createClient()
+  const { user, loading: authLoading } = useAuth()
 
   const [username, setUsername] = useState('')
   const [error, setError]       = useState<string | null>(null)
@@ -24,23 +26,20 @@ export default function ChooseUsernamePage() {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.replace('/'); return }
-      supabase.from('profiles').select('username').eq('id', user.id).single().then(({ data }) => {
-        if (data?.username) setUsername(data.username)
-        setChecking(false)
-      })
+    if (authLoading) return
+    if (!user) { router.replace('/'); return }
+    supabase.from('profiles').select('username').eq('id', user.id).single().then(({ data }) => {
+      if (data?.username) setUsername(data.username)
+      setChecking(false)
     })
-  }, [])
+  }, [authLoading, user, router])
 
   async function handleSubmit() {
     setError(null)
     const cleaned = username.trim().toLowerCase().replace(/\s+/g, '_')
     if (!cleaned) { setError('Pick a username to continue.'); return }
-    setLoading(true)
-
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/'); return }
+    setLoading(true)
 
     const { error: upsertError } = await supabase.from('profiles').upsert({
       id:           user.id,

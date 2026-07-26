@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { StarDisplay } from '@/components/StarDisplay'
 import { useTheme } from '@/components/FestivalThemeProvider'
+import { useAuth } from '@/components/AuthProvider'
 
 interface ArtistRow {
   artist_id: string
@@ -21,6 +22,7 @@ export default function RankingsPage() {
   const router   = useRouter()
   const supabase = createClient()
   const T = useTheme()
+  const { user, loading: authLoading } = useAuth()
 
   const [rows, setRows]       = useState<ArtistRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,11 +37,15 @@ export default function RankingsPage() {
     }
   }, [])
 
+  // Redirect check runs independently of the data fetch below — this query
+  // isn't scoped to the current user at all, so there's no reason to make it
+  // wait on the auth round-trip.
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/')
+  }, [authLoading, user, router])
+
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
-
       const { data: logs } = await supabase
         .from('logged_shows')
         .select('artist_id, performance_rating, venue_rating, vibe_rating, artist_name, stage, day')

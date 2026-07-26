@@ -3,20 +3,21 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { FESTIVALS, LOCAL_STORAGE_KEY } from '@/lib/festivals'
-import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
+import { useAuth } from '@/components/AuthProvider'
 
 export default function SelectFestivalPage() {
-  const router   = useRouter()
-  const supabase = createClient()
+  const router = useRouter()
   const T = useTheme()
+  const { user, loading: authLoading } = useAuth()
 
   const [isSwitching, setIsSwitching] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.replace('/')
-    })
+    if (!authLoading && !user) router.replace('/')
+  }, [authLoading, user, router])
+
+  useEffect(() => {
     setIsSwitching(!!localStorage.getItem(LOCAL_STORAGE_KEY))
   }, [])
 

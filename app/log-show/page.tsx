@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
+import { useAuth } from '@/components/AuthProvider'
 
 const MAX_VIDEOS = 1
 const MAX_PHOTOS = 2
@@ -113,6 +114,7 @@ function LogShowInner() {
   const supabase     = createClient()
   const searchParams = useSearchParams()
   const T = useTheme()
+  const { user, loading: authLoading } = useAuth()
 
   const artistId    = searchParams.get('artistId') ?? ''
   const artistName  = searchParams.get('artistName') ?? 'Unknown artist'
@@ -146,15 +148,15 @@ function LogShowInner() {
 
   // Prefill from an existing log for this artist, if one exists.
   useEffect(() => {
-    async function load() {
-      if (!artistId) { setLoadingExisting(false); return }
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+    if (!artistId) { setLoadingExisting(false); return }
+    if (authLoading) return
+    if (!user) { router.push('/'); return }
 
+    async function load(userId: string) {
       const { data } = await supabase
         .from('logged_shows')
         .select('id, stage, day, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, media_urls')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('artist_id', artistId)
         .maybeSingle()
 
@@ -177,8 +179,8 @@ function LogShowInner() {
       }
       setLoadingExisting(false)
     }
-    load()
-  }, [artistId])
+    load(user.id)
+  }, [artistId, authLoading, user, router])
 
   useEffect(() => {
     if (addingTag) customTagInputRef.current?.focus()
@@ -234,10 +236,8 @@ function LogShowInner() {
 
   async function handleSave() {
     if (!canSave || saving) return
-    setSaving(true)
-
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
+    setSaving(true)
 
     let isFirstShow = false
     if (!existingId) {
