@@ -10,8 +10,10 @@ import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
+import { readCache, writeCache } from '@/lib/staleCache'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
+const FEED_CACHE_KEY = 'gigl_feed_cache'
 
 function resolvePhotoUrl(url: string): string {
   if (url.startsWith('http')) return url
@@ -54,6 +56,17 @@ function FeedInner() {
     }
   }, [])
 
+  // Stale-while-revalidate: show whatever we last fetched immediately, so a
+  // repeat visit never has to sit on a blank spinner while the real fetch
+  // (below) is still in flight on a slow connection.
+  useEffect(() => {
+    const cached = readCache<GlobalLog[]>(FEED_CACHE_KEY)
+    if (cached) {
+      setGlobalFeed(cached)
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (authLoading) return
     if (!user) { router.push('/'); return }
@@ -92,7 +105,9 @@ function FeedInner() {
     const usernameMap: Record<string, string> = {}
     profiles?.forEach(p => { usernameMap[p.id] = p.username })
 
-    setGlobalFeed(logs.map(l => ({ ...l, username: usernameMap[l.user_id] ?? null })))
+    const withUsernames = logs.map(l => ({ ...l, username: usernameMap[l.user_id] ?? null }))
+    setGlobalFeed(withUsernames)
+    writeCache(FEED_CACHE_KEY, withUsernames)
     setLoading(false)
   }
 
