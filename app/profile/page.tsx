@@ -98,7 +98,18 @@ export default function ProfilePage() {
 
   async function copyLink() {
     if (!profile) return
-    await navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`)
+    const url = `${window.location.origin}/u/${profile.username}`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Gigl', text: 'Check out my rankings on Gigl', url })
+      } catch {
+        // user backed out of the native share sheet — nothing to do
+      }
+      return
+    }
+
+    await navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
   }
