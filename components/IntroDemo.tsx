@@ -153,27 +153,27 @@ function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
         <div style={{ position: 'relative' }}>
           <div style={{
             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-            marginBottom: 10, width: 140, zIndex: 10,
+            marginBottom: 16, width: 280, zIndex: 10,
             opacity: 0, animation: 'fadeIn 0.4s ease-out 0.3s forwards',
           }}>
             <div style={{
               position: 'relative', background: T.card, border: T.cardBorder,
-              boxShadow: T.cardShadow, borderRadius: 5, padding: '6px 8px',
+              boxShadow: T.cardShadow, borderRadius: 8, padding: '12px 16px',
             }}>
-              <div style={{ fontSize: 8, color: '#4A3528', lineHeight: 1.3, fontFamily: T.sans }}>
+              <div style={{ fontSize: 16, color: '#4A3528', lineHeight: 1.3, fontFamily: T.sans }}>
                 <strong>Hey!</strong> Welcome to Gigl. Log and rate your first show here.
               </div>
               <div style={{
-                position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+                position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)',
                 width: 0, height: 0,
-                borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-                borderTop: '6px solid #4A3528',
+                borderLeft: '12px solid transparent', borderRight: '12px solid transparent',
+                borderTop: '12px solid #4A3528',
               }} />
               <div style={{
-                position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)',
+                position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)',
                 width: 0, height: 0,
-                borderLeft: '4.5px solid transparent', borderRight: '4.5px solid transparent',
-                borderTop: `4.5px solid ${T.card}`,
+                borderLeft: '9px solid transparent', borderRight: '9px solid transparent',
+                borderTop: `9px solid ${T.card}`,
               }} />
             </div>
           </div>
