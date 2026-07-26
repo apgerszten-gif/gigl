@@ -553,7 +553,7 @@ export default function ProfilePage() {
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '12px 32px 16px',
+        padding: '12px 32px calc(4px + env(safe-area-inset-bottom))',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         <button onClick={() => router.push('/feed')} style={{

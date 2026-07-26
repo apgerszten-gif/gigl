@@ -368,7 +368,7 @@ function FeedInner() {
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '16px 32px calc(10px + env(safe-area-inset-bottom))',
+        padding: '16px 32px calc(4px + env(safe-area-inset-bottom))',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         {/* Home */}
