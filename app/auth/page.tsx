@@ -11,8 +11,8 @@ const paper  = '#EDE3D0'
 const sienna = '#B85827'
 const muted  = '#8B7560'
 const faint  = '#B8A898'
-const serif  = "'Space Grotesk', sans-serif"
-const sans   = "'Inter', sans-serif"
+const serif  = 'var(--font-space-grotesk), sans-serif'
+const sans   = 'var(--font-inter), sans-serif'
 
 export default function AuthPage() {
   const router   = useRouter()

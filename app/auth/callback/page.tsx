@@ -8,7 +8,7 @@ import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 const ink   = '#4A3528'
 const paper = '#EDE3D0'
 const muted = '#8B7560'
-const sans  = "'Inter', sans-serif"
+const sans  = 'var(--font-inter), sans-serif'
 
 export default function AuthCallbackPage() {
   const router   = useRouter()

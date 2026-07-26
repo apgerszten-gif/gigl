@@ -16,8 +16,8 @@ module.exports = {
         faint:  '#B8A898',
       },
       fontFamily: {
-        display: ['Space Grotesk', 'sans-serif'],
-        sans:    ['Inter', 'sans-serif'],
+        display: ['var(--font-space-grotesk)', 'sans-serif'],
+        sans:    ['var(--font-inter)', 'sans-serif'],
       },
     },
   },

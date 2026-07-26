@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 import { AuthProvider } from '@/components/AuthProvider'
+import { spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
   title: 'Gigl — be the critic.',
@@ -11,14 +12,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <meta name="theme-color" content="#EDE3D0" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
