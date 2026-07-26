@@ -323,7 +323,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ── Rankings list ────────────────────────────────────────────────────── */}
-      <div style={{ padding: '8px 24px 120px' }}>
+      <div style={{ padding: '8px 24px 24px' }}>
         <div style={{
           fontSize: 10, color: T.muted, letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 12, fontWeight: 600,
@@ -544,6 +544,21 @@ export default function ProfilePage() {
             })}
           </div>
         )}
+      </div>
+
+      {/* ── Legal footer ─────────────────────────────────────────────────────── */}
+      <div style={{
+        padding: '16px 24px 120px', textAlign: 'center',
+        display: 'flex', justifyContent: 'center', gap: 14,
+      }}>
+        <button onClick={() => router.push('/privacy')} style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          fontSize: 11, color: T.faint, fontFamily: T.sans, textDecoration: 'underline', textUnderlineOffset: 3,
+        }}>Privacy Policy</button>
+        <button onClick={() => router.push('/terms')} style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          fontSize: 11, color: T.faint, fontFamily: T.sans, textDecoration: 'underline', textUnderlineOffset: 3,
+        }}>Terms of Service</button>
       </div>
 
       {/* ── Bottom nav ───────────────────────────────────────────────────────── */}
