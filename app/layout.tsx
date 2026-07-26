@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 import { AuthProvider } from '@/components/AuthProvider'
+import { PendingLogsSync } from '@/components/PendingLogsSync'
 import { spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-paper min-h-screen font-sans antialiased">
         <AuthProvider>
           <FestivalThemeProvider>
+            <PendingLogsSync />
             <div className="max-w-md mx-auto min-h-screen">
               {children}
             </div>

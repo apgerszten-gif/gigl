@@ -8,6 +8,7 @@ import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 import { useAuth } from '@/components/AuthProvider'
+import { enqueuePendingLog, getPendingLogForArtist, flushPendingLogs } from '@/lib/pendingLogs'
 
 const MAX_VIDEOS = 1
 const MAX_PHOTOS = 2
@@ -177,6 +178,23 @@ function LogShowInner() {
           setMedia(existingUrls.map(url => ({ url, isVideo: isVideoUrl(url) })))
         }
       }
+
+      // A rating logged moments ago may still be queued locally, not yet
+      // synced (e.g. the connection dropped right after saving) — prefer it
+      // over the server row above since it reflects the user's most recent
+      // intent.
+      const pending = getPendingLogForArtist(userId, artistId)
+      if (pending) {
+        setPerformance(pending.performance_rating)
+        setVenue(pending.venue_rating)
+        setVibe(pending.vibe_rating)
+        setThoughts(pending.review ?? '')
+        if (pending.tags && pending.tags.length > 0) {
+          setSelectedTags(pending.tags)
+          setTagOptions(prev => Array.from(new Set([...prev, ...pending.tags!])))
+        }
+      }
+
       setLoadingExisting(false)
     }
     load(user.id)
@@ -239,38 +257,12 @@ function LogShowInner() {
     if (!user) { router.push('/'); return }
     setSaving(true)
 
-    let isFirstShow = false
-    if (!existingId) {
-      const { count } = await supabase
-        .from('logged_shows')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-      isFirstShow = (count ?? 0) === 0
-    }
-
-    const mediaUrls: string[] = []
-    for (const item of media) {
-      if (item.file) {
-        const ext = item.file.name.split('.').pop()
-        const path = `${user.id}/${artistId}-${Date.now()}-${mediaUrls.length}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('show-photos')
-          .upload(path, item.file, { upsert: true })
-
-        if (uploadError) {
-          alert('Media upload error: ' + uploadError.message)
-          continue
-        }
-        const { data: urlData } = supabase.storage.from('show-photos').getPublicUrl(path)
-        mediaUrls.push(urlData.publicUrl)
-      } else {
-        mediaUrls.push(item.url)
-      }
-    }
-
     const score = computeShowScore(performance, venue, vibe)
 
-    const { error } = await supabase.from('logged_shows').upsert({
+    // Queue the rating locally before anything else touches the network.
+    // From this line on, the rating itself can't be lost to a dropped
+    // connection — everything below is best-effort.
+    enqueuePendingLog({
       user_id:            user.id,
       artist_id:          artistId,
       artist_name:        artistName,
@@ -281,12 +273,66 @@ function LogShowInner() {
       vibe_rating:         vibe,
       review:              thoughts.trim() || null,
       tags:                selectedTags.length > 0 ? selectedTags : null,
-      photo_url:           mediaUrls[0] ?? null,
-      media_urls:          mediaUrls.length > 0 ? mediaUrls : null,
+      photo_url:           null,
+      media_urls:          null,
       emoji:               deriveLegacyEmoji(score),
-    }, { onConflict: 'user_id,artist_id' })
+    })
 
-    if (error) { alert('Error saving: ' + error.message); setSaving(false); return }
+    // Best-effort media upload — if this fails, the rating above is already
+    // safe; the show just gets logged without its photo/video for now.
+    const mediaUrls: string[] = []
+    for (const item of media) {
+      if (item.file) {
+        try {
+          const ext = item.file.name.split('.').pop()
+          const path = `${user.id}/${artistId}-${Date.now()}-${mediaUrls.length}.${ext}`
+          const { error: uploadError } = await supabase.storage
+            .from('show-photos')
+            .upload(path, item.file, { upsert: true })
+          if (uploadError) throw uploadError
+          const { data: urlData } = supabase.storage.from('show-photos').getPublicUrl(path)
+          mediaUrls.push(urlData.publicUrl)
+        } catch {
+          // skip this item — logged without it, user can re-attach later
+        }
+      } else {
+        mediaUrls.push(item.url)
+      }
+    }
+    if (mediaUrls.length > 0) {
+      enqueuePendingLog({
+        user_id:            user.id,
+        artist_id:          artistId,
+        artist_name:        artistName,
+        stage,
+        day,
+        performance_rating: performance,
+        venue_rating:        venue,
+        vibe_rating:         vibe,
+        review:              thoughts.trim() || null,
+        tags:                selectedTags.length > 0 ? selectedTags : null,
+        photo_url:           mediaUrls[0],
+        media_urls:          mediaUrls,
+        emoji:               deriveLegacyEmoji(score),
+      })
+    }
+
+    let isFirstShow = false
+    if (!existingId) {
+      try {
+        const { count } = await supabase
+          .from('logged_shows')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        isFirstShow = (count ?? 0) === 0
+      } catch {
+        isFirstShow = false
+      }
+    }
+
+    // Fire-and-forget — PendingLogsSync retries this in the background
+    // regardless (on foreground/reconnect) if it fails here.
+    void flushPendingLogs()
 
     if (isFirstShow) {
       const { data: profileRow } = await supabase.from('profiles').select('username').eq('id', user.id).single()
