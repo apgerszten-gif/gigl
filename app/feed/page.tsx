@@ -345,7 +345,7 @@ function FeedInner() {
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '12px 32px calc(10px + env(safe-area-inset-bottom))',
+        padding: '16px 32px calc(10px + env(safe-area-inset-bottom))',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
       }}>
         {/* Home */}
@@ -353,14 +353,14 @@ function FeedInner() {
           background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill={T.accent} stroke="none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={T.accent} stroke="none">
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />
             <rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
           <span style={{
-            fontSize: 8, color: T.accent, letterSpacing: '0.08em',
+            fontSize: 9, color: T.accent, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700,
           }}>Home</span>
         </button>
@@ -370,34 +370,34 @@ function FeedInner() {
           {showLogTip && (
             <div style={{
               position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-              marginBottom: 14, width: 190, zIndex: 30,
+              marginBottom: 18, width: 'min(340px, calc(100vw - 24px))', zIndex: 30,
             }}>
               <div style={{
                 position: 'relative', background: T.card, border: T.cardBorder,
-                boxShadow: T.cardShadow, borderRadius: 6, padding: '10px 20px 10px 12px',
+                boxShadow: T.cardShadow, borderRadius: 10, padding: '20px 34px 20px 22px',
               }}>
                 <button
                   onClick={() => setShowLogTip(false)}
                   aria-label="Dismiss"
                   style={{
-                    position: 'absolute', top: 2, right: 4, background: 'none', border: 'none',
-                    cursor: 'pointer', color: T.faint, fontSize: 14, lineHeight: 1, padding: 4,
+                    position: 'absolute', top: 6, right: 8, background: 'none', border: 'none',
+                    cursor: 'pointer', color: T.faint, fontSize: 26, lineHeight: 1, padding: 6,
                   }}
                 >×</button>
-                <div style={{ fontSize: 11, color: '#4A3528', lineHeight: 1.4, fontFamily: T.sans }}>
+                <div style={{ fontSize: 24, color: '#4A3528', lineHeight: 1.4, fontFamily: T.sans }}>
                   <strong>Hey!</strong> Welcome to Gigl. Log and rate your first show here.
                 </div>
                 <div style={{
-                  position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)',
+                  position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
                   width: 0, height: 0,
-                  borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
-                  borderTop: '8px solid #4A3528',
+                  borderLeft: '18px solid transparent', borderRight: '18px solid transparent',
+                  borderTop: '18px solid #4A3528',
                 }} />
                 <div style={{
-                  position: 'absolute', bottom: -5.5, left: '50%', transform: 'translateX(-50%)',
+                  position: 'absolute', bottom: -12.5, left: '50%', transform: 'translateX(-50%)',
                   width: 0, height: 0,
-                  borderLeft: '6.5px solid transparent', borderRight: '6.5px solid transparent',
-                  borderTop: `6.5px solid ${T.card}`,
+                  borderLeft: '15px solid transparent', borderRight: '15px solid transparent',
+                  borderTop: `15px solid ${T.card}`,
                 }} />
               </div>
             </div>
@@ -405,22 +405,22 @@ function FeedInner() {
           <div
             onClick={() => router.push('/log')}
             style={{
-              width: 38, height: 38,
+              width: 42, height: 42,
               background: T.accent, borderRadius: '50%',
               border: '1.5px solid #4A3528',
               boxShadow: '2px 2px 0 #4A3528',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: -16, cursor: 'pointer',
+              marginTop: -18, cursor: 'pointer',
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
               stroke="#FAF3E2" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
           <span style={{
-            fontSize: 8, color: T.muted, letterSpacing: '0.08em',
+            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
           }}>Log</span>
         </div>
@@ -433,12 +433,12 @@ function FeedInner() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
             stroke={T.muted} strokeWidth="2">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
           <span style={{
-            fontSize: 8, color: T.muted, letterSpacing: '0.08em',
+            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
             textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
           }}>You</span>
         </button>
