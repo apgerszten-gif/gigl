@@ -60,14 +60,20 @@ function FeedInner() {
     if (!user) { router.push('/'); return }
     setCurrentUserId(user.id)
 
-    const { data: profileRow } = await supabase
+    const { data: profileRow, error: tipError } = await supabase
       .from('profiles')
       .select('has_seen_log_tip')
       .eq('id', user.id)
       .single()
-    if (profileRow && !profileRow.has_seen_log_tip) {
+    if (tipError) {
+      console.error('has_seen_log_tip lookup failed:', tipError.message)
+    } else if (profileRow && !profileRow.has_seen_log_tip) {
       setShowLogTip(true)
-      await supabase.from('profiles').update({ has_seen_log_tip: true }).eq('id', user.id)
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ has_seen_log_tip: true })
+        .eq('id', user.id)
+      if (updateError) console.error('has_seen_log_tip update failed:', updateError.message)
     }
 
     const { data: logs } = await supabase
