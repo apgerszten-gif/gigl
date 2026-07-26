@@ -16,14 +16,6 @@ function Ul({ children }: { children: React.ReactNode }) {
 export default function PrivacyPage() {
   return (
     <LegalPageShell title="Privacy Policy" updated="Last updated: July 26, 2026">
-      <div style={{
-        background: T.card, border: T.cardBorder, borderRadius: 5,
-        padding: '12px 14px', fontSize: 12, color: T.muted, fontStyle: 'italic',
-        marginBottom: 20, lineHeight: 1.5,
-      }}>
-        This is a template. Have it reviewed by a lawyer before publishing, particularly for compliance with your users&apos; actual jurisdictions (e.g. CCPA if you have California users, GDPR if you have EU/UK users).
-      </div>
-
       <P>This Privacy Policy explains how Gigl (&quot;Gigl,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) collects, uses, and shares information when you use our website and application (the &quot;Service&quot;).</P>
 
       <H2>1. Information We Collect</H2>

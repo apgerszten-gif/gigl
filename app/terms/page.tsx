@@ -16,14 +16,6 @@ function Ul({ children }: { children: React.ReactNode }) {
 export default function TermsPage() {
   return (
     <LegalPageShell title="Terms of Service" updated="Last updated: July 26, 2026">
-      <div style={{
-        background: T.card, border: T.cardBorder, borderRadius: 5,
-        padding: '12px 14px', fontSize: 12, color: T.muted, fontStyle: 'italic',
-        marginBottom: 20, lineHeight: 1.5,
-      }}>
-        This is a template. Have it reviewed by a lawyer before publishing — in particular the governing law/jurisdiction section, and liability limitations, which vary by region and by whether you&apos;re operating as an individual or a formed business entity.
-      </div>
-
       <P>Welcome to Gigl. These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Gigl website and application (the &quot;Service&quot;), operated by Gigl, Inc. (&quot;Gigl,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). By creating an account or using the Service, you agree to these Terms.</P>
 
       <H2>1. Eligibility</H2>
