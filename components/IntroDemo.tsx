@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { StarDisplay } from '@/components/StarDisplay'
 
-const DURATION_MS = 10000
+const DURATION_MS = 20000
 const SCENE_COUNT = 5
 
 const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'
@@ -56,7 +56,7 @@ function FingerTap({ delay }: { delay: number }) {
     <div style={{
       position: 'absolute', top: '50%', left: '50%', zIndex: 6,
       pointerEvents: 'none', opacity: 0,
-      animation: `fingerTap 0.9s ease-out ${delay}s forwards`,
+      animation: `fingerTap 1.8s ease-out ${delay}s forwards`,
     }}>
       <div style={{
         position: 'absolute', width: 26, height: 26, marginTop: -13, marginLeft: -13,
@@ -72,7 +72,7 @@ function FingerTap({ delay }: { delay: number }) {
 
 // Stars that pop in one at a time (as if being tapped in), rather than
 // rendering fully-formed the way the static StarDisplay does.
-function TapStars({ count, size, accent, delay, stagger = 0.12 }: {
+function TapStars({ count, size, accent, delay, stagger = 0.24 }: {
   count: number; size: number; accent: string; delay: number; stagger?: number
 }) {
   return (
@@ -86,7 +86,7 @@ function TapStars({ count, size, accent, delay, stagger = 0.12 }: {
             <span style={{
               position: 'absolute', top: 0, left: 0, width: size, height: size,
               opacity: 0, transform: 'scale(0.4)',
-              animation: `starPop 0.25s ease-out ${delay + i * stagger}s forwards`,
+              animation: `starPop 0.5s ease-out ${delay + i * stagger}s forwards`,
             }}>
               <svg width={size} height={size} viewBox="0 0 24 24" fill={accent} stroke={accent} strokeWidth="1.5" style={{ display: 'block' }}>
                 <polygon points={STAR_POINTS} />
@@ -139,13 +139,13 @@ function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
             width: 30, height: 30, borderRadius: '50%', background: T.accent,
             border: '1.5px solid #4A3528', boxShadow: '2px 2px 0 #4A3528',
             display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -12,
-            animation: 'fabPress 0.25s ease-out 0.6s',
+            animation: 'fabPress 0.5s ease-out 1.2s',
           }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
-          <FingerTap delay={0.6} />
+          <FingerTap delay={1.2} />
         </div>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -173,9 +173,9 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
               padding: '5px 0', textAlign: 'center',
               background: T.card, color: T.muted,
               fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', fontFamily: T.sans,
-              ...(i === 1 ? { animation: 'dayTabActivate 0.2s ease-out 1.9s forwards' } : {}),
+              ...(i === 1 ? { animation: 'dayTabActivate 0.4s ease-out 3.8s forwards' } : {}),
             }}>{d}</div>
-            {i === 1 && <FingerTap delay={1.85} />}
+            {i === 1 && <FingerTap delay={3.7} />}
           </div>
         ))}
       </div>
@@ -190,7 +190,7 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
               borderRadius: i === 0 ? '5px 5px 3px 3px' : i === LOG_ARTISTS.length - 1 ? '3px 3px 5px 5px' : 3,
               padding: '7px 10px',
               display: 'flex', alignItems: 'center', gap: 8,
-              ...(isTapped ? { animation: 'rowTapActivate 0.3s ease-out 2.7s forwards' } : {}),
+              ...(isTapped ? { animation: 'rowTapActivate 0.6s ease-out 5.4s forwards' } : {}),
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: T.serif, fontSize: 11, fontWeight: 700, color: '#4A3528' }}>{a.name}</div>
@@ -200,14 +200,14 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
                 <div style={{
                   width: 16, height: 16, borderRadius: '50%', background: T.accent,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  opacity: 0, animation: 'fadeIn 0.25s ease-out 2.8s forwards',
+                  opacity: 0, animation: 'fadeIn 0.5s ease-out 5.6s forwards',
                 }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
               )}
-              {isTapped && <FingerTap delay={2.65} />}
+              {isTapped && <FingerTap delay={5.3} />}
             </div>
           )
         })}
@@ -220,9 +220,9 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
 
 function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
   const rows = [
-    { label: 'Performance', count: 5, dotDelay: 4.1, starDelay: 4.2 },
-    { label: 'Venue',       count: 4, dotDelay: 4.9, starDelay: 5.0 },
-    { label: 'Vibe',        count: 5, dotDelay: 5.6, starDelay: 5.7 },
+    { label: 'Performance', count: 5, dotDelay: 8.2,  starDelay: 8.4 },
+    { label: 'Venue',       count: 4, dotDelay: 9.8,  starDelay: 10.0 },
+    { label: 'Vibe',        count: 5, dotDelay: 11.2, starDelay: 11.4 },
   ]
   return (
     <div style={{ padding: '18px 16px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
@@ -251,10 +251,10 @@ function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
             background: 'none', color: T.muted,
             border: '1.5px solid rgba(74,53,40,0.25)',
             fontFamily: T.sans, fontWeight: 600,
-            ...(tag.active ? { animation: 'tagActivate 0.25s ease-out 6.25s forwards' } : {}),
+            ...(tag.active ? { animation: 'tagActivate 0.5s ease-out 12.5s forwards' } : {}),
           }}>
             {tag.label}
-            {tag.active && <FingerTap delay={6.15} />}
+            {tag.active && <FingerTap delay={12.3} />}
           </div>
         ))}
       </div>
@@ -263,7 +263,7 @@ function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
         background: T.card, borderRadius: 5, border: T.cardBorder,
         padding: '9px 11px', fontSize: 10, color: 'rgba(74,53,40,0.65)',
         fontStyle: 'italic', lineHeight: 1.45, fontFamily: T.sans,
-        opacity: 0, animation: 'fadeIn 0.4s ease-out 6.4s forwards',
+        opacity: 0, animation: 'fadeIn 0.8s ease-out 12.8s forwards',
       }}>
         &ldquo;best set of the whole weekend, never left the floor once&rdquo;
       </div>
@@ -282,7 +282,7 @@ function RankingsScene({ T }: { T: ReturnType<typeof useTheme> }) {
       <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12, color: '#4A3528' }}>
         The crowd decides<span style={{ color: T.accent }}>.</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, animation: 'sceneScroll 1s ease-in-out 6.9s forwards' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, animation: 'sceneScroll 2s ease-in-out 13.8s forwards' }}>
         {RANKING_ROWS.map((r, i) => (
           <div key={r.name} style={{
             background: i % 2 === 0 ? T.card : T.cardAlt,
@@ -311,7 +311,7 @@ function ProfileScene({ T }: { T: ReturnType<typeof useTheme> }) {
   return (
     <div style={{
       padding: '18px 16px', height: '100%', boxSizing: 'border-box', background: T.bg,
-      opacity: 0, animation: 'fadeIn 0.4s ease-out 8.4s forwards',
+      opacity: 0, animation: 'fadeIn 0.8s ease-out 16.8s forwards',
     }}>
       <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3, fontFamily: T.sans }}>
         Festival season · 2026
@@ -438,17 +438,17 @@ export default function IntroDemo() {
         position: 'relative', height: '100dvh', width: '100%', maxWidth: 430, margin: '0 auto',
         overflow: 'hidden', background: T.bg, fontFamily: T.sans, cursor: 'pointer',
         touchAction: 'none', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: '24px 16px', boxSizing: 'border-box',
+        alignItems: 'center', justifyContent: 'center', padding: '10px 10px', boxSizing: 'border-box',
       }}
     >
       <div style={{
         fontSize: 10, color: T.accent, letterSpacing: '0.14em', textTransform: 'uppercase',
-        fontWeight: 700, marginBottom: 14, fontFamily: T.sans,
+        fontWeight: 700, marginBottom: 8, fontFamily: T.sans,
       }}>Here&apos;s how it works</div>
 
       {/* Phone-within-a-phone frame — makes clear this is a demo, not the real app chrome */}
       <div style={{
-        position: 'relative', width: 'min(84vw, 340px)', height: 'min(64dvh, 600px)',
+        position: 'relative', width: 'min(80vw, 380px)', height: 'min(80dvh, 720px)',
         background: '#4A3528', borderRadius: 40, padding: 10,
         boxShadow: '0 24px 60px rgba(0,0,0,0.35), 0 4px 14px rgba(0,0,0,0.25)',
         flexShrink: 0,
