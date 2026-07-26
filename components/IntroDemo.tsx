@@ -6,38 +6,39 @@ import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { StarDisplay } from '@/components/StarDisplay'
 
-const DURATION_MS = 20000
-const SCENE_COUNT = 5
+const DURATION_MS = 16000
+const SCENE_COUNT = 4
 
 const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'
 
-// ── Mock data (fictional — this is the very first thing a new visitor sees,
-// so we invent a lineup rather than borrowing real artists' names/likeness) ──
+// ── Mock data — real artists pulled from the Lolla/OSL lineups in
+// lib/festivals.ts (stage names are invented, since every real entry is
+// tagged "Stage TBA" until set times are announced) ──────────────────────────
 
 const FEED_PREVIEW = [
-  { name: 'Nova Wilder',    stage: 'Sunset Stage', score: 4.9 },
-  { name: 'The Salt Flats', stage: 'North Field',  score: 4.7 },
-]
-
-const RANKING_ROWS = [
-  { medal: '🥇', name: 'Nova Wilder',    stage: 'Sunset Stage', day: 2, score: 4.9 },
-  { medal: '🥈', name: 'The Salt Flats', stage: 'North Field',  day: 1, score: 4.7 },
-  { medal: '🥉', name: 'Glass Coyote',   stage: 'Main Stage',   day: 3, score: 4.6 },
-  { medal: '4',  name: 'Midnight Radio', stage: 'The Grove',    day: 2, score: 4.4 },
-  { medal: '5',  name: 'Paper Static',   stage: 'East Tent',    day: 1, score: 4.2 },
+  { name: 'Charli XCX',    stage: 'Sunset Stage', score: 4.8 },
+  { name: 'Turnstile',     stage: 'North Field',  score: 4.9 },
+  { name: 'Olivia Dean',   stage: 'Main Stage',   score: 4.6 },
+  { name: 'The Strokes',   stage: 'The Grove',    score: 4.7 },
+  { name: 'Rüfüs Du Sol',  stage: 'East Tent',    score: 4.5 },
 ]
 
 const LOG_ARTISTS = [
-  { name: 'Nova Wilder',    stage: 'Sunset Stage' },
-  { name: 'The Salt Flats', stage: 'North Field' },
-  { name: 'Glass Coyote',   stage: 'Main Stage' },
-  { name: 'Midnight Radio', stage: 'The Grove' },
-  { name: 'Paper Static',   stage: 'East Tent' },
+  { name: 'Ethel Cain',           stage: 'South Lawn' },
+  { name: 'Turnstile',            stage: 'North Field' },
+  { name: 'PinkPantheress',       stage: 'Main Stage' },
+  { name: 'Clipse',               stage: 'Sunset Stage' },
+  { name: 'Djo',                  stage: 'The Grove' },
+  { name: 'Death Cab for Cutie',  stage: 'East Tent' },
 ]
 
-const MY_RANKINGS = [
-  { medal: '🥇', name: 'The Salt Flats', stage: 'North Field',  score: 5.0 },
-  { medal: '🥈', name: 'Nova Wilder',    stage: 'Sunset Stage', score: 4.5 },
+const RANKING_ROWS = [
+  { medal: '🥇', name: 'Charli XCX',   stage: 'Sunset Stage', day: 2, score: 4.9 },
+  { medal: '🥈', name: 'Turnstile',    stage: 'North Field',  day: 1, score: 4.8 },
+  { medal: '🥉', name: 'Olivia Dean',  stage: 'Main Stage',   day: 3, score: 4.7 },
+  { medal: '4',  name: 'The Strokes',  stage: 'The Grove',    day: 2, score: 4.6 },
+  { medal: '5',  name: 'Rüfüs Du Sol', stage: 'East Tent',    day: 1, score: 4.5 },
+  { medal: '6',  name: 'Ethel Cain',   stage: 'South Lawn',   day: 3, score: 4.3 },
 ]
 
 function SceneWrapper({ children }: { children: React.ReactNode }) {
@@ -72,7 +73,7 @@ function FingerTap({ delay }: { delay: number }) {
 
 // Stars that pop in one at a time (as if being tapped in), rather than
 // rendering fully-formed the way the static StarDisplay does.
-function TapStars({ count, size, accent, delay, stagger = 0.24 }: {
+function TapStars({ count, size, accent, delay, stagger = 0.15 }: {
   count: number; size: number; accent: string; delay: number; stagger?: number
 }) {
   return (
@@ -104,8 +105,8 @@ function TapStars({ count, size, accent, delay, stagger = 0.24 }: {
 function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
   return (
     <div style={{ height: '100%', boxSizing: 'border-box', background: T.bg, position: 'relative' }}>
-      <div style={{ padding: '18px 16px 0' }}>
-        <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10, fontFamily: T.sans }}>
+      <div style={{ padding: '16px 16px 0' }}>
+        <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8, fontFamily: T.sans }}>
           Activity
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -116,10 +117,10 @@ function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
               padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8,
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: T.serif, fontSize: 11, fontWeight: 700, color: '#4A3528' }}>{f.name}</div>
-                <div style={{ fontSize: 7, color: T.muted, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>{f.stage}</div>
+                <div style={{ fontFamily: T.serif, fontSize: 12, fontWeight: 700, color: '#4A3528', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+                <div style={{ fontSize: 8, color: T.muted, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>{f.stage}</div>
               </div>
-              <StarDisplay score={f.score} size={11} accent={T.accent} />
+              <StarDisplay score={f.score} size={12} accent={T.accent} />
             </div>
           ))}
         </div>
@@ -139,13 +140,13 @@ function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
             width: 30, height: 30, borderRadius: '50%', background: T.accent,
             border: '1.5px solid #4A3528', boxShadow: '2px 2px 0 #4A3528',
             display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -12,
-            animation: 'fabPress 0.5s ease-out 1.2s',
+            animation: 'fabPress 0.5s ease-out 1.8s',
           }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
-          <FingerTap delay={1.2} />
+          <FingerTap delay={1.8} />
         </div>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -159,23 +160,23 @@ function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
 
 function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
   return (
-    <div style={{ padding: '18px 16px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
+    <div style={{ padding: '16px 16px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
       <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3, fontFamily: T.sans }}>
         Right after the set
       </div>
-      <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12, color: '#4A3528' }}>
+      <div style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 10, color: '#4A3528' }}>
         Log it in seconds<span style={{ color: T.accent }}>.</span>
       </div>
-      <div style={{ display: 'flex', border: '2px solid #4A3528', borderRadius: 5, overflow: 'hidden', marginBottom: 10 }}>
+      <div style={{ display: 'flex', border: '2px solid #4A3528', borderRadius: 5, overflow: 'hidden', marginBottom: 8 }}>
         {['FRI', 'SAT', 'SUN'].map((d, i) => (
           <div key={d} style={{ position: 'relative', flex: 1, borderLeft: i > 0 ? '2px solid #4A3528' : 'none' }}>
             <div style={{
               padding: '5px 0', textAlign: 'center',
               background: T.card, color: T.muted,
               fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', fontFamily: T.sans,
-              ...(i === 1 ? { animation: 'dayTabActivate 0.4s ease-out 3.8s forwards' } : {}),
+              ...(i === 1 ? { animation: 'dayTabActivate 0.3s ease-out 4.4s forwards' } : {}),
             }}>{d}</div>
-            {i === 1 && <FingerTap delay={3.7} />}
+            {i === 1 && <FingerTap delay={4.3} />}
           </div>
         ))}
       </div>
@@ -188,9 +189,9 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
               background: i % 2 === 0 ? T.card : T.cardAlt,
               borderWidth: 1.5, borderStyle: 'solid', borderColor: '#4A3528',
               borderRadius: i === 0 ? '5px 5px 3px 3px' : i === LOG_ARTISTS.length - 1 ? '3px 3px 5px 5px' : 3,
-              padding: '7px 10px',
+              padding: '6px 10px',
               display: 'flex', alignItems: 'center', gap: 8,
-              ...(isTapped ? { animation: 'rowTapActivate 0.6s ease-out 5.4s forwards' } : {}),
+              ...(isTapped ? { animation: 'rowTapActivate 0.5s ease-out 5.8s forwards' } : {}),
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: T.serif, fontSize: 11, fontWeight: 700, color: '#4A3528' }}>{a.name}</div>
@@ -200,14 +201,14 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
                 <div style={{
                   width: 16, height: 16, borderRadius: '50%', background: T.accent,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  opacity: 0, animation: 'fadeIn 0.5s ease-out 5.6s forwards',
+                  opacity: 0, animation: 'fadeIn 0.4s ease-out 6.0s forwards',
                 }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
               )}
-              {isTapped && <FingerTap delay={5.3} />}
+              {isTapped && <FingerTap delay={5.7} />}
             </div>
           )
         })}
@@ -216,34 +217,47 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
   )
 }
 
-// ── Scene 3: Rate the show ──────────────────────────────────────────────────────
+// ── Scene 3: Rate the show — stars, thoughts, tags, media, in that order ────────
 
 function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
   const rows = [
-    { label: 'Performance', count: 5, dotDelay: 8.2,  starDelay: 8.4 },
-    { label: 'Venue',       count: 4, dotDelay: 9.8,  starDelay: 10.0 },
-    { label: 'Vibe',        count: 5, dotDelay: 11.2, starDelay: 11.4 },
+    { label: 'Performance', count: 5, dotDelay: 8.35, starDelay: 8.45 },
+    { label: 'Venue',       count: 4, dotDelay: 9.15, starDelay: 9.25 },
+    { label: 'Vibe',        count: 5, dotDelay: 9.85, starDelay: 9.95 },
   ]
   return (
-    <div style={{ padding: '18px 16px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
+    <div style={{ padding: '16px 16px', height: '100%', boxSizing: 'border-box', background: T.bg }}>
       <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3, fontFamily: T.sans }}>
-        The Salt Flats
+        Turnstile
       </div>
-      <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 14, color: '#4A3528' }}>
+      <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 10, color: '#4A3528' }}>
         North Field · Sat
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
         {rows.map(row => (
           <div key={row.label} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontFamily: T.serif, fontSize: 12, fontWeight: 700, color: '#4A3528' }}>{row.label}</div>
-            <TapStars count={row.count} size={15} accent={T.accent} delay={row.starDelay} />
+            <TapStars count={row.count} size={14} accent={T.accent} delay={row.starDelay} />
             <FingerTap delay={row.dotDelay} />
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
+      <div style={{ marginBottom: 9 }}>
+        <div style={{ fontSize: 8, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4, fontFamily: T.sans }}>
+          Your thoughts
+        </div>
+        <div style={{
+          background: T.card, borderRadius: 5, border: T.cardBorder, padding: '7px 9px',
+          fontSize: 10, color: '#4A3528', lineHeight: 1.4, fontFamily: T.sans,
+          opacity: 0, animation: 'fadeIn 0.5s ease-out 10.65s forwards',
+        }}>
+          Never left the floor once, that bass drop is still ringing in my ears
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 5, marginBottom: 9 }}>
         {[{ label: 'Crowd surf', active: true }, { label: 'Sing along', active: false }, { label: 'Cool lighting', active: false }].map(tag => (
           <div key={tag.label} style={{
             position: 'relative',
@@ -251,21 +265,28 @@ function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
             background: 'none', color: T.muted,
             border: '1.5px solid rgba(74,53,40,0.25)',
             fontFamily: T.sans, fontWeight: 600,
-            ...(tag.active ? { animation: 'tagActivate 0.5s ease-out 12.5s forwards' } : {}),
+            ...(tag.active ? { animation: 'tagActivate 0.4s ease-out 10.95s forwards' } : {}),
           }}>
             {tag.label}
-            {tag.active && <FingerTap delay={12.3} />}
+            {tag.active && <FingerTap delay={10.85} />}
           </div>
         ))}
       </div>
 
-      <div style={{
-        background: T.card, borderRadius: 5, border: T.cardBorder,
-        padding: '9px 11px', fontSize: 10, color: 'rgba(74,53,40,0.65)',
-        fontStyle: 'italic', lineHeight: 1.45, fontFamily: T.sans,
-        opacity: 0, animation: 'fadeIn 0.8s ease-out 12.8s forwards',
-      }}>
-        &ldquo;best set of the whole weekend, never left the floor once&rdquo;
+      <div style={{ opacity: 0, animation: 'fadeIn 0.5s ease-out 11.15s forwards' }}>
+        <div style={{ fontSize: 8, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4, fontFamily: T.sans }}>
+          Media
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 5, background: T.cardInner, border: '1px solid rgba(74,53,40,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </div>
+          <div style={{ width: 34, height: 34, borderRadius: 5, border: '1.5px dashed rgba(74,53,40,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.faint, fontSize: 16 }}>+</div>
+        </div>
       </div>
     </div>
   )
@@ -275,86 +296,27 @@ function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
 
 function RankingsScene({ T }: { T: ReturnType<typeof useTheme> }) {
   return (
-    <div style={{ padding: '18px 16px', height: '100%', boxSizing: 'border-box', background: T.bg, overflow: 'hidden' }}>
+    <div style={{ padding: '16px 16px', height: '100%', boxSizing: 'border-box', background: T.bg, overflow: 'hidden' }}>
       <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3, fontFamily: T.sans }}>
         Live leaderboard
       </div>
-      <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12, color: '#4A3528' }}>
+      <div style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 10, color: '#4A3528' }}>
         The crowd decides<span style={{ color: T.accent }}>.</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, animation: 'sceneScroll 2s ease-in-out 13.8s forwards' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, animation: 'sceneScroll 2s ease-in-out 12.5s forwards' }}>
         {RANKING_ROWS.map((r, i) => (
           <div key={r.name} style={{
             background: i % 2 === 0 ? T.card : T.cardAlt,
             border: T.cardBorder,
             borderRadius: i === 0 ? '5px 5px 3px 3px' : i === RANKING_ROWS.length - 1 ? '3px 3px 5px 5px' : 3,
             boxShadow: i === 0 ? T.cardShadow : 'none',
-            padding: '7px 10px',
+            padding: '6px 10px',
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             <div style={{ width: 16, textAlign: 'center', flexShrink: 0, fontFamily: T.serif, fontSize: i < 3 ? 12 : 10, color: i < 3 ? T.accent : T.faint, fontWeight: 700 }}>{r.medal}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: T.serif, fontSize: 11, fontWeight: 700, color: '#4A3528', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
               <div style={{ fontSize: 7, color: T.muted, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>{r.stage} · Day {r.day}</div>
-            </div>
-            <StarDisplay score={r.score} size={11} accent={T.accent} />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Scene 5: Your profile ────────────────────────────────────────────────────────
-
-function ProfileScene({ T }: { T: ReturnType<typeof useTheme> }) {
-  return (
-    <div style={{
-      padding: '18px 16px', height: '100%', boxSizing: 'border-box', background: T.bg,
-      opacity: 0, animation: 'fadeIn 0.8s ease-out 16.8s forwards',
-    }}>
-      <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3, fontFamily: T.sans }}>
-        Festival season · 2026
-      </div>
-      <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2, color: '#4A3528' }}>
-        Your rankings<span style={{ color: T.accent }}>.</span>
-      </div>
-      <div style={{ fontSize: 10, color: T.muted, marginBottom: 12, fontFamily: T.sans }}>@you</div>
-
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-        borderTop: '1px solid rgba(74,53,40,0.1)', borderBottom: '1px solid rgba(74,53,40,0.1)',
-        marginBottom: 14,
-      }}>
-        <div style={{ padding: '8px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
-          <div style={{ fontFamily: T.serif, fontSize: 14, fontWeight: 700, color: '#4A3528' }}>9</div>
-          <div style={{ fontSize: 7, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.muted, marginTop: 2, fontWeight: 600 }}>Sets logged</div>
-        </div>
-        <div style={{ padding: '8px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <StarDisplay score={4.4} size={11} accent={T.accent} />
-          <div style={{ fontSize: 7, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Avg score</div>
-        </div>
-        <div style={{ padding: '8px 0', textAlign: 'center' }}>
-          <div style={{ fontFamily: T.serif, fontSize: 14, fontWeight: 700, color: '#4A3528' }}>2026</div>
-          <div style={{ fontSize: 7, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.muted, marginTop: 2, fontWeight: 600 }}>Festival</div>
-        </div>
-      </div>
-
-      <div style={{ fontSize: 8, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8, fontWeight: 600, fontFamily: T.sans }}>
-        My rankings
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {MY_RANKINGS.map((r, i) => (
-          <div key={r.name} style={{
-            background: i % 2 === 0 ? T.card : T.cardAlt, border: T.cardBorder,
-            borderRadius: i === 0 ? '5px 5px 3px 3px' : '3px 3px 5px 5px',
-            boxShadow: i === 0 ? T.cardShadow : 'none',
-            padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <div style={{ width: 16, textAlign: 'center', flexShrink: 0, fontFamily: T.serif, fontSize: 12, color: T.accent, fontWeight: 700 }}>{r.medal}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: T.serif, fontSize: 11, fontWeight: 700, color: '#4A3528' }}>{r.name}</div>
-              <div style={{ fontSize: 7, color: T.muted, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>{r.stage}</div>
             </div>
             <StarDisplay score={r.score} size={11} accent={T.accent} />
           </div>
@@ -438,17 +400,17 @@ export default function IntroDemo() {
         position: 'relative', height: '100dvh', width: '100%', maxWidth: 430, margin: '0 auto',
         overflow: 'hidden', background: T.bg, fontFamily: T.sans, cursor: 'pointer',
         touchAction: 'none', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: '10px 10px', boxSizing: 'border-box',
+        alignItems: 'center', justifyContent: 'center', padding: '6px 6px', boxSizing: 'border-box',
       }}
     >
       <div style={{
         fontSize: 10, color: T.accent, letterSpacing: '0.14em', textTransform: 'uppercase',
-        fontWeight: 700, marginBottom: 8, fontFamily: T.sans,
+        fontWeight: 700, marginBottom: 6, fontFamily: T.sans,
       }}>Here&apos;s how it works</div>
 
       {/* Phone-within-a-phone frame — makes clear this is a demo, not the real app chrome */}
       <div style={{
-        position: 'relative', width: 'min(80vw, 380px)', height: 'min(80dvh, 720px)',
+        position: 'relative', width: 'min(88vw, 418px)', height: 'min(88dvh, 792px)',
         background: '#4A3528', borderRadius: 40, padding: 10,
         boxShadow: '0 24px 60px rgba(0,0,0,0.35), 0 4px 14px rgba(0,0,0,0.25)',
         flexShrink: 0,
@@ -470,7 +432,6 @@ export default function IntroDemo() {
             <SceneWrapper><LogScene T={T} /></SceneWrapper>
             <SceneWrapper><RateScene T={T} /></SceneWrapper>
             <SceneWrapper><RankingsScene T={T} /></SceneWrapper>
-            <SceneWrapper><ProfileScene T={T} /></SceneWrapper>
           </div>
         </div>
       </div>
@@ -505,16 +466,14 @@ export default function IntroDemo() {
 
       <style>{`
         @keyframes introPan {
-          0%   { transform: translateY(0); }
-          13%  { transform: translateY(0); }
-          16%  { transform: translateY(-20%); }
-          36%  { transform: translateY(-20%); }
-          39%  { transform: translateY(-40%); }
-          65%  { transform: translateY(-40%); }
-          68%  { transform: translateY(-60%); }
-          81%  { transform: translateY(-60%); }
-          84%  { transform: translateY(-80%); }
-          100% { transform: translateY(-80%); }
+          0%      { transform: translateY(0); }
+          23.125% { transform: translateY(0); }
+          25.625% { transform: translateY(-25%); }
+          48.75%  { transform: translateY(-25%); }
+          51.25%  { transform: translateY(-50%); }
+          74.375% { transform: translateY(-50%); }
+          76.875% { transform: translateY(-75%); }
+          100%    { transform: translateY(-75%); }
         }
         @keyframes introHintPulse {
           0%, 100% { opacity: 0.55; transform: translateY(0); }
