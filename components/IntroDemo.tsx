@@ -152,6 +152,32 @@ function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
         </svg>
         <div style={{ position: 'relative' }}>
           <div style={{
+            position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+            marginBottom: 10, width: 140, zIndex: 10,
+            opacity: 0, animation: 'fadeIn 0.4s ease-out 0.3s forwards',
+          }}>
+            <div style={{
+              position: 'relative', background: T.card, border: T.cardBorder,
+              boxShadow: T.cardShadow, borderRadius: 5, padding: '6px 8px',
+            }}>
+              <div style={{ fontSize: 8, color: '#4A3528', lineHeight: 1.3, fontFamily: T.sans }}>
+                <strong>Hey!</strong> Welcome to Gigl. Log and rate your first show here.
+              </div>
+              <div style={{
+                position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+                width: 0, height: 0,
+                borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+                borderTop: '6px solid #4A3528',
+              }} />
+              <div style={{
+                position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)',
+                width: 0, height: 0,
+                borderLeft: '4.5px solid transparent', borderRight: '4.5px solid transparent',
+                borderTop: `4.5px solid ${T.card}`,
+              }} />
+            </div>
+          </div>
+          <div style={{
             width: 30, height: 30, borderRadius: '50%', background: T.accent,
             border: '1.5px solid #4A3528', boxShadow: '2px 2px 0 #4A3528',
             display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -12,
