@@ -98,7 +98,7 @@ export default function AuthPage() {
           lineHeight: 1.1, letterSpacing: '-1px', color: ink,
         }}>
           {mode === 'signup' ? (
-            <>Rate the sets<span style={{ color: sienna }}>.</span><br />Own the moment<span style={{ color: sienna }}>.</span></>
+            <>Be the critic<span style={{ color: sienna }}>.</span><br />Own the moment<span style={{ color: sienna }}>.</span></>
           ) : (
             <>Good to have<br />you back<span style={{ color: sienna }}>.</span></>
           )}

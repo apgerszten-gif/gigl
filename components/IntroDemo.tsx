@@ -16,29 +16,44 @@ const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 
 // tagged "Stage TBA" until set times are announced) ──────────────────────────
 
 const FEED_PREVIEW = [
-  { name: 'Charli XCX',    stage: 'Sunset Stage', score: 4.8 },
-  { name: 'Turnstile',     stage: 'North Field',  score: 4.9 },
-  { name: 'Olivia Dean',   stage: 'Main Stage',   score: 4.6 },
-  { name: 'The Strokes',   stage: 'The Grove',    score: 4.7 },
-  { name: 'Rüfüs Du Sol',  stage: 'East Tent',    score: 4.5 },
+  { name: 'Charli XCX',          stage: 'Sunset Stage',     score: 4.8 },
+  { name: 'Turnstile',           stage: 'North Field',      score: 4.9 },
+  { name: 'Olivia Dean',         stage: 'Main Stage',       score: 4.6 },
+  { name: 'The Strokes',         stage: 'The Grove',        score: 4.7 },
+  { name: 'Rüfüs Du Sol',        stage: 'East Tent',        score: 4.5 },
+  { name: 'Djo',                 stage: 'South Lawn',       score: 4.4 },
+  { name: 'PinkPantheress',      stage: 'West Field',       score: 4.6 },
+  { name: 'Ethel Cain',          stage: 'The Meadow',       score: 4.3 },
 ]
 
 const LOG_ARTISTS = [
+  { name: 'Lorde',                stage: 'Sunset Stage' },
   { name: 'Ethel Cain',           stage: 'South Lawn' },
   { name: 'Turnstile',            stage: 'North Field' },
   { name: 'PinkPantheress',       stage: 'Main Stage' },
-  { name: 'Clipse',               stage: 'Sunset Stage' },
+  { name: 'Clipse',               stage: 'West Field' },
   { name: 'Djo',                  stage: 'The Grove' },
   { name: 'Death Cab for Cutie',  stage: 'East Tent' },
+  { name: 'Zara Larsson',         stage: 'The Meadow' },
+  { name: 'Wet Leg',              stage: 'Palm Court' },
+  { name: 'Little Simz',          stage: 'Twilight Terrace' },
+  { name: 'GloRilla',             stage: 'Sunset Stage' },
+  { name: 'Modest Mouse',         stage: 'North Field' },
 ]
 
 const RANKING_ROWS = [
-  { medal: '🥇', name: 'Charli XCX',   stage: 'Sunset Stage', day: 2, score: 4.9 },
-  { medal: '🥈', name: 'Turnstile',    stage: 'North Field',  day: 1, score: 4.8 },
-  { medal: '🥉', name: 'Olivia Dean',  stage: 'Main Stage',   day: 3, score: 4.7 },
-  { medal: '4',  name: 'The Strokes',  stage: 'The Grove',    day: 2, score: 4.6 },
-  { medal: '5',  name: 'Rüfüs Du Sol', stage: 'East Tent',    day: 1, score: 4.5 },
-  { medal: '6',  name: 'Ethel Cain',   stage: 'South Lawn',   day: 3, score: 4.3 },
+  { medal: '🥇', name: 'Charli XCX',          stage: 'Sunset Stage',     day: 2, score: 4.9 },
+  { medal: '🥈', name: 'Turnstile',           stage: 'North Field',      day: 1, score: 4.8 },
+  { medal: '🥉', name: 'Olivia Dean',         stage: 'Main Stage',       day: 3, score: 4.7 },
+  { medal: '4',  name: 'The Strokes',         stage: 'The Grove',        day: 2, score: 4.6 },
+  { medal: '5',  name: 'Rüfüs Du Sol',        stage: 'East Tent',        day: 1, score: 4.5 },
+  { medal: '6',  name: 'Ethel Cain',          stage: 'South Lawn',       day: 3, score: 4.4 },
+  { medal: '7',  name: 'Djo',                 stage: 'West Field',       day: 2, score: 4.3 },
+  { medal: '8',  name: 'PinkPantheress',      stage: 'The Meadow',       day: 1, score: 4.2 },
+  { medal: '9',  name: 'Clipse',              stage: 'Palm Court',       day: 3, score: 4.1 },
+  { medal: '10', name: 'Death Cab for Cutie', stage: 'Twilight Terrace', day: 2, score: 4.0 },
+  { medal: '11', name: 'Zara Larsson',        stage: 'Sunset Stage',     day: 1, score: 3.9 },
+  { medal: '12', name: 'Wet Leg',             stage: 'North Field',      day: 3, score: 3.8 },
 ]
 
 function SceneWrapper({ children }: { children: React.ReactNode }) {
@@ -105,7 +120,7 @@ function TapStars({ count, size, accent, delay, stagger = 0.15 }: {
 function HomeScene({ T }: { T: ReturnType<typeof useTheme> }) {
   return (
     <div style={{ height: '100%', boxSizing: 'border-box', background: T.bg, position: 'relative' }}>
-      <div style={{ padding: '16px 16px 0' }}>
+      <div style={{ padding: '16px 16px 60px', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
         <div style={{ fontSize: 9, color: T.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8, fontFamily: T.sans }}>
           Activity
         </div>
@@ -182,7 +197,7 @@ function LogScene({ T }: { T: ReturnType<typeof useTheme> }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {LOG_ARTISTS.map((a, i) => {
-          const isTapped = i === 1
+          const isTapped = a.name === 'Turnstile'
           return (
             <div key={a.name} style={{
               position: 'relative',
