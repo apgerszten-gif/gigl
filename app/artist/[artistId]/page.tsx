@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
+import Image from 'next/image'
 import { DEFAULT_THEME as T } from '@/lib/theme'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -112,10 +113,12 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
       {photos.length > 0 && (
         <div style={{ display: 'flex', gap: 3, padding: '0 24px', marginBottom: 20, overflow: 'hidden' }}>
           {photos.map((url, i) => (
-            <img key={i} src={url} alt="" style={{
-              flex: 1, height: 110, objectFit: 'cover',
-              borderRadius: i === 0 ? '10px 4px 4px 10px' : i === photos.length - 1 ? '4px 10px 10px 4px' : 4,
-            }} />
+            <div key={i} style={{ position: 'relative', flex: 1, height: 110 }}>
+              <Image src={url} alt="" fill sizes="140px" style={{
+                objectFit: 'cover',
+                borderRadius: i === 0 ? '10px 4px 4px 10px' : i === photos.length - 1 ? '4px 10px 10px 4px' : 4,
+              }} />
+            </div>
           ))}
         </div>
       )}
