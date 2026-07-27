@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getFestival, LOCAL_STORAGE_KEY, type Festival } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { StarDisplay } from '@/components/StarDisplay'
+import { BattleModeCard } from '@/components/BattleModeCard'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 
@@ -25,6 +26,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
 
   const [festival, setFestival] = useState<Festival | null>(null)
   const [filter, setFilter]     = useState<string>('all')
+  const [battleModeUnlocked, setBattleModeUnlocked] = useState(false)
 
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
@@ -33,6 +35,14 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       if (f) setFestival(f)
     }
   }, [])
+
+  // Rankings is server-rendered and user-agnostic, so battle_mode_unlocked
+  // (needed only for the entry-point card below) is fetched client-side.
+  useEffect(() => {
+    if (!user) return
+    supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single()
+      .then(({ data }) => setBattleModeUnlocked(!!data?.battle_mode_unlocked))
+  }, [user])
 
   // The rows already arrived pre-computed from the server component — this
   // check only exists to bounce unauthenticated visitors, it never gates
@@ -169,6 +179,10 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
 
       {/* ── List ────────────────────────────────────────────────────────────── */}
       <div style={{ padding: '0 24px 100px' }}>
+        {battleModeUnlocked && (
+          <BattleModeCard onEnter={() => router.push('/battle')} />
+        )}
+
         {visible.length === 0 && (
           <div style={{ textAlign: 'center', padding: 40, fontSize: 13, color: T.faint }}>
             No ratings yet

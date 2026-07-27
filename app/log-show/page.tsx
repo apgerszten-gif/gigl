@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
+import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
 import { useAuth } from '@/components/AuthProvider'
 import { enqueuePendingLog, getPendingLogForArtist, flushPendingLogs } from '@/lib/pendingLogs'
 
@@ -146,6 +147,7 @@ function LogShowInner() {
 
   const [saving, setSaving] = useState(false)
   const [celebration, setCelebration] = useState<{ username: string | null } | null>(null)
+  const [battleUnlock, setBattleUnlock] = useState(false)
 
   // Prefill from an existing log for this artist, if one exists.
   useEffect(() => {
@@ -318,25 +320,45 @@ function LogShowInner() {
     }
 
     let isFirstShow = false
+    let wasUnlocked = true
     if (!existingId) {
       try {
-        const { count } = await supabase
-          .from('logged_shows')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
+        const [{ count }, { data: profileBefore }] = await Promise.all([
+          supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single(),
+        ])
         isFirstShow = (count ?? 0) === 0
+        wasUnlocked = profileBefore?.battle_mode_unlocked ?? true
       } catch {
         isFirstShow = false
       }
     }
 
-    // Fire-and-forget — PendingLogsSync retries this in the background
-    // regardless (on foreground/reconnect) if it fails here.
-    void flushPendingLogs()
+    // Awaited (not fire-and-forget) so we can reliably read whether this
+    // insert just crossed the 10-show battle_mode_unlocked threshold — the
+    // Postgres trigger runs synchronously with it. The rating itself is
+    // already crash-safe via the local queue above regardless of this wait.
+    await flushPendingLogs()
+
+    let battleModeJustUnlocked = false
+    if (!existingId && !wasUnlocked) {
+      try {
+        const { data: profileAfter } = await supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single()
+        battleModeJustUnlocked = profileAfter?.battle_mode_unlocked === true
+      } catch {
+        battleModeJustUnlocked = false
+      }
+    }
 
     if (isFirstShow) {
       const { data: profileRow } = await supabase.from('profiles').select('username').eq('id', user.id).single()
       setCelebration({ username: profileRow?.username ?? null })
+      setSaving(false)
+      return
+    }
+
+    if (battleModeJustUnlocked) {
+      setBattleUnlock(true)
       setSaving(false)
       return
     }
@@ -573,6 +595,9 @@ function LogShowInner() {
       </div>
 
       {celebration && <FirstShowCelebration username={celebration.username} />}
+      {battleUnlock && (
+        <BattleModeUnlockedModal onDismiss={() => { setBattleUnlock(false); router.push('/feed') }} />
+      )}
     </div>
   )
 }

@@ -161,3 +161,68 @@ create table public.sms_verification_codes (
   created_at timestamp with time zone default now()
 );
 alter table public.sms_verification_codes enable row level security;
+
+-- Battle Mode: an optional, purely additive gamified layer. Nothing here
+-- ever reads from or writes to performance_rating/venue_rating/vibe_rating
+-- or anything computeShowScore() touches.
+
+alter table public.profiles add column shows_logged_count integer not null default 0;
+
+-- Only ever flips false -> true, once, permanently (see the trigger below).
+-- Does not re-lock if shows_logged_count later drops below 10 (e.g. after
+-- a deletion) since the trigger only ever sets it, never clears it.
+alter table public.profiles add column battle_mode_unlocked boolean not null default false;
+
+-- Independent of battle_mode_unlocked - only controls whether the Battle
+-- Mode promo card shows on the feed. Sticky once dismissed; never affects
+-- unlock status or the entry point on the rankings page.
+alter table public.profiles add column battle_card_dismissed boolean not null default false;
+
+-- One row per (user, artist) that's ever been battled - a show accumulates
+-- many battle outcomes over time, this is a running tally, not a single
+-- field on logged_shows. Completely separate from performance_rating/
+-- venue_rating/vibe_rating and everything computeShowScore() touches.
+--
+-- Publicly readable (like logged_shows/profiles already are) so the Feed
+-- can show an artist's all-time battle record aggregated across every
+-- user, not just the viewer's own - consistent with how star ratings
+-- already aggregate into a public consensus elsewhere in the app.
+create table public.battle_records (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  artist_id text not null,
+  wins integer not null default 0,
+  losses integer not null default 0,
+  updated_at timestamp with time zone default now(),
+  unique(user_id, artist_id)
+);
+alter table public.battle_records enable row level security;
+create policy "battle_records_read"   on public.battle_records for select using (true);
+create policy "battle_records_insert" on public.battle_records for insert with check (auth.uid() = user_id);
+create policy "battle_records_update" on public.battle_records for update using (auth.uid() = user_id);
+
+-- Fires on every genuine new logged_shows row (not on re-rates, which go
+-- through the upsert's UPDATE path instead, since this is an AFTER INSERT
+-- trigger - see chat history for full rationale). security definer to
+-- match the existing handle_new_user() trigger's convention, so this isn't
+-- dependent on profiles' RLS policies staying exactly as they are today.
+create or replace function public.handle_logged_show_insert()
+returns trigger as $$
+begin
+  update public.profiles
+  set shows_logged_count = shows_logged_count + 1
+  where id = new.user_id;
+
+  update public.profiles
+  set battle_mode_unlocked = true
+  where id = new.user_id
+    and shows_logged_count >= 10
+    and battle_mode_unlocked = false;
+
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_logged_show_insert
+  after insert on public.logged_shows
+  for each row execute procedure public.handle_logged_show_insert();

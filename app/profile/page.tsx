@@ -8,6 +8,7 @@ import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
 import { SmsScoringSection } from '@/components/SmsScoringSection'
+import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
@@ -53,10 +54,11 @@ interface Show {
 }
 
 interface Profile {
-  username:       string
-  display_name:   string
-  phone_number:   string | null
-  phone_verified: boolean
+  username:            string
+  display_name:        string
+  phone_number:        string | null
+  phone_verified:      boolean
+  battle_mode_unlocked: boolean
 }
 
 export default function ProfilePage() {
@@ -76,6 +78,7 @@ export default function ProfilePage() {
   const [editPhotoFile, setEditPhotoFile]   = useState<File | null>(null)
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [battleMap, setBattleMap] = useState<Record<string, { wins: number; losses: number }>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -92,11 +95,22 @@ export default function ProfilePage() {
 
     async function load(userId: string) {
       const [{ data: prof }, { data: showData }] = await Promise.all([
-        supabase.from('profiles').select('username, display_name, phone_number, phone_verified').eq('id', userId).single(),
+        supabase.from('profiles').select('username, display_name, phone_number, phone_verified, battle_mode_unlocked').eq('id', userId).single(),
         supabase.from('logged_shows').select('*').eq('user_id', userId),
       ])
       setProfile(prof)
       setShows((showData || []).slice().sort((a, b) => showScore(b) - showScore(a)))
+
+      // This viewer's own battle record per artist - never another user's,
+      // and never blended into performance_rating/venue_rating/vibe_rating.
+      const { data: battleRows } = await supabase
+        .from('battle_records')
+        .select('artist_id, wins, losses')
+        .eq('user_id', userId)
+      const map: Record<string, { wins: number; losses: number }> = {}
+      battleRows?.forEach(r => { map[r.artist_id] = { wins: r.wins, losses: r.losses } })
+      setBattleMap(map)
+
       setLoading(false)
     }
     load(user.id)
@@ -380,6 +394,15 @@ export default function ProfilePage() {
                           minWidth: 0,
                         }}>{show.artist_name}</span>
                         {hasScore && <StarDisplay score={score} size={18} accent={T.accent} />}
+                        {battleMap[show.artist_id] && (
+                          <BattleRecordBadge
+                            wins={battleMap[show.artist_id].wins}
+                            losses={battleMap[show.artist_id].losses}
+                            unlocked={!!profile?.battle_mode_unlocked}
+                            context="personal"
+                            artistName={show.artist_name}
+                          />
+                        )}
                       </div>
                       <div style={{
                         fontSize: 10, color: T.muted, letterSpacing: '0.06em',

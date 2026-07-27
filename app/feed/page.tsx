@@ -8,6 +8,8 @@ import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
+import { BattleModeCard } from '@/components/BattleModeCard'
+import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
@@ -47,6 +49,9 @@ function FeedInner() {
   const [loading, setLoading]             = useState(true)
   const [festivalName, setFestivalName]   = useState<string | null>(null)
   const [showLogTip, setShowLogTip]       = useState(false)
+  const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
+  const [battleCardDismissed, setBattleCardDismissed] = useState(false)
+  const [battleAggMap, setBattleAggMap]   = useState<Record<string, { wins: number; losses: number }>>({})
 
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
@@ -75,7 +80,7 @@ function FeedInner() {
 
   async function fetchFeed(userId: string) {
     const [{ data: profileRow, error: tipError }, { data: logs }] = await Promise.all([
-      supabase.from('profiles').select('has_seen_log_tip').eq('id', userId).single(),
+      supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single(),
       supabase
         .from('logged_shows')
         .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
@@ -93,22 +98,45 @@ function FeedInner() {
         .eq('id', userId)
       if (updateError) console.error('has_seen_log_tip update failed:', updateError.message)
     }
+    if (profileRow) {
+      setBattleModeUnlocked(!!profileRow.battle_mode_unlocked)
+      setBattleCardDismissed(!!profileRow.battle_card_dismissed)
+    }
 
     if (!logs) { setLoading(false); return }
 
     const userIds = logs.map(l => l.user_id).filter((id, i, arr) => arr.indexOf(id) === i)
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, username')
-      .in('id', userIds)
+    const artistIds = logs.map(l => l.artist_id).filter((id, i, arr) => arr.indexOf(id) === i)
+    const [{ data: profiles }, { data: battleRows }] = await Promise.all([
+      supabase.from('profiles').select('id, username').in('id', userIds),
+      artistIds.length > 0
+        ? supabase.from('battle_records').select('artist_id, wins, losses').in('artist_id', artistIds)
+        : Promise.resolve({ data: [] as { artist_id: string; wins: number; losses: number }[] }),
+    ])
 
     const usernameMap: Record<string, string> = {}
     profiles?.forEach(p => { usernameMap[p.id] = p.username })
+
+    // All-time record per artist, aggregated across every user's battles -
+    // never any single user's personal record (that's Profile's job).
+    const aggMap: Record<string, { wins: number; losses: number }> = {}
+    battleRows?.forEach(r => {
+      const cur = aggMap[r.artist_id] ?? { wins: 0, losses: 0 }
+      aggMap[r.artist_id] = { wins: cur.wins + r.wins, losses: cur.losses + r.losses }
+    })
+    setBattleAggMap(aggMap)
 
     const withUsernames = logs.map(l => ({ ...l, username: usernameMap[l.user_id] ?? null }))
     setGlobalFeed(withUsernames)
     writeCache(FEED_CACHE_KEY, withUsernames)
     setLoading(false)
+  }
+
+  function dismissBattleCard() {
+    setBattleCardDismissed(true)
+    if (user) {
+      void supabase.from('profiles').update({ battle_card_dismissed: true }).eq('id', user.id)
+    }
   }
 
   function timeAgo(dateStr: string) {
@@ -239,6 +267,10 @@ function FeedInner() {
           }}>Loading...</div>
         )}
 
+        {battleModeUnlocked && !battleCardDismissed && (
+          <BattleModeCard onDismiss={dismissBattleCard} onEnter={() => router.push('/battle')} />
+        )}
+
         {!loading && globalFeed.length === 0 && (
           <div style={{
             background: T.card, borderRadius: 5,
@@ -300,6 +332,15 @@ function FeedInner() {
                         minWidth: 0,
                       }}>{name}</span>
                       {score !== null && <StarDisplay score={score} size={16} accent={T.accent} />}
+                      {battleAggMap[item.artist_id] && (
+                        <BattleRecordBadge
+                          wins={battleAggMap[item.artist_id].wins}
+                          losses={battleAggMap[item.artist_id].losses}
+                          unlocked={battleModeUnlocked}
+                          context="aggregate"
+                          artistName={name}
+                        />
+                      )}
                     </div>
                     <div
                       onClick={() => stageName && router.push(`/stage/${encodeURIComponent(stageName)}`)}
