@@ -117,3 +117,47 @@ alter table public.logged_shows add column media_urls text[];
 -- pointing at the Log button on the feed page. Keyed to the account (not a
 -- browser-local flag) so it stays "seen" across devices/browsers once shown.
 alter table public.profiles add column has_seen_log_tip boolean not null default false;
+
+-- SMS-based show scoring (see /api/sms/*). Lets a user link a phone number
+-- to their account for SMS-based show scoring. Unique so a phone number
+-- can only ever be linked to one account, since the inbound webhook looks
+-- up the sender's account by this number alone. Store in E.164 format
+-- (e.g. +15551234567) to match Twilio's `From` field exactly.
+--
+-- profiles.phone_number/phone_verified are readable by anyone via the
+-- existing "profiles_read ... using (true)" policy, same as
+-- username/display_name already are - RLS is row-level, not column-level,
+-- so restricting just these two columns would need a view or a second
+-- policy layer. Decided against that for now; app code must never
+-- select('*') on profiles for another user's row, only explicit column
+-- lists, to avoid leaking these two fields through the client.
+alter table public.profiles add column phone_number text unique;
+alter table public.profiles add column phone_verified boolean not null default false;
+
+-- Persists which festival a user has selected server-side. localStorage
+-- (LOCAL_STORAGE_KEY in lib/festivals) stays the source of truth for the
+-- in-app UI, but the SMS webhook runs server-side with no access to a
+-- browser's localStorage, so it reads this column instead to know which
+-- festival's lineup to match an incoming artist name against. Written
+-- alongside localStorage wherever festival selection happens
+-- (app/select-festival/page.tsx).
+alter table public.profiles add column active_festival_id text;
+
+-- Distinguishes ratings logged via SMS from the normal in-app flow, for any
+-- future UI treatment (e.g. a small SMS badge on the feed).
+alter table public.logged_shows add column sms_logged boolean not null default false;
+
+-- Short-lived phone verification codes. No RLS policies at all (RLS stays
+-- enabled with zero grants) - this table is only ever touched by
+-- server-side API routes using the Supabase service role key
+-- (SUPABASE_SERVICE_ROLE_KEY env var), never the client-side anon key,
+-- since it briefly links a raw phone number to a code before that number
+-- is confirmed to belong to any account.
+create table public.sms_verification_codes (
+  id uuid default gen_random_uuid() primary key,
+  phone_number text not null,
+  code text not null,
+  expires_at timestamp with time zone not null,
+  created_at timestamp with time zone default now()
+);
+alter table public.sms_verification_codes enable row level security;

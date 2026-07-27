@@ -5,9 +5,11 @@ import { useEffect, useState } from 'react'
 import { FESTIVALS, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SelectFestivalPage() {
-  const router = useRouter()
+  const router   = useRouter()
+  const supabase = createClient()
   const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
@@ -23,6 +25,17 @@ export default function SelectFestivalPage() {
 
   function select(id: string) {
     localStorage.setItem(LOCAL_STORAGE_KEY, id)
+
+    // Best-effort, fire-and-forget — this is only needed so the SMS webhook
+    // (which has no access to a browser's localStorage) knows which
+    // festival to match artist names against. The in-app UI never depends
+    // on this write completing.
+    if (user) {
+      supabase.from('profiles').update({ active_festival_id: id }).eq('id', user.id).then(({ error }) => {
+        if (error) console.error('active_festival_id update failed:', error.message)
+      })
+    }
+
     router.push('/feed')
   }
 
