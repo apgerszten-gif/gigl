@@ -246,11 +246,17 @@ export default function ProfilePage() {
             {profile?.display_name}&apos;s<br />
             <span>rankings</span><span style={{ color: T.accent }}>.</span>
           </div>
-          <button onClick={signOut} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 11, color: T.muted, fontFamily: T.sans,
-            paddingTop: 6, letterSpacing: '0.06em',
-          }}>sign out</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingTop: 6, flexShrink: 0 }}>
+            <button onClick={() => router.push('/select-festival')} style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              color: T.accent, fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
+            }}>switch</button>
+            <span style={{ fontSize: 10, color: T.faint }}>·</span>
+            <button onClick={signOut} style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              fontSize: 11, color: T.muted, fontFamily: T.sans, letterSpacing: '0.06em',
+            }}>sign out</button>
+          </div>
         </div>
         <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>@{profile?.username}</div>
       </div>
@@ -306,35 +312,6 @@ export default function ProfilePage() {
               {copied ? 'Link copied!' : 'Share my rankings'}
             </div>
             <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>gigl.app/u/{profile?.username}</div>
-          </div>
-        </button>
-      </div>
-
-      {/* ── Switch festival button ───────────────────────────────────────────── */}
-      <div style={{ padding: '8px 24px 8px' }}>
-        <button onClick={() => router.push('/select-festival')} style={{
-          width: '100%',
-          background: T.card,
-          border: T.cardBorder,
-          borderRadius: 5,
-          padding: '12px 16px',
-          display: 'flex', alignItems: 'center', gap: 12,
-          cursor: 'pointer', fontFamily: T.sans,
-        }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: T.accentDim,
-            border: `1px solid ${T.accentBorder}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
-              <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />
-            </svg>
-          </div>
-          <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#4A3528' }}>Switch festival</div>
-            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{festivalLabel}</div>
           </div>
         </button>
       </div>
