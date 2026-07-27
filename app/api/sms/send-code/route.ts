@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   // If this number is already verified on a *different* account, don't
   // let it be re-linked out from under that user.
-  const { data: existing } = await supabaseAdmin
+  const { data: existing } = await supabaseAdmin()
     .from('profiles')
     .select('id')
     .eq('phone_number', phoneNumber)
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const code = String(Math.floor(100000 + Math.random() * 900000))
   const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString()
 
-  const { error: insertError } = await supabaseAdmin
+  const { error: insertError } = await supabaseAdmin()
     .from('sms_verification_codes')
     .insert({ phone_number: phoneNumber, code, expires_at: expiresAt })
 

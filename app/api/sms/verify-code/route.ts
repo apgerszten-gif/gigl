@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing phone number or code.' }, { status: 400 })
   }
 
-  const { data: codeRow } = await supabaseAdmin
+  const { data: codeRow } = await supabaseAdmin()
     .from('sms_verification_codes')
     .select('*')
     .eq('phone_number', phoneNumber)
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'That code expired — request a new one.' }, { status: 400 })
   }
 
-  const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin()
     .from('profiles')
     .update({ phone_number: phoneNumber, phone_verified: true })
     .eq('id', userId)
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'This phone number is already linked to another account.' }, { status: 409 })
   }
 
-  await supabaseAdmin.from('sms_verification_codes').delete().eq('phone_number', phoneNumber)
+  await supabaseAdmin().from('sms_verification_codes').delete().eq('phone_number', phoneNumber)
 
   try {
     await sendSms(phoneNumber, WELCOME_MESSAGE)

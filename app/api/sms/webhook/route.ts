@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const body = (params['Body'] ?? '').trim()
 
   // 1. Look up the sender
-  const { data: profile } = await supabaseAdmin
+  const { data: profile } = await supabaseAdmin()
     .from('profiles')
     .select('id, active_festival_id')
     .eq('phone_number', from)
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   // 5. Upsert the rating
   const score = computeShowScore(performance, venue, vibe)
-  const { error } = await supabaseAdmin.from('logged_shows').upsert({
+  const { error } = await supabaseAdmin().from('logged_shows').upsert({
     user_id:            profile.id,
     artist_id:          artist.id,
     artist_name:        artist.name,

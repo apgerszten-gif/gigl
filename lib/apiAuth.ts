@@ -9,7 +9,7 @@ export async function getAuthenticatedUserId(req: NextRequest): Promise<string |
   const token = authHeader?.replace(/^Bearer\s+/i, '')
   if (!token) return null
 
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+  const { data: { user }, error } = await supabaseAdmin().auth.getUser(token)
   if (error || !user) return null
   return user.id
 }
