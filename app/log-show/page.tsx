@@ -321,34 +321,35 @@ function LogShowInner() {
 
     let isFirstShow = false
     let wasUnlocked = true
+    let priorCount = 0
     if (!existingId) {
       try {
         const [{ count }, { data: profileBefore }] = await Promise.all([
           supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single(),
         ])
-        isFirstShow = (count ?? 0) === 0
+        priorCount = count ?? 0
+        isFirstShow = priorCount === 0
         wasUnlocked = profileBefore?.battle_mode_unlocked ?? true
       } catch {
         isFirstShow = false
       }
     }
 
-    // Awaited (not fire-and-forget) so we can reliably read whether this
-    // insert just crossed the 10-show battle_mode_unlocked threshold — the
-    // Postgres trigger runs synchronously with it. The rating itself is
-    // already crash-safe via the local queue above regardless of this wait.
-    await flushPendingLogs()
+    // Fire-and-forget — PendingLogsSync retries this in the background
+    // regardless (on foreground/reconnect) if it fails here. Never await
+    // this on the critical path; festival wifi is exactly the case this
+    // queue exists for.
+    void flushPendingLogs()
 
-    let battleModeJustUnlocked = false
-    if (!existingId && !wasUnlocked) {
-      try {
-        const { data: profileAfter } = await supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single()
-        battleModeJustUnlocked = profileAfter?.battle_mode_unlocked === true
-      } catch {
-        battleModeJustUnlocked = false
-      }
-    }
+    // Optimistic: this save is about to push shows_logged_count past the
+    // trigger's threshold, so we celebrate immediately from data already in
+    // hand rather than a round trip to confirm the server-side flip.
+    // Everywhere the feature actually gates on (Feed/Rankings cards) always
+    // reads the live battle_mode_unlocked value, so a rare desync here just
+    // means the celebration and the real unlock land a beat apart, not that
+    // the feature opens before it should.
+    const battleModeJustUnlocked = !existingId && !wasUnlocked && (priorCount + 1) >= 10
 
     if (isFirstShow) {
       const { data: profileRow } = await supabase.from('profiles').select('username').eq('id', user.id).single()

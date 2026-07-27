@@ -100,7 +100,12 @@ function FeedInner() {
     }
     if (profileRow) {
       setBattleModeUnlocked(!!profileRow.battle_mode_unlocked)
-      setBattleCardDismissed(!!profileRow.battle_card_dismissed)
+      // Ratchet, never downgrade: AuthProvider hands out a new `user` object
+      // on every auth event (including background token refreshes), which
+      // re-runs this fetch. A refetch racing ahead of the dismiss button's
+      // own (fire-and-forget) write must never un-dismiss a card the user
+      // already closed this session.
+      setBattleCardDismissed(prev => prev || !!profileRow.battle_card_dismissed)
     }
 
     if (!logs) { setLoading(false); return }

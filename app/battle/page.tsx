@@ -1,95 +1,75 @@
 'use client'
 
 import { useEffect, useState, Suspense, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { newRatings } from '@/lib/elo'
+import { recordBattleResult } from '@/lib/battleRecords'
 import { useTheme } from '@/components/FestivalThemeProvider'
+
+const MAX_SESSION = 10
 
 interface LoggedArtist {
   artist_id:   string
-  elo:         number
-  emoji:       string
   artist_name: string
   stage:       string
 }
 
-const BUCKET_LABEL: Record<string, string> = {
-  loved: 'loved',
-  ok:    'ok',
-  skip:  'skip',
+function pairKey(a: string, b: string): string {
+  return [a, b].sort().join('|')
 }
 
 function BattleInner() {
-  const router       = useRouter()
-  const supabase     = createClient()
-  const searchParams = useSearchParams()
-  const newArtistId  = searchParams.get('newArtistId')
+  const router   = useRouter()
+  const supabase = createClient()
   const T = useTheme()
 
   const [logs, setLogs]                 = useState<LoggedArtist[]>([])
-  const [bucketLogs, setBucketLogs]     = useState<LoggedArtist[]>([])
   const [pair, setPair]                 = useState<[LoggedArtist, LoggedArtist] | null>(null)
   const [loading, setLoading]           = useState(true)
   const [battles, setBattles]           = useState(0)
-  const [sessionLimit, setSessionLimit] = useState(4)
+  const [sessionLimit, setSessionLimit] = useState(MAX_SESSION)
   const [picked, setPicked]             = useState<string | null>(null)
 
-  const usedOpponents = useRef<Set<string>>(new Set())
+  const usedPairKeys = useRef<Set<string>>(new Set())
+  const userIdRef = useRef<string | null>(null)
 
-  useEffect(() => { fetchLogs(true) }, [])
+  useEffect(() => { init() }, [])
 
-  async function fetchLogs(initial = false) {
+  async function init() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
+    userIdRef.current = user.id
 
     const { data } = await supabase
       .from('logged_shows')
-      .select('artist_id, elo, emoji, artist_name, stage')
+      .select('artist_id, artist_name, stage')
       .eq('user_id', user.id)
-      .order('elo', { ascending: false })
 
     if (!data || data.length < 2) {
       router.push('/feed')
-      setLoading(false)
       return
     }
 
     setLogs(data)
-
-    if (initial) {
-      const newArtist = data.find(a => a.artist_id === newArtistId)
-      const bucket    = newArtist?.emoji ?? null
-      const sameBucket = bucket ? data.filter(a => a.emoji === bucket) : data
-      setBucketLogs(sameBucket)
-
-      if (sameBucket.length < 2) { router.push('/feed'); return }
-
-      const possibleOpponents = sameBucket.filter(a => a.artist_id !== newArtistId).length
-      setSessionLimit(Math.min(4, possibleOpponents))
-      pickPair(sameBucket, new Set(), newArtistId)
-    }
-
+    const maxPossiblePairs = Math.floor((data.length * (data.length - 1)) / 2)
+    setSessionLimit(Math.min(MAX_SESSION, maxPossiblePairs))
+    pickPair(data)
     setLoading(false)
   }
 
-  function pickPair(data: LoggedArtist[], used: Set<string>, anchorId?: string | null) {
-    const anchor = anchorId ?? newArtistId
-
-    if (!anchor) {
+  function pickPair(data: LoggedArtist[]) {
+    const attempts = 30
+    for (let i = 0; i < attempts; i++) {
       const shuffled = [...data].sort(() => Math.random() - 0.5)
-      setPair([shuffled[0], shuffled[1]])
-      return
+      const [a, b] = shuffled
+      if (!usedPairKeys.current.has(pairKey(a.artist_id, b.artist_id))) {
+        setPair([a, b])
+        return
+      }
     }
-
-    const newArtist = data.find(a => a.artist_id === anchor)
-    if (!newArtist) { router.push('/feed'); return }
-
-    const available = data.filter(a => a.artist_id !== anchor && !used.has(a.artist_id))
-    if (available.length === 0) { router.push('/feed'); return }
-
-    const opponent = available[Math.floor(Math.random() * available.length)]
-    setPair([newArtist, opponent])
+    // Exhausted unique pairs for this session (small logged history) — repeat is fine.
+    const shuffled = [...data].sort(() => Math.random() - 0.5)
+    setPair([shuffled[0], shuffled[1]])
   }
 
   async function handlePick(winnerId: string) {
@@ -102,18 +82,16 @@ function BattleInner() {
       const winner    = isAWinner ? a : b
       const loser     = isAWinner ? b : a
 
-      const opponentId = winner.artist_id === newArtistId ? loser.artist_id : winner.artist_id
-      usedOpponents.current.add(opponentId)
+      usedPairKeys.current.add(pairKey(winner.artist_id, loser.artist_id))
 
-      const { winner: newW, loser: newL } = newRatings(winner.elo, loser.elo)
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      await Promise.all([
-        supabase.from('logged_shows').update({ elo: newW }).match({ user_id: user.id, artist_id: winner.artist_id }),
-        supabase.from('logged_shows').update({ elo: newL }).match({ user_id: user.id, artist_id: loser.artist_id }),
-      ])
+      const userId = userIdRef.current
+      if (userId) {
+        try {
+          await recordBattleResult(supabase, userId, winner.artist_id, loser.artist_id)
+        } catch (err) {
+          console.error('recordBattleResult failed:', err)
+        }
+      }
 
       const newCount = battles + 1
       setBattles(newCount)
@@ -121,22 +99,7 @@ function BattleInner() {
 
       if (newCount >= sessionLimit) { router.push('/feed'); return }
 
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (!u) return
-      const { data: freshLogs } = await supabase
-        .from('logged_shows')
-        .select('artist_id, elo, emoji, artist_name, stage')
-        .eq('user_id', u.id)
-        .order('elo', { ascending: false })
-
-      if (freshLogs && freshLogs.length >= 2) {
-        setLogs(freshLogs)
-        const newEntry  = freshLogs.find(a => a.artist_id === newArtistId)
-        const bucket    = newEntry?.emoji ?? null
-        const freshBucket = bucket ? freshLogs.filter(a => a.emoji === bucket) : freshLogs
-        setBucketLogs(freshBucket)
-        pickPair(freshBucket, usedOpponents.current)
-      }
+      pickPair(logs)
     }, 700)
   }
 
@@ -171,7 +134,7 @@ function BattleInner() {
 
       <div style={{ padding: '24px 24px 40px' }}>
         {/* Progress dots */}
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 32 }}>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 32, flexWrap: 'wrap' }}>
           {Array.from({ length: sessionLimit }).map((_, i) => (
             <div key={i} style={{
               width: 8, height: 8, borderRadius: '50%',
@@ -198,7 +161,6 @@ function BattleInner() {
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
               {pair.map(log => {
-                const isNew    = log.artist_id === newArtistId
                 const isWinner = picked === log.artist_id
                 const isLoser  = picked !== null && picked !== log.artist_id
 
@@ -209,11 +171,7 @@ function BattleInner() {
                     disabled={!!picked}
                     style={{
                       background: isWinner ? T.accentDim : T.card,
-                      border: isWinner
-                        ? `2px solid ${T.accent}`
-                        : isNew
-                        ? `1.5px solid ${T.accentBorder}`
-                        : T.cardBorder,
+                      border: isWinner ? `2px solid ${T.accent}` : T.cardBorder,
                       boxShadow: isWinner ? T.cardShadow : 'none',
                       borderRadius: 5, overflow: 'hidden',
                       cursor: picked ? 'default' : 'pointer',
@@ -234,15 +192,6 @@ function BattleInner() {
                           position: 'absolute', top: 10, right: 10,
                           fontSize: 20, lineHeight: 1,
                         }}>✓</div>
-                      )}
-                      {isNew && !isWinner && (
-                        <div style={{
-                          position: 'absolute', top: 10, right: 10,
-                          fontSize: 9, color: T.accent, letterSpacing: '0.1em',
-                          textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700,
-                          background: T.accentDim, padding: '3px 7px', borderRadius: 20,
-                          border: `1px solid ${T.accentBorder}`,
-                        }}>New</div>
                       )}
                       <div>
                         <div style={{
@@ -278,7 +227,7 @@ function BattleInner() {
             {!picked && (
               <div style={{ textAlign: 'center' }}>
                 <button
-                  onClick={() => pickPair(bucketLogs, usedOpponents.current)}
+                  onClick={() => pickPair(logs)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     fontSize: 11, color: T.faint, letterSpacing: '0.06em',

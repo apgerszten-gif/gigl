@@ -6,6 +6,7 @@ import { getFestival, LOCAL_STORAGE_KEY, type Festival } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { StarDisplay } from '@/components/StarDisplay'
 import { BattleModeCard } from '@/components/BattleModeCard'
+import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 
@@ -27,6 +28,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const [festival, setFestival] = useState<Festival | null>(null)
   const [filter, setFilter]     = useState<string>('all')
   const [battleModeUnlocked, setBattleModeUnlocked] = useState(false)
+  const [battleAggMap, setBattleAggMap] = useState<Record<string, { wins: number; losses: number }>>({})
 
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
@@ -50,6 +52,23 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   useEffect(() => {
     if (!authLoading && !user) router.push('/')
   }, [authLoading, user, router])
+
+  // All-time record per artist, aggregated across every user's battles - a
+  // public consensus view, same treatment as Feed, never any one user's own
+  // record (that's Profile's job).
+  useEffect(() => {
+    const artistIds = initialRows.map(r => r.artist_id)
+    if (artistIds.length === 0) return
+    supabase.from('battle_records').select('artist_id, wins, losses').in('artist_id', artistIds)
+      .then(({ data }) => {
+        const map: Record<string, { wins: number; losses: number }> = {}
+        data?.forEach(r => {
+          const cur = map[r.artist_id] ?? { wins: 0, losses: 0 }
+          map[r.artist_id] = { wins: cur.wins + r.wins, losses: cur.losses + r.losses }
+        })
+        setBattleAggMap(map)
+      })
+  }, [initialRows])
 
   const days    = festival ? ['all', ...festival.days] : ['all', 'friday', 'saturday', 'sunday']
   const visible = filter === 'all' ? initialRows : initialRows.filter(r => r.day === filter)
@@ -228,6 +247,15 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
                       minWidth: 0,
                     }}>{row.name}</span>
                     <StarDisplay score={row.avgScore} size={17} accent={T.accent} />
+                    {battleAggMap[row.artist_id] && (
+                      <BattleRecordBadge
+                        wins={battleAggMap[row.artist_id].wins}
+                        losses={battleAggMap[row.artist_id].losses}
+                        unlocked={battleModeUnlocked}
+                        context="aggregate"
+                        artistName={row.name}
+                      />
+                    )}
                   </div>
                   <div style={{
                     fontSize: 9, color: T.muted, letterSpacing: '0.06em',
