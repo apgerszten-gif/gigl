@@ -71,6 +71,7 @@ export default function ProfilePage() {
   const [shows, setShows]                   = useState<Show[]>([])
   const [loading, setLoading]               = useState(true)
   const [copied, setCopied]                 = useState(false)
+  const [smsOpen, setSmsOpen]               = useState(false)
   const [editingId, setEditingId]           = useState<string | null>(null)
   const [editReview, setEditReview]         = useState('')
   const [editTags, setEditTags]             = useState<string[]>([])
@@ -217,19 +218,31 @@ export default function ProfilePage() {
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{
-        padding: '18px 24px 14px',
+        padding: '11px 20px',
         position: 'sticky', top: 0, zIndex: 10,
         background: T.bgRgba,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderBottom: '1px solid rgba(74,53,40,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
       }}>
         {T.logoUrl ? (
-          <img src={T.logoUrl} alt="Festival" style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }} />
+          <img src={T.logoUrl} alt="Festival" style={{ height: 20, objectFit: 'contain', filter: T.logoFilter }} />
         ) : (
-          <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 19, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
             Gigl<span style={{ color: T.accent }}>/</span>
           </div>
         )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+          <button onClick={() => router.push('/select-festival')} style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
+          }}>switch</button>
+          <span style={{ fontSize: 10, color: T.faint }}>·</span>
+          <button onClick={signOut} style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            color: T.muted, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em',
+          }}>sign out</button>
+        </div>
       </div>
 
       {/* ── Profile header ───────────────────────────────────────────────────── */}
@@ -246,19 +259,59 @@ export default function ProfilePage() {
             {profile?.display_name}&apos;s<br />
             <span>rankings</span><span style={{ color: T.accent }}>.</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingTop: 6, flexShrink: 0 }}>
-            <button onClick={() => router.push('/select-festival')} style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              color: T.accent, fontSize: 11, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
-            }}>switch</button>
-            <span style={{ fontSize: 10, color: T.faint }}>·</span>
-            <button onClick={signOut} style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              fontSize: 11, color: T.muted, fontFamily: T.sans, letterSpacing: '0.06em',
-            }}>sign out</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4, flexShrink: 0 }}>
+            <button onClick={copyLink} aria-label={copied ? 'Link copied' : 'Share my rankings'} style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: copied ? T.accentDim : T.card,
+              border: T.cardBorder,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}>
+              {copied ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M8 1h5v5M13 1L6 8M5.5 3H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8.5"
+                    stroke={T.accent} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+            <button onClick={() => setSmsOpen(o => !o)} aria-label="SMS Scoring" style={{
+              position: 'relative',
+              width: 32, height: 32, borderRadius: '50%',
+              background: smsOpen ? T.accentDim : T.card,
+              border: T.cardBorder,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              {profile?.phone_verified && (
+                <div style={{
+                  position: 'absolute', bottom: -1, right: -1,
+                  width: 9, height: 9, borderRadius: '50%',
+                  background: T.accent, border: `1.5px solid ${T.bg}`,
+                }} />
+              )}
+            </button>
           </div>
         </div>
-        <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>@{profile?.username}</div>
+        <div style={{ fontSize: 11, color: T.muted, marginBottom: smsOpen ? 12 : 16 }}>@{profile?.username}</div>
+
+        {smsOpen && (
+          <div style={{ marginBottom: 16 }}>
+            <SmsScoringSection
+              phoneNumber={profile?.phone_number ?? null}
+              phoneVerified={profile?.phone_verified ?? false}
+              onChange={(phoneNumber, phoneVerified) => {
+                setProfile(prev => prev ? { ...prev, phone_number: phoneNumber, phone_verified: phoneVerified } : prev)
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Stats bar ────────────────────────────────────────────────────────── */}
@@ -281,47 +334,6 @@ export default function ProfilePage() {
         <div style={{ padding: '14px 0', textAlign: 'center' }}>
           <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>2026</div>
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Festival</div>
-        </div>
-      </div>
-
-      {/* ── Share + SMS Scoring — same row to save vertical space ───────────── */}
-      <div style={{ padding: '16px 24px 8px', display: 'flex', gap: 10, alignItems: 'stretch' }}>
-        <button onClick={copyLink} style={{
-          flex: 1, minWidth: 0,
-          background: copied ? T.accentDim : T.card,
-          border: T.cardBorder,
-          boxShadow: T.cardShadow,
-          borderRadius: 5,
-          padding: '12px 14px',
-          display: 'flex', alignItems: 'center', gap: 8,
-          cursor: 'pointer', fontFamily: T.sans,
-        }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: '50%',
-            background: T.accentDim,
-            border: `1px solid ${T.accentBorder}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-              <path d="M8 1h5v5M13 1L6 8M5.5 3H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8.5"
-                stroke={T.accent} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#4A3528', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {copied ? 'Link copied!' : 'Share rankings'}
-            </div>
-          </div>
-        </button>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <SmsScoringSection
-            phoneNumber={profile?.phone_number ?? null}
-            phoneVerified={profile?.phone_verified ?? false}
-            onChange={(phoneNumber, phoneVerified) => {
-              setProfile(prev => prev ? { ...prev, phone_number: phoneNumber, phone_verified: phoneVerified } : prev)
-            }}
-          />
         </div>
       </div>
 
