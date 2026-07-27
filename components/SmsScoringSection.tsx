@@ -82,36 +82,37 @@ export function SmsScoringSection({
   }
 
   return (
-    <div style={{ padding: '8px 24px 8px' }}>
+    <div style={{ height: '100%' }}>
       <div style={{
-        background: T.card, border: T.cardBorder, borderRadius: 5, padding: '14px 16px',
+        background: T.card, border: T.cardBorder, borderRadius: 5, padding: '12px 14px',
+        height: '100%', boxSizing: 'border-box',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: phoneVerified || step !== 'idle' ? 12 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: phoneVerified || step !== 'idle' ? 12 : 0 }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '50%', background: T.accentDim,
+            width: 28, height: 28, borderRadius: '50%', background: T.accentDim,
             border: `1px solid ${T.accentBorder}`, display: 'flex', alignItems: 'center',
             justifyContent: 'center', flexShrink: 0,
           }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#4A3528' }}>SMS Scoring</div>
-            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>
-              {phoneVerified ? `Linked: ${phoneNumber}` : 'Log shows by text when wifi is bad'}
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#4A3528', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>SMS Scoring</div>
+            <div style={{ fontSize: 9, color: T.muted, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {phoneVerified ? `Linked: ${phoneNumber}` : 'Log by text'}
             </div>
           </div>
           {phoneVerified ? (
             <button onClick={handleUnlink} disabled={saving} style={{
               background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer',
-              fontSize: 11, color: T.muted, textDecoration: 'underline', textUnderlineOffset: 3,
+              fontSize: 10, color: T.muted, textDecoration: 'underline', textUnderlineOffset: 3,
               fontFamily: T.sans, flexShrink: 0, opacity: saving ? 0.6 : 1,
             }}>Unlink</button>
           ) : step === 'idle' && (
             <button onClick={() => setStep('phone')} style={{
               background: T.accent, border: '1.5px solid #4A3528', borderRadius: 5,
-              padding: '6px 12px', color: '#FAF3E2', fontSize: 10, fontWeight: 700,
+              padding: '6px 10px', color: '#FAF3E2', fontSize: 9, fontWeight: 700,
               cursor: 'pointer', fontFamily: T.sans, letterSpacing: '0.06em',
               textTransform: 'uppercase', flexShrink: 0,
             }}>Enable</button>

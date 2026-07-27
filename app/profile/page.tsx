@@ -284,46 +284,46 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Share button ─────────────────────────────────────────────────────── */}
-      <div style={{ padding: '16px 24px 8px' }}>
+      {/* ── Share + SMS Scoring — same row to save vertical space ───────────── */}
+      <div style={{ padding: '16px 24px 8px', display: 'flex', gap: 10, alignItems: 'stretch' }}>
         <button onClick={copyLink} style={{
-          width: '100%',
+          flex: 1, minWidth: 0,
           background: copied ? T.accentDim : T.card,
           border: T.cardBorder,
           boxShadow: T.cardShadow,
           borderRadius: 5,
-          padding: '12px 16px',
-          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '12px 14px',
+          display: 'flex', alignItems: 'center', gap: 8,
           cursor: 'pointer', fontFamily: T.sans,
         }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '50%',
+            width: 28, height: 28, borderRadius: '50%',
             background: T.accentDim,
             border: `1px solid ${T.accentBorder}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
               <path d="M8 1h5v5M13 1L6 8M5.5 3H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8.5"
                 stroke={T.accent} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#4A3528' }}>
-              {copied ? 'Link copied!' : 'Share my rankings'}
+          <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#4A3528', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {copied ? 'Link copied!' : 'Share rankings'}
             </div>
-            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>gigl.app/u/{profile?.username}</div>
           </div>
         </button>
-      </div>
 
-      {/* ── SMS Scoring ──────────────────────────────────────────────────────── */}
-      <SmsScoringSection
-        phoneNumber={profile?.phone_number ?? null}
-        phoneVerified={profile?.phone_verified ?? false}
-        onChange={(phoneNumber, phoneVerified) => {
-          setProfile(prev => prev ? { ...prev, phone_number: phoneNumber, phone_verified: phoneVerified } : prev)
-        }}
-      />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <SmsScoringSection
+            phoneNumber={profile?.phone_number ?? null}
+            phoneVerified={profile?.phone_verified ?? false}
+            onChange={(phoneNumber, phoneVerified) => {
+              setProfile(prev => prev ? { ...prev, phone_number: phoneNumber, phone_verified: phoneVerified } : prev)
+            }}
+          />
+        </div>
+      </div>
 
       {/* ── Rankings list ────────────────────────────────────────────────────── */}
       <div style={{ padding: '8px 24px 24px' }}>

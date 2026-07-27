@@ -27,7 +27,8 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
 
   const [festival, setFestival] = useState<Festival | null>(null)
   const [filter, setFilter]     = useState<string>('all')
-  const [battleModeUnlocked, setBattleModeUnlocked] = useState(false)
+  const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
+  const [battleCardDismissed, setBattleCardDismissed] = useState(false)
   const [battleAggMap, setBattleAggMap] = useState<Record<string, { wins: number; losses: number }>>({})
 
   useEffect(() => {
@@ -38,13 +39,28 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
     }
   }, [])
 
-  // Rankings is server-rendered and user-agnostic, so battle_mode_unlocked
-  // (needed only for the entry-point card below) is fetched client-side.
+  // Rankings is server-rendered and user-agnostic, so battle_mode_unlocked/
+  // battle_card_dismissed (needed only for the entry-point card below) are
+  // fetched client-side.
   useEffect(() => {
     if (!user) return
-    supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single()
-      .then(({ data }) => setBattleModeUnlocked(!!data?.battle_mode_unlocked))
+    supabase.from('profiles').select('battle_mode_unlocked, battle_card_dismissed').eq('id', user.id).single()
+      .then(({ data }) => {
+        setBattleModeUnlocked(!!data?.battle_mode_unlocked)
+        // Ratchet, never downgrade: AuthProvider hands out a new `user`
+        // object on every auth event (including background token refreshes),
+        // re-running this fetch — it must never un-dismiss a card the user
+        // already closed this session (same fix as the feed page's card).
+        setBattleCardDismissed(prev => prev || !!data?.battle_card_dismissed)
+      })
   }, [user])
+
+  function dismissBattleCard() {
+    setBattleCardDismissed(true)
+    if (user) {
+      void supabase.from('profiles').update({ battle_card_dismissed: true }).eq('id', user.id)
+    }
+  }
 
   // The rows already arrived pre-computed from the server component — this
   // check only exists to bounce unauthenticated visitors, it never gates
@@ -198,8 +214,8 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
 
       {/* ── List ────────────────────────────────────────────────────────────── */}
       <div style={{ padding: '0 24px 100px' }}>
-        {battleModeUnlocked && (
-          <BattleModeCard onEnter={() => router.push('/battle')} />
+        {battleModeUnlocked && !battleCardDismissed && (
+          <BattleModeCard onDismiss={dismissBattleCard} onEnter={() => router.push('/battle')} />
         )}
 
         {visible.length === 0 && (
