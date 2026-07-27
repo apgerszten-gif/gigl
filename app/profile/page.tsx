@@ -7,6 +7,7 @@ import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
+import { SmsScoringSection } from '@/components/SmsScoringSection'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
@@ -52,8 +53,10 @@ interface Show {
 }
 
 interface Profile {
-  username:     string
-  display_name: string
+  username:       string
+  display_name:   string
+  phone_number:   string | null
+  phone_verified: boolean
 }
 
 export default function ProfilePage() {
@@ -89,7 +92,7 @@ export default function ProfilePage() {
 
     async function load(userId: string) {
       const [{ data: prof }, { data: showData }] = await Promise.all([
-        supabase.from('profiles').select('username, display_name').eq('id', userId).single(),
+        supabase.from('profiles').select('username, display_name, phone_number, phone_verified').eq('id', userId).single(),
         supabase.from('logged_shows').select('*').eq('user_id', userId),
       ])
       setProfile(prof)
@@ -321,6 +324,15 @@ export default function ProfilePage() {
           </div>
         </button>
       </div>
+
+      {/* ── SMS Scoring ──────────────────────────────────────────────────────── */}
+      <SmsScoringSection
+        phoneNumber={profile?.phone_number ?? null}
+        phoneVerified={profile?.phone_verified ?? false}
+        onChange={(phoneNumber, phoneVerified) => {
+          setProfile(prev => prev ? { ...prev, phone_number: phoneNumber, phone_verified: phoneVerified } : prev)
+        }}
+      />
 
       {/* ── Rankings list ────────────────────────────────────────────────────── */}
       <div style={{ padding: '8px 24px 24px' }}>
