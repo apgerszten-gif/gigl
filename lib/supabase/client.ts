@@ -1,25 +1,26 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { resilientFetch } from '../supabaseFetch'
 
-let client: SupabaseClient | undefined
+// Cached on globalThis, not a module-level `let` - Next.js code-splits this
+// module into each route's own JS chunk, so a plain module-scope variable
+// only dedupes calls within a single chunk. Navigating from /feed to
+// /profile loads a *different* chunk with its own copy of that variable,
+// still spinning up a second GoTrueClient against the same localStorage
+// auth key ("Multiple GoTrueClient instances" persisted even after the
+// first memoization attempt - see PERF_INVESTIGATION). globalThis is the
+// one thing every chunk actually shares within a tab.
+declare global {
+  // eslint-disable-next-line no-var
+  var __giglSupabaseClient: SupabaseClient | undefined
+}
 
-// Memoized on purpose: every 'use client' component calls this directly in
-// its render body (not useMemo), so on every re-render (every keystroke,
-// every state update) it was constructing a brand new GoTrueClient against
-// the same localStorage auth key - the "Multiple GoTrueClient instances"
-// console warning. Per PERF_INVESTIGATION, that showed up as a trivial
-// 2-row query consistently taking 800-2300ms, not just occasionally - the
-// competing clients were duplicating/racing session and token-refresh work
-// in front of every real request. This file only ever runs in the browser,
-// so one client per tab is exactly right - no per-request server state to
-// leak between users.
 export function createClient() {
-  if (!client) {
-    client = createSupabaseClient(
+  if (!globalThis.__giglSupabaseClient) {
+    globalThis.__giglSupabaseClient = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { global: { fetch: resilientFetch } }
     )
   }
-  return client
+  return globalThis.__giglSupabaseClient
 }
