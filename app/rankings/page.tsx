@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { computeShowScore } from '@/lib/rating'
 import { RankingsClient, type ArtistRow } from '@/components/RankingsClient'
+import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
 
 // Server component: the leaderboard read has no per-user filter (RLS already
 // allows public select on logged_shows), so it's fetched and aggregated here
@@ -15,9 +16,13 @@ import { RankingsClient, type ArtistRow } from '@/components/RankingsClient'
 export const dynamic = 'force-dynamic'
 
 export default async function RankingsPage() {
-  const { data: logs } = await supabase
+  const pageStart = Date.now()
+  const { cold } = markInvocation()
+  console.log(`[perf] rankings:page start cold=${cold}`)
+
+  const { data: logs } = await timeQuery('rankings:logged_shows', supabase
     .from('logged_shows')
-    .select('artist_id, performance_rating, venue_rating, vibe_rating, artist_name, stage, day')
+    .select('artist_id, performance_rating, venue_rating, vibe_rating, artist_name, stage, day'))
 
   const map: Record<string, { scores: number[]; name: string; stage: string; day: string }> = {}
   logs?.forEach(l => {
@@ -39,5 +44,6 @@ export default async function RankingsPage() {
     }))
     .sort((a, b) => b.avgScore - a.avgScore)
 
+  timeMark('rankings:page total', pageStart)
   return <RankingsClient initialRows={rows} />
 }

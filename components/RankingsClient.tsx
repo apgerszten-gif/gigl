@@ -9,6 +9,7 @@ import { BattleModeCard } from '@/components/BattleModeCard'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
+import { timeQuery } from '@/lib/queryTiming'
 
 export interface ArtistRow {
   artist_id: string
@@ -44,7 +45,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   // fetched client-side.
   useEffect(() => {
     if (!user) return
-    supabase.from('profiles').select('battle_mode_unlocked, battle_card_dismissed').eq('id', user.id).single()
+    timeQuery('rankings:profiles', supabase.from('profiles').select('battle_mode_unlocked, battle_card_dismissed').eq('id', user.id).single())
       .then(({ data }) => {
         setBattleModeUnlocked(!!data?.battle_mode_unlocked)
         // Ratchet, never downgrade: AuthProvider hands out a new `user`
@@ -75,7 +76,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   useEffect(() => {
     const artistIds = initialRows.map(r => r.artist_id)
     if (artistIds.length === 0) return
-    supabase.from('battle_records').select('artist_id, wins, losses').in('artist_id', artistIds)
+    timeQuery(`rankings:battle_records(${artistIds.length} artists)`, supabase.from('battle_records').select('artist_id, wins, losses').in('artist_id', artistIds))
       .then(({ data }) => {
         const map: Record<string, { wins: number; losses: number }> = {}
         data?.forEach(r => {

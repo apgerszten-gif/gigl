@@ -13,6 +13,7 @@ import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
+import { timeQuery, timeMark } from '@/lib/queryTiming'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
@@ -95,24 +96,28 @@ export default function ProfilePage() {
     if (!user) { router.push('/'); return }
 
     async function load(userId: string) {
+      const loadStart = Date.now()
+      console.log(`[perf] profile:load start userId=${userId}`)
+
       const [{ data: prof }, { data: showData }] = await Promise.all([
-        supabase.from('profiles').select('username, display_name, phone_number, phone_verified, battle_mode_unlocked').eq('id', userId).single(),
-        supabase.from('logged_shows').select('*').eq('user_id', userId),
+        timeQuery('profile:profiles', supabase.from('profiles').select('username, display_name, phone_number, phone_verified, battle_mode_unlocked').eq('id', userId).single()),
+        timeQuery('profile:logged_shows', supabase.from('logged_shows').select('*').eq('user_id', userId)),
       ])
       setProfile(prof)
       setShows((showData || []).slice().sort((a, b) => showScore(b) - showScore(a)))
 
       // This viewer's own battle record per artist - never another user's,
       // and never blended into performance_rating/venue_rating/vibe_rating.
-      const { data: battleRows } = await supabase
+      const { data: battleRows } = await timeQuery('profile:battle_records', supabase
         .from('battle_records')
         .select('artist_id, wins, losses')
-        .eq('user_id', userId)
+        .eq('user_id', userId))
       const map: Record<string, { wins: number; losses: number }> = {}
       battleRows?.forEach(r => { map[r.artist_id] = { wins: r.wins, losses: r.losses } })
       setBattleMap(map)
 
       setLoading(false)
+      timeMark(`profile:load total (${(showData || []).length} shows)`, loadStart)
     }
     load(user.id)
   }, [authLoading, user, router])

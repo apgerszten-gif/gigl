@@ -5,6 +5,7 @@ import { DEFAULT_THEME as T } from '@/lib/theme'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
+import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -25,16 +26,20 @@ function dayLabel(d: string) {
 }
 
 export default async function ArtistPage({ params }: { params: { artistId: string } }) {
-  const { data: logs } = await supabase
+  const pageStart = Date.now()
+  const { cold } = markInvocation()
+  console.log(`[perf] artist:page start cold=${cold} artistId=${params.artistId}`)
+
+  const { data: logs } = await timeQuery(`artist:logged_shows(${params.artistId})`, supabase
     .from('logged_shows')
     .select('user_id, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, media_urls, artist_name, stage, day')
-    .eq('artist_id', params.artistId)
+    .eq('artist_id', params.artistId))
 
   if (!logs || logs.length === 0) notFound()
 
   const userIds = Array.from(new Set(logs.map(l => l.user_id)))
-  const { data: profiles } = await supabase
-    .from('profiles').select('id, username').in('id', userIds)
+  const { data: profiles } = await timeQuery(`artist:profiles(${userIds.length} ids)`, supabase
+    .from('profiles').select('id, username').in('id', userIds))
 
   const usernameMap: Record<string, string> = {}
   profiles?.forEach(p => { usernameMap[p.id] = p.username })
@@ -61,6 +66,8 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
     .filter(u => !isVideoUrl(u))
     .filter((u, i, arr) => arr.indexOf(u) === i)
     .slice(0, 3)
+
+  timeMark(`artist:page total (${logs.length} logs)`, pageStart)
 
   return (
     <div style={{
