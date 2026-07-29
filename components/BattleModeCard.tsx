@@ -18,8 +18,11 @@ export function BattleModeCard({
     }}>
       {onDismiss && (
         <button onClick={onDismiss} aria-label="Dismiss Battle Mode card" style={{
-          position: 'absolute', top: 6, right: 8, background: 'none', border: 'none',
-          cursor: 'pointer', color: T.faint, fontSize: 15, padding: 4, lineHeight: 1,
+          position: 'absolute', top: -10, right: -10, width: 22, height: 22,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: T.bg, border: '1.5px solid #4A3528',
+          borderRadius: '50%', boxShadow: '0 1px 3px rgba(74,53,40,0.25)',
+          cursor: 'pointer', color: '#4A3528', fontSize: 13, fontWeight: 700, padding: 0, lineHeight: 1,
         }}>×</button>
       )}
       <div style={{ fontSize: 28, flexShrink: 0 }}>🏆</div>
