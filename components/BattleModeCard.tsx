@@ -18,7 +18,7 @@ export function BattleModeCard({
     }}>
       {onDismiss && (
         <button onClick={onDismiss} aria-label="Dismiss Battle Mode card" style={{
-          position: 'absolute', top: -10, right: -10, width: 22, height: 22,
+          position: 'absolute', top: 6, right: 6, width: 22, height: 22,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: T.bg, border: '1.5px solid #4A3528',
           borderRadius: '50%', boxShadow: '0 1px 3px rgba(74,53,40,0.25)',
