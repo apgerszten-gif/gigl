@@ -29,6 +29,7 @@ function BattleInner() {
   const [battles, setBattles]           = useState(0)
   const [sessionLimit, setSessionLimit] = useState(MAX_SESSION)
   const [picked, setPicked]             = useState<string | null>(null)
+  const [tossUp, setTossUp]             = useState(false)
 
   const usedPairKeys = useRef<Set<string>>(new Set())
   const userIdRef = useRef<string | null>(null)
@@ -73,7 +74,7 @@ function BattleInner() {
   }
 
   async function handlePick(winnerId: string) {
-    if (!pair || picked) return
+    if (!pair || picked || tossUp) return
     setPicked(winnerId)
 
     setTimeout(async () => {
@@ -96,6 +97,24 @@ function BattleInner() {
       const newCount = battles + 1
       setBattles(newCount)
       setPicked(null)
+
+      if (newCount >= sessionLimit) { router.push('/feed'); return }
+
+      pickPair(logs)
+    }, 700)
+  }
+
+  function handleTossUp() {
+    if (!pair || picked || tossUp) return
+    setTossUp(true)
+
+    setTimeout(() => {
+      const [a, b] = pair
+      usedPairKeys.current.add(pairKey(a.artist_id, b.artist_id))
+
+      const newCount = battles + 1
+      setBattles(newCount)
+      setTossUp(false)
 
       if (newCount >= sessionLimit) { router.push('/feed'); return }
 
@@ -163,18 +182,19 @@ function BattleInner() {
               {pair.map(log => {
                 const isWinner = picked === log.artist_id
                 const isLoser  = picked !== null && picked !== log.artist_id
+                const isTied   = tossUp
 
                 return (
                   <button
                     key={log.artist_id}
                     onClick={() => handlePick(log.artist_id)}
-                    disabled={!!picked}
+                    disabled={!!picked || tossUp}
                     style={{
-                      background: isWinner ? T.accentDim : T.card,
-                      border: isWinner ? `2px solid ${T.accent}` : T.cardBorder,
-                      boxShadow: isWinner ? T.cardShadow : 'none',
+                      background: isWinner || isTied ? T.accentDim : T.card,
+                      border: isWinner || isTied ? `2px solid ${T.accent}` : T.cardBorder,
+                      boxShadow: isWinner || isTied ? T.cardShadow : 'none',
                       borderRadius: 5, overflow: 'hidden',
-                      cursor: picked ? 'default' : 'pointer',
+                      cursor: picked || tossUp ? 'default' : 'pointer',
                       textAlign: 'left',
                       opacity:   isLoser ? 0.4 : 1,
                       transform: isWinner ? 'scale(1.02)' : 'scale(1)',
@@ -182,16 +202,16 @@ function BattleInner() {
                     }}
                   >
                     <div style={{
-                      background: isWinner ? T.accentDim : T.cardInner,
+                      background: isWinner || isTied ? T.accentDim : T.cardInner,
                       height: 140, display: 'flex', alignItems: 'flex-end',
                       padding: 12, position: 'relative',
                       transition: 'background 0.25s ease',
                     }}>
-                      {isWinner && (
+                      {(isWinner || isTied) && (
                         <div style={{
                           position: 'absolute', top: 10, right: 10,
                           fontSize: 20, lineHeight: 1,
-                        }}>✓</div>
+                        }}>{isTied ? '=' : '✓'}</div>
                       )}
                       <div>
                         <div style={{
@@ -207,16 +227,16 @@ function BattleInner() {
                     </div>
                     <div style={{ padding: 12 }}>
                       <div style={{
-                        background: isWinner ? T.accent : T.cardInner,
-                        border: isWinner ? '1.5px solid #4A3528' : '1px solid rgba(74,53,40,0.15)',
+                        background: isWinner || isTied ? T.accent : T.cardInner,
+                        border: isWinner || isTied ? '1.5px solid #4A3528' : '1px solid rgba(74,53,40,0.15)',
                         borderRadius: 4, padding: 8,
                         textAlign: 'center', fontSize: 11, fontWeight: 700,
-                        color: isWinner ? '#FAF3E2' : T.muted,
+                        color: isWinner || isTied ? '#FAF3E2' : T.muted,
                         letterSpacing: '0.08em', textTransform: 'uppercase',
                         fontFamily: T.sans,
                         transition: 'all 0.25s ease',
                       }}>
-                        {isWinner ? '✓ Picked' : 'Pick this'}
+                        {isWinner ? '✓ Picked' : isTied ? "It's a toss up" : 'Pick this'}
                       </div>
                     </div>
                   </button>
@@ -224,8 +244,17 @@ function BattleInner() {
               })}
             </div>
 
-            {!picked && (
-              <div style={{ textAlign: 'center' }}>
+            {!picked && !tossUp && (
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+                <button
+                  onClick={handleTossUp}
+                  style={{
+                    background: 'none', border: `1px solid ${T.faint}`, borderRadius: 20,
+                    cursor: 'pointer', padding: '8px 18px',
+                    fontSize: 11, color: T.muted, letterSpacing: '0.06em',
+                    textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700,
+                  }}
+                >It's a toss up</button>
                 <button
                   onClick={() => pickPair(logs)}
                   style={{
