@@ -1,4 +1,10 @@
-const TIMEOUT_MS = 8000
+// Was 8000 - production logs showed a real request whose first attempt hung
+// for the full 8s before the retry succeeded in ~2.6s, turning a transient
+// blip into an 11s+ page load (see PERF_INVESTIGATION). Every observed
+// successful query, including a degraded-connection retry, has finished
+// well under 3s, so 4000 still leaves generous headroom while capping the
+// worst case a hung attempt can cost in half.
+const TIMEOUT_MS = 4000
 const MAX_ATTEMPTS = 3
 const BASE_DELAY_MS = 500
 
