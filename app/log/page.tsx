@@ -8,6 +8,7 @@ import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { StarDisplay } from '@/components/StarDisplay'
 import { computeShowScore } from '@/lib/rating'
+import { timeQuery, timeMark } from '@/lib/queryTiming'
 
 type Day = string
 
@@ -45,10 +46,11 @@ function LogInner() {
     if (!user) { router.push('/'); return }
 
     async function fetchLogged(userId: string) {
-      const { data } = await supabase
+      const loadStart = Date.now()
+      const { data } = await timeQuery('log:logged_shows', supabase
         .from('logged_shows')
         .select('artist_id, performance_rating, venue_rating, vibe_rating')
-        .eq('user_id', userId)
+        .eq('user_id', userId))
 
       if (data) {
         const map = new Map<string, ExistingLog>()
@@ -62,6 +64,7 @@ function LogInner() {
         setLoggedMap(map)
       }
       setLoadingLogged(false)
+      timeMark(`log:load total (${data?.length ?? 0} logs)`, loadStart)
     }
     fetchLogged(user.id)
   }, [authLoading, user, router])

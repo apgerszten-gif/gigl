@@ -10,6 +10,7 @@ import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
 import { useAuth } from '@/components/AuthProvider'
 import { enqueuePendingLog, getPendingLogForArtist, flushPendingLogs } from '@/lib/pendingLogs'
+import { timeQuery, timeMark } from '@/lib/queryTiming'
 
 const MAX_VIDEOS = 1
 const MAX_PHOTOS = 2
@@ -156,12 +157,13 @@ function LogShowInner() {
     if (!user) { router.push('/'); return }
 
     async function load(userId: string) {
-      const { data } = await supabase
+      const loadStart = Date.now()
+      const { data } = await timeQuery('log-show:logged_shows', supabase
         .from('logged_shows')
         .select('id, stage, day, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, media_urls')
         .eq('user_id', userId)
         .eq('artist_id', artistId)
-        .maybeSingle()
+        .maybeSingle())
 
       if (data) {
         setExistingId(data.id)
@@ -198,6 +200,7 @@ function LogShowInner() {
       }
 
       setLoadingExisting(false)
+      timeMark('log-show:prefill total', loadStart)
     }
     load(user.id)
   }, [artistId, authLoading, user, router])
@@ -258,6 +261,8 @@ function LogShowInner() {
     if (!canSave || saving) return
     if (!user) { router.push('/'); return }
     setSaving(true)
+    const saveStart = Date.now()
+    console.log('[perf] log-show:save start')
 
     const score = computeShowScore(performance, venue, vibe)
 
@@ -288,9 +293,9 @@ function LogShowInner() {
         try {
           const ext = item.file.name.split('.').pop()
           const path = `${user.id}/${artistId}-${Date.now()}-${mediaUrls.length}.${ext}`
-          const { error: uploadError } = await supabase.storage
+          const { error: uploadError } = await timeQuery(`log-show:media-upload(${item.file.size}b)`, supabase.storage
             .from('show-photos')
-            .upload(path, item.file, { upsert: true })
+            .upload(path, item.file, { upsert: true }))
           if (uploadError) throw uploadError
           const { data: urlData } = supabase.storage.from('show-photos').getPublicUrl(path)
           mediaUrls.push(urlData.publicUrl)
@@ -325,8 +330,8 @@ function LogShowInner() {
     if (!existingId) {
       try {
         const [{ count }, { data: profileBefore }] = await Promise.all([
-          supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single(),
+          timeQuery('log-show:count-logged_shows', supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
+          timeQuery('log-show:profiles', supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single()),
         ])
         priorCount = count ?? 0
         isFirstShow = priorCount === 0
@@ -352,18 +357,21 @@ function LogShowInner() {
     const battleModeJustUnlocked = !existingId && !wasUnlocked && (priorCount + 1) >= 10
 
     if (isFirstShow) {
-      const { data: profileRow } = await supabase.from('profiles').select('username').eq('id', user.id).single()
+      const { data: profileRow } = await timeQuery('log-show:profiles-username', supabase.from('profiles').select('username').eq('id', user.id).single())
       setCelebration({ username: profileRow?.username ?? null })
       setSaving(false)
+      timeMark('log-show:save total (first show)', saveStart)
       return
     }
 
     if (battleModeJustUnlocked) {
       setBattleUnlock(true)
       setSaving(false)
+      timeMark('log-show:save total (battle unlock)', saveStart)
       return
     }
 
+    timeMark('log-show:save total', saveStart)
     router.push('/feed')
   }
 
