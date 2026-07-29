@@ -12,6 +12,7 @@ import { BattleModeCard } from '@/components/BattleModeCard'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
+import { timeQuery, timeMark } from '@/lib/queryTiming'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const FEED_CACHE_KEY = 'gigl_feed_cache'
@@ -77,13 +78,16 @@ function FeedInner() {
   }, [authLoading, user])
 
   async function fetchFeed(userId: string) {
+    const loadStart = Date.now()
+    console.log(`[perf] feed:load start userId=${userId}`)
+
     const [{ data: profileRow, error: tipError }, { data: logs }] = await Promise.all([
-      supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single(),
-      supabase
+      timeQuery('feed:profiles', supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single()),
+      timeQuery('feed:logged_shows', supabase
         .from('logged_shows')
         .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
         .order('created_at', { ascending: false })
-        .limit(200),
+        .limit(200)),
     ])
 
     if (tipError) {
@@ -106,10 +110,10 @@ function FeedInner() {
       setBattleCardDismissed(prev => prev || !!profileRow.battle_card_dismissed)
     }
 
-    if (!logs) { setLoading(false); return }
+    if (!logs) { setLoading(false); timeMark('feed:load total (no logs)', loadStart); return }
 
     const userIds = logs.map(l => l.user_id).filter((id, i, arr) => arr.indexOf(id) === i)
-    const { data: profiles } = await supabase.from('profiles').select('id, username').in('id', userIds)
+    const { data: profiles } = await timeQuery(`feed:profiles-by-id(${userIds.length} ids)`, supabase.from('profiles').select('id, username').in('id', userIds))
 
     const usernameMap: Record<string, string> = {}
     profiles?.forEach(p => { usernameMap[p.id] = p.username })
@@ -118,6 +122,7 @@ function FeedInner() {
     setGlobalFeed(withUsernames)
     writeCache(FEED_CACHE_KEY, withUsernames)
     setLoading(false)
+    timeMark(`feed:load total (${logs.length} logs)`, loadStart)
   }
 
   function dismissBattleCard() {
