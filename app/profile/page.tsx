@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
@@ -64,6 +64,7 @@ interface Profile {
 
 export default function ProfilePage() {
   const router = useRouter()
+  const supabase = createClient()
   const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
