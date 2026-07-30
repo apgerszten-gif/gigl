@@ -51,6 +51,8 @@ function FeedInner() {
   const [showLogTip, setShowLogTip]       = useState(false)
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
+  const [filterMode, setFilterMode]       = useState<'all' | 'following'>('all')
+  const [followingIds, setFollowingIds]   = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
@@ -81,14 +83,28 @@ function FeedInner() {
     const loadStart = Date.now()
     console.log(`[perf] feed:load start userId=${userId}`)
 
-    const [{ data: profileRow, error: tipError }, { data: logs }] = await Promise.all([
+    // Scope to whichever festival is currently selected (artist_id is
+    // festival-specific, e.g. 'lolla-...' vs 'osl-...') so activity from one
+    // festival never bleeds into another's feed. No filter is applied if no
+    // festival is selected yet, matching this page's existing lenient
+    // fallback for that edge case.
+    const festivalId = localStorage.getItem(LOCAL_STORAGE_KEY)
+    const festival    = festivalId ? getFestival(festivalId) : null
+
+    let logsQuery = supabase
+      .from('logged_shows')
+      .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (festival) logsQuery = logsQuery.in('artist_id', festival.artists.map(a => a.id))
+
+    const [{ data: profileRow, error: tipError }, { data: logs }, { data: followRows }] = await Promise.all([
       timeQuery('feed:profiles', supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single()),
-      timeQuery('feed:logged_shows', supabase
-        .from('logged_shows')
-        .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
-        .order('created_at', { ascending: false })
-        .limit(200)),
+      timeQuery('feed:logged_shows', logsQuery),
+      timeQuery('feed:follows', supabase.from('follows').select('following_id').eq('follower_id', userId)),
     ])
+
+    setFollowingIds(new Set((followRows ?? []).map(r => r.following_id)))
 
     if (tipError) {
       console.error('has_seen_log_tip lookup failed:', tipError.message)
@@ -145,6 +161,10 @@ function FeedInner() {
   function dayLabel(day: string) {
     return day.charAt(0).toUpperCase() + day.slice(1)
   }
+
+  const visibleFeed = filterMode === 'following'
+    ? globalFeed.filter(item => item.user_id === user?.id || followingIds.has(item.user_id))
+    : globalFeed
 
   return (
     <div style={{
@@ -227,6 +247,7 @@ function FeedInner() {
             border: '2px solid #4A3528',
             borderRadius: 5,
             overflow: 'hidden',
+            marginBottom: 8,
           }}>
             <button style={{
               flex: 1, padding: '6px 0',
@@ -247,6 +268,21 @@ function FeedInner() {
               }}
             >Rankings</button>
           </div>
+
+          {/* All / Following filter — same pill treatment as Rankings' day filter */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['all', 'following'] as const).map(mode => (
+              <button key={mode} onClick={() => setFilterMode(mode)} style={{
+                flex: 1, padding: '6px 0', borderRadius: 4,
+                background: filterMode === mode ? T.accentDim : 'transparent',
+                border: filterMode === mode ? `1.5px solid ${T.accentBorder}` : '1.5px solid rgba(74,53,40,0.15)',
+                color: filterMode === mode ? T.accent : T.muted,
+                fontSize: 9, cursor: 'pointer',
+                fontFamily: T.sans, fontWeight: filterMode === mode ? 700 : 500,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>{mode === 'all' ? 'All' : 'Following'}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -264,20 +300,22 @@ function FeedInner() {
           <BattleModeCard onDismiss={dismissBattleCard} onEnter={() => router.push('/battle')} />
         )}
 
-        {!loading && globalFeed.length === 0 && (
+        {!loading && visibleFeed.length === 0 && (
           <div style={{
             background: T.card, borderRadius: 5,
             border: T.cardBorder, boxShadow: T.cardShadow,
             padding: 32, textAlign: 'center',
           }}>
             <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
-              No ratings yet — be the first to log a show
+              {filterMode === 'following'
+                ? "No activity yet from people you follow at this festival"
+                : 'No ratings yet — be the first to log a show'}
             </div>
           </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {globalFeed.map((item, i) => {
+          {visibleFeed.map((item, i) => {
             const name      = item.artist_name ?? 'Unknown'
             const stageName = item.stage       ?? ''
             const day       = item.day         ?? ''

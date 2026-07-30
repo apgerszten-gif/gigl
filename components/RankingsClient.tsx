@@ -87,8 +87,16 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       })
   }, [initialRows])
 
+  // initialRows comes from a server-side query with no per-festival filter
+  // (RankingsPage has no access to the client's localStorage festival
+  // selection) — scope it here to whichever festival is currently selected,
+  // same as the day filter below, so ratings from one festival never bleed
+  // into another's leaderboard.
+  const festivalArtistIds = festival ? new Set(festival.artists.map(a => a.id)) : null
+  const scopedRows = festivalArtistIds ? initialRows.filter(r => festivalArtistIds.has(r.artist_id)) : initialRows
+
   const days    = festival ? ['all', ...festival.days] : ['all', 'friday', 'saturday', 'sunday']
-  const visible = filter === 'all' ? initialRows : initialRows.filter(r => r.day === filter)
+  const visible = filter === 'all' ? scopedRows : scopedRows.filter(r => r.day === filter)
 
   function dayLabel(d: string) {
     if (festival?.dayDates[d]) return festival.dayDates[d]
