@@ -20,6 +20,14 @@ export default async function RankingsPage() {
   const { cold } = markInvocation()
   console.log(`[perf] rankings:page start cold=${cold}`)
 
+  // TEMPORARY diagnostic - the server query is returning 0 rows against a
+  // table that has 15 real rows via a direct REST call, despite identical
+  // NEXT_PUBLIC_ env vars supposedly being baked into both client and server
+  // bundles. Logging which key/URL this deployment actually resolved to,
+  // masked, to rule in/out a stale env var. Remove once root-caused.
+  const keyEnv = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+  console.log(`[rankings][diag] url=${process.env.NEXT_PUBLIC_SUPABASE_URL} keyFormat=${keyEnv.startsWith('eyJ') ? 'legacy-jwt' : keyEnv.startsWith('sb_') ? 'new-format' : 'unknown'} keyLen=${keyEnv.length} keyTail=${keyEnv.slice(-8)}`)
+
   const { data: logs, error } = await timeQuery('rankings:logged_shows', supabase
     .from('logged_shows')
     .select(RANKINGS_SELECT))
