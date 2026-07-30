@@ -56,9 +56,9 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   const avgScore  = rated.length > 0 ? rated.reduce((a, l) => a + l.score, 0) / rated.length : 0
   const highScore = rated.length > 0 ? Math.max(...rated.map(l => l.score)).toFixed(1) : '—'
 
-  const loved   = rated.filter(l => l.score >= 4).length
-  const ok      = rated.filter(l => l.score >= 2.5 && l.score < 4).length
-  const skip    = rated.filter(l => l.score < 2.5).length
+  const avgPerformance = rated.length > 0 ? rated.reduce((a, l) => a + l.performance_rating!, 0) / rated.length : 0
+  const avgVenue       = rated.length > 0 ? rated.reduce((a, l) => a + l.venue_rating!,       0) / rated.length : 0
+  const avgVibe        = rated.length > 0 ? rated.reduce((a, l) => a + l.vibe_rating!,        0) / rated.length : 0
   const reviews = rated.filter(l => l.review)
 
   const photos = logs
@@ -161,20 +161,20 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
         }}>Crowd reaction</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
-            { label: 'Loved it 👍',   count: loved, color: T.accent },
-            { label: 'It was ok 🤷',  count: ok,    color: T.muted },
-            { label: 'Kinda Wack 👎', count: skip,  color: T.faint },
+            { label: 'Performance', value: avgPerformance, color: T.accent },
+            { label: 'Venue',       value: avgVenue,        color: T.muted },
+            { label: 'Vibe',        value: avgVibe,         color: T.faint },
           ].map(row => (
             <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 90, fontSize: 11, color: 'rgba(74,53,40,0.55)', flexShrink: 0 }}>{row.label}</div>
               <div style={{ flex: 1, height: 6, background: T.cardInner, borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(74,53,40,0.1)' }}>
                 <div style={{
                   height: '100%', borderRadius: 3, background: row.color,
-                  width: rated.length > 0 ? `${(row.count / rated.length) * 100}%` : '0%',
+                  width: rated.length > 0 ? `${(row.value / 5) * 100}%` : '0%',
                   transition: 'width 0.4s ease',
                 }} />
               </div>
-              <div style={{ width: 20, fontSize: 11, color: T.muted, textAlign: 'right', flexShrink: 0 }}>{row.count}</div>
+              <div style={{ width: 20, fontSize: 11, color: T.muted, textAlign: 'right', flexShrink: 0 }}>{rated.length > 0 ? row.value.toFixed(1) : '—'}</div>
             </div>
           ))}
         </div>
