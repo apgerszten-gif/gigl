@@ -261,12 +261,12 @@ export default function ProfilePage() {
             {profile?.display_name}&apos;s<br />
             <span>rankings</span><span style={{ color: T.accent }}>.</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4, flexShrink: 0 }}>
-            <button onClick={copyLink} aria-label={copied ? 'Link copied' : 'Share my rankings'} style={{
-              width: 32, height: 32, borderRadius: '50%',
+          <div style={{ display: 'flex', alignItems: 'center', paddingTop: 4, flexShrink: 0 }}>
+            <button onClick={copyLink} aria-label={copied ? 'Link copied' : 'Share my rankings with friends'} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 12px', borderRadius: 20,
               background: copied ? T.accentDim : T.card,
               border: T.cardBorder,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', flexShrink: 0,
             }}>
               {copied ? (
@@ -279,6 +279,10 @@ export default function ProfilePage() {
                     stroke={T.accent} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               )}
+              <span style={{
+                fontSize: 11, fontWeight: 700, color: T.accent, fontFamily: T.sans,
+                letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+              }}>{copied ? 'Copied!' : 'Share with friends'}</span>
             </button>
           </div>
         </div>
