@@ -281,8 +281,8 @@ export default function ProfilePage() {
               )}
               <span style={{
                 fontSize: 11, fontWeight: 700, color: T.accent, fontFamily: T.sans,
-                letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-              }}>{copied ? 'Copied!' : 'Invite friends to Gigl'}</span>
+                letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.35, textAlign: 'left',
+              }}>{copied ? 'Copied!' : <>Invite friends<br />to Gigl</>}</span>
             </button>
           </div>
         </div>
