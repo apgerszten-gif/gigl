@@ -105,36 +105,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Google sign-in */}
-      <button
-        onClick={handleGoogle}
-        style={{
-          width: '100%', background: cream,
-          border: `1.5px solid ${ink}`,
-          borderRadius: 5, padding: 14,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          cursor: 'pointer',
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 18 18">
-          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-        </svg>
-        <span style={{
-          fontSize: 12, fontWeight: 700, color: ink,
-          letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: sans,
-        }}>Continue with Google</span>
-      </button>
-
-      {/* Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-        <span style={{ fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>or</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-      </div>
-
       {/* Form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
         {mode === 'signup' && (
@@ -188,7 +158,7 @@ export default function AuthPage() {
           <div style={{
             fontSize: 9, color: muted, letterSpacing: '0.12em',
             textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
-          }}>Password</div>
+          }}>Password <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500, color: faint }}>(6 character min)</span></div>
           <input
             type="password"
             value={password}
@@ -231,6 +201,37 @@ export default function AuthPage() {
           </span>
         </button>
       </div>
+
+      {/* Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
+        <span style={{ fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>or</span>
+        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
+      </div>
+
+      {/* Google sign-in — kept below the normal fields, deliberately the
+          less prominent path */}
+      <button
+        onClick={handleGoogle}
+        style={{
+          width: '100%', background: 'none',
+          border: '1px solid rgba(74,53,40,0.2)',
+          borderRadius: 5, padding: 12,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          cursor: 'pointer', marginBottom: 20,
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        <span style={{
+          fontSize: 11, fontWeight: 600, color: muted,
+          letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: sans,
+        }}>Continue with Google</span>
+      </button>
 
       {/* Toggle */}
       <div style={{ textAlign: 'center', fontSize: 13, color: muted, fontFamily: sans }}>
