@@ -295,3 +295,16 @@ begin
   return new;
 end;
 $$ language plpgsql security definer;
+
+-- `genre` was part of the very first version of this table and has been
+-- dead ever since the star-rating rewrite (58f36e0) - no code anywhere
+-- writes it, but it's still `not null` with no default, so every insert
+-- (log-show, SMS webhook, pending-log sync) has been failing outright.
+-- This is why Rankings/Feed render empty even after people log shows.
+alter table public.logged_shows alter column genre drop not null;
+
+-- Rankings now subscribes to postgres_changes on logged_shows so the
+-- leaderboard updates live as ratings come in - requires the table to be
+-- in the realtime publication (off by default for tables created before
+-- Realtime was enabled on the project).
+alter publication supabase_realtime add table public.logged_shows;

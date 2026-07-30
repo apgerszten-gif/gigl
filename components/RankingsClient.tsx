@@ -10,15 +10,9 @@ import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { timeQuery } from '@/lib/queryTiming'
+import { aggregateArtistRows, RANKINGS_SELECT, type ArtistRow } from '@/lib/rankings'
 
-export interface ArtistRow {
-  artist_id: string
-  name:      string
-  stage:     string
-  day:       string
-  avgScore:  number
-  count:     number
-}
+export type { ArtistRow }
 
 export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const router   = useRouter()
@@ -26,11 +20,30 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
+  const [rows, setRows]         = useState<ArtistRow[]>(initialRows)
   const [festival, setFestival] = useState<Festival | null>(null)
   const [filter, setFilter]     = useState<string>('all')
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
   const [battleAggMap, setBattleAggMap] = useState<Record<string, { wins: number; losses: number }>>({})
+
+  // Rankings has no built-in refresh — a visitor only ever saw a snapshot
+  // from the moment they loaded the page. Subscribe to every insert/update/
+  // delete on logged_shows and re-aggregate so a new rating anywhere shows
+  // up here live, without the visitor needing to reload.
+  useEffect(() => {
+    const channel = supabase
+      .channel('rankings-logged_shows')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'logged_shows' }, async () => {
+        const { data, error } = await timeQuery('rankings:realtime-refetch', supabase
+          .from('logged_shows')
+          .select(RANKINGS_SELECT))
+        if (!error) setRows(aggregateArtistRows(data))
+      })
+      .subscribe()
+
+    return () => { void supabase.removeChannel(channel) }
+  }, [])
 
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
@@ -74,7 +87,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   // public consensus view, same treatment as Feed, never any one user's own
   // record (that's Profile's job).
   useEffect(() => {
-    const artistIds = initialRows.map(r => r.artist_id)
+    const artistIds = rows.map(r => r.artist_id)
     if (artistIds.length === 0) return
     timeQuery(`rankings:battle_records(${artistIds.length} artists)`, supabase.from('battle_records').select('artist_id, wins, losses').in('artist_id', artistIds))
       .then(({ data }) => {
@@ -85,15 +98,15 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
         })
         setBattleAggMap(map)
       })
-  }, [initialRows])
+  }, [rows])
 
-  // initialRows comes from a server-side query with no per-festival filter
-  // (RankingsPage has no access to the client's localStorage festival
-  // selection) — scope it here to whichever festival is currently selected,
-  // same as the day filter below, so ratings from one festival never bleed
-  // into another's leaderboard.
+  // rows starts from the server-rendered snapshot and is kept current by the
+  // realtime subscription above; scope it here to whichever festival is
+  // currently selected (RankingsPage has no access to the client's
+  // localStorage festival selection), same as the day filter below, so
+  // ratings from one festival never bleed into another's leaderboard.
   const festivalArtistIds = festival ? new Set(festival.artists.map(a => a.id)) : null
-  const scopedRows = festivalArtistIds ? initialRows.filter(r => festivalArtistIds.has(r.artist_id)) : initialRows
+  const scopedRows = festivalArtistIds ? rows.filter(r => festivalArtistIds.has(r.artist_id)) : rows
 
   const days    = festival ? ['all', ...festival.days] : ['all', 'friday', 'saturday', 'sunday']
   const visible = filter === 'all' ? scopedRows : scopedRows.filter(r => r.day === filter)
