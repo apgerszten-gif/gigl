@@ -7,7 +7,6 @@ import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
-import { SmsScoringSection } from '@/components/SmsScoringSection'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
@@ -57,8 +56,6 @@ interface Show {
 interface Profile {
   username:            string
   display_name:        string
-  phone_number:        string | null
-  phone_verified:      boolean
   battle_mode_unlocked: boolean
 }
 
@@ -73,7 +70,6 @@ export default function ProfilePage() {
   const [shows, setShows]                   = useState<Show[]>([])
   const [loading, setLoading]               = useState(true)
   const [copied, setCopied]                 = useState(false)
-  const [smsOpen, setSmsOpen]               = useState(false)
   const [editingId, setEditingId]           = useState<string | null>(null)
   const [editReview, setEditReview]         = useState('')
   const [editTags, setEditTags]             = useState<string[]>([])
@@ -101,7 +97,7 @@ export default function ProfilePage() {
       console.log(`[perf] profile:load start userId=${userId}`)
 
       const [{ data: prof }, { data: showData }] = await Promise.all([
-        timeQuery('profile:profiles', supabase.from('profiles').select('username, display_name, phone_number, phone_verified, battle_mode_unlocked').eq('id', userId).single()),
+        timeQuery('profile:profiles', supabase.from('profiles').select('username, display_name, battle_mode_unlocked').eq('id', userId).single()),
         timeQuery('profile:logged_shows', supabase.from('logged_shows').select('*').eq('user_id', userId)),
       ])
       setProfile(prof)
@@ -284,40 +280,9 @@ export default function ProfilePage() {
                 </svg>
               )}
             </button>
-            <button onClick={() => setSmsOpen(o => !o)} aria-label="SMS Scoring" style={{
-              position: 'relative',
-              width: 32, height: 32, borderRadius: '50%',
-              background: smsOpen ? T.accentDim : T.card,
-              border: T.cardBorder,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', flexShrink: 0,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              {profile?.phone_verified && (
-                <div style={{
-                  position: 'absolute', bottom: -1, right: -1,
-                  width: 9, height: 9, borderRadius: '50%',
-                  background: T.accent, border: `1.5px solid ${T.bg}`,
-                }} />
-              )}
-            </button>
           </div>
         </div>
-        <div style={{ fontSize: 11, color: T.muted, marginBottom: smsOpen ? 12 : 16 }}>@{profile?.username}</div>
-
-        {smsOpen && (
-          <div style={{ marginBottom: 16 }}>
-            <SmsScoringSection
-              phoneNumber={profile?.phone_number ?? null}
-              phoneVerified={profile?.phone_verified ?? false}
-              onChange={(phoneNumber, phoneVerified) => {
-                setProfile(prev => prev ? { ...prev, phone_number: phoneNumber, phone_verified: phoneVerified } : prev)
-              }}
-            />
-          </div>
-        )}
+        <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>@{profile?.username}</div>
       </div>
 
       {/* ── Stats bar ────────────────────────────────────────────────────────── */}
