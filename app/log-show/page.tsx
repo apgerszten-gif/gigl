@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { createClient } from '@/lib/supabase/client'
+import { getFestival, hasDayOccurred, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
@@ -132,6 +133,16 @@ function LogShowInner() {
 
   const [loadingExisting, setLoadingExisting] = useState(true)
   const [existingId, setExistingId]           = useState<string | null>(null)
+
+  // Shows can only be logged starting the calendar day they happen -
+  // re-rating an already-logged show is exempt, since it can only exist if
+  // the show already happened.
+  const [festival, setFestival] = useState<ReturnType<typeof getFestival>>(null)
+  useEffect(() => {
+    const id = localStorage.getItem(LOCAL_STORAGE_KEY)
+    setFestival(id ? getFestival(id) : null)
+  }, [])
+  const dayLocked = !existingId && !!festival && !!day && !hasDayOccurred(festival, day)
 
   const [performance, setPerformance] = useState(0)
   const [venue, setVenue]             = useState(0)
@@ -448,6 +459,51 @@ function LogShowInner() {
   }
 
   if (loadingExisting) return null
+
+  if (dayLocked) {
+    const unlockDate = festival?.dayDates[day]
+    return (
+      <div style={{
+        minHeight: '100vh', background: T.bg,
+        fontFamily: T.sans, color: '#4A3528',
+        maxWidth: 430, margin: '0 auto',
+      }}>
+        <div style={{
+          padding: '18px 24px', position: 'sticky', top: 0, zIndex: 10,
+          background: T.bgRgba,
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(74,53,40,0.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.3px' }}>Log show</div>
+          <button onClick={() => router.back()} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div style={{
+          padding: '60px 32px', textAlign: 'center',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+        }}>
+          <div style={{ fontSize: 36, marginBottom: 16 }}>🔒</div>
+          <div style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 700, color: '#4A3528', marginBottom: 10, lineHeight: 1.3 }}>
+            Not showtime yet<span style={{ color: T.accent }}>.</span>
+          </div>
+          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, marginBottom: 28 }}>
+            You can log {artistName} once {day ? day.charAt(0).toUpperCase() + day.slice(1) : 'its day'}{unlockDate ? ` (${unlockDate})` : ''} arrives.
+          </div>
+          <button onClick={() => router.back()} style={{
+            background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
+            borderRadius: 5, padding: '12px 28px', cursor: 'pointer',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#FAF3E2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>Back</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{

@@ -370,4 +370,23 @@ export function getArtistsByDay(festival: Festival, day: string): FestivalArtist
   return festival.artists.filter(a => a.day === day)
 }
 
+// Shows can only be logged starting the calendar day they actually happen -
+// never in advance. Compares by local calendar date only (time-of-day
+// ignored), so a show unlocks first thing in the morning of its day rather
+// than at its exact set time. `dayDates` values (e.g. 'Jul 30') carry no
+// year, so it's pulled out of the festival's `dates` range string (e.g.
+// 'Jul 30 – Aug 2, 2026') instead.
+export function hasDayOccurred(festival: Festival, day: string, now: Date = new Date()): boolean {
+  const dateStr = festival.dayDates[day]
+  if (!dateStr) return false
+
+  const yearMatch = festival.dates.match(/(\d{4})/)
+  const year = yearMatch ? yearMatch[1] : String(now.getFullYear())
+  const showDate = new Date(`${dateStr} ${year}`)
+  if (isNaN(showDate.getTime())) return false
+
+  const dateOnly = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  return dateOnly(showDate) <= dateOnly(now)
+}
+
 export const LOCAL_STORAGE_KEY = 'gigl_festival_id'

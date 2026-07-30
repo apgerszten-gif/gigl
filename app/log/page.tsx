@@ -2,7 +2,7 @@
 
 import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { getFestival, getArtistsByDay, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
+import { getFestival, getArtistsByDay, hasDayOccurred, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
@@ -198,10 +198,15 @@ function LogInner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {allArtists.map((a, i) => {
               const existing = loggedMap.get(a.id)
+              // Re-rating an already-logged show is always allowed - it can
+              // only exist if the show already happened. Only gate the
+              // first-time log.
+              const locked = !isRerate && !!festival && !hasDayOccurred(festival, a.day)
               return (
                 <button
                   key={a.id}
-                  onClick={() => openLogShow(a)}
+                  onClick={() => { if (!locked) openLogShow(a) }}
+                  disabled={locked}
                   style={{
                     background: i % 2 === 0 ? T.card : T.cardAlt,
                     border: T.cardBorder,
@@ -209,7 +214,8 @@ function LogInner() {
                       : i === allArtists.length - 1 ? '3px 3px 5px 5px' : 3,
                     padding: '14px 16px',
                     display: 'flex', alignItems: 'center', gap: 12,
-                    cursor: 'pointer', width: '100%', textAlign: 'left',
+                    cursor: locked ? 'default' : 'pointer', width: '100%', textAlign: 'left',
+                    opacity: locked ? 0.5 : 1,
                   }}
                 >
                   <div style={{ flex: 1 }}>
@@ -223,9 +229,16 @@ function LogInner() {
                     }}>{a.stage}</div>
                   </div>
                   {existing && <StarDisplay score={existing.score} size={17} accent={T.accent} />}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
+                  {locked ? (
+                    <span style={{
+                      fontSize: 9, color: T.faint, fontFamily: T.sans, fontWeight: 600,
+                      letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0,
+                    }}>🔒 {festival?.dayDates[a.day] ?? ''}</span>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  )}
                 </button>
               )
             })}
