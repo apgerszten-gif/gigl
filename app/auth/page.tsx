@@ -72,21 +72,17 @@ export default function AuthPage() {
     }}>
 
       {/* Wordmark */}
-      <div style={{ paddingTop: 60, marginBottom: 48 }}>
+      <div style={{ paddingTop: 40, marginBottom: 28 }}>
         <div style={{
-          fontFamily: serif, fontSize: 32, fontWeight: 700,
-          color: ink, letterSpacing: '-0.5px', marginBottom: 8,
+          fontFamily: serif, fontSize: 48, fontWeight: 700,
+          color: ink, letterSpacing: '-1px',
         }}>
           Gigl<span style={{ color: sienna }}>/</span>
         </div>
-        <div style={{
-          fontSize: 10, color: muted, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 600,
-        }}>Festival season · 2026</div>
       </div>
 
       {/* Headline */}
-      <div style={{ marginBottom: 40 }}>
+      <div style={{ marginBottom: 28 }}>
         <div style={{
           fontSize: 10, color: sienna, letterSpacing: '0.14em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 10,
@@ -106,7 +102,7 @@ export default function AuthPage() {
       </div>
 
       {/* Form */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
         {mode === 'signup' && (
           <div style={{
             background: cream, borderRadius: 5,
@@ -203,7 +199,7 @@ export default function AuthPage() {
       </div>
 
       {/* Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
         <span style={{ fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>or</span>
         <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
@@ -218,7 +214,7 @@ export default function AuthPage() {
           border: '1px solid rgba(74,53,40,0.2)',
           borderRadius: 5, padding: 12,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          cursor: 'pointer', marginBottom: 20,
+          cursor: 'pointer', marginBottom: 16,
         }}
       >
         <svg width="14" height="14" viewBox="0 0 18 18">
@@ -246,7 +242,7 @@ export default function AuthPage() {
 
       <div style={{ flex: 1 }} />
       <div style={{
-        paddingBottom: 48, textAlign: 'center',
+        paddingBottom: 32, textAlign: 'center',
         fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase',
       }}>
         Rate every set<span style={{ color: sienna }}>.</span> Rank every moment<span style={{ color: sienna }}>.</span>
