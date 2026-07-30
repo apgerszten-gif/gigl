@@ -159,22 +159,15 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           fontSize: 10, color: T.muted, letterSpacing: '0.12em',
           textTransform: 'uppercase', marginBottom: 10, fontWeight: 600,
         }}>Crowd reaction</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
-            { label: 'Performance', value: avgPerformance, color: T.accent },
-            { label: 'Venue',       value: avgVenue,        color: T.muted },
-            { label: 'Vibe',        value: avgVibe,         color: T.faint },
+            { label: 'Performance', value: avgPerformance },
+            { label: 'Venue',       value: avgVenue },
+            { label: 'Vibe',        value: avgVibe },
           ].map(row => (
-            <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 90, fontSize: 11, color: 'rgba(74,53,40,0.55)', flexShrink: 0 }}>{row.label}</div>
-              <div style={{ flex: 1, height: 6, background: T.cardInner, borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(74,53,40,0.1)' }}>
-                <div style={{
-                  height: '100%', borderRadius: 3, background: row.color,
-                  width: rated.length > 0 ? `${(row.value / 5) * 100}%` : '0%',
-                  transition: 'width 0.4s ease',
-                }} />
-              </div>
-              <div style={{ width: 20, fontSize: 11, color: T.muted, textAlign: 'right', flexShrink: 0 }}>{rated.length > 0 ? row.value.toFixed(1) : '—'}</div>
+            <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 11, color: 'rgba(74,53,40,0.55)' }}>{row.label}</div>
+              <StarDisplay score={row.value} size={16} accent={T.accent} />
             </div>
           ))}
         </div>
