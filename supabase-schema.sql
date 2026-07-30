@@ -226,3 +226,36 @@ $$ language plpgsql security definer;
 create trigger on_logged_show_insert
   after insert on public.logged_shows
   for each row execute procedure public.handle_logged_show_insert();
+
+-- Tag friends who were at a show with you. tagged_user_id is null for a
+-- friend who isn't on Gigl yet (pending_invite = true, invite_contact holds
+-- the phone/email they were invited through); otherwise it points at their
+-- profile directly. unique() allows any number of pending invites per show
+-- (NULLs are never considered equal by a unique constraint) while still
+-- preventing the same confirmed friend being tagged twice on one show.
+--
+-- public.follows already exists above (see "Friend connections") with the
+-- exact shape/RLS this feature's follow system needs - anyone can read the
+-- graph, only the follower can insert/delete their own edge. No changes
+-- needed there.
+create table public.show_tags (
+  id uuid default gen_random_uuid() primary key,
+  logged_show_id uuid references public.logged_shows(id) on delete cascade not null,
+  tagged_user_id uuid references public.profiles(id) on delete cascade,
+  pending_invite boolean not null default false,
+  invite_contact text,
+  created_at timestamp with time zone default now(),
+  unique(logged_show_id, tagged_user_id)
+);
+alter table public.show_tags enable row level security;
+
+-- Readable by anyone (matches logged_shows/profiles' public-read model);
+-- writes are gated on owning the parent show, not a direct user_id column,
+-- since show_tags itself doesn't record who's doing the tagging.
+create policy "show_tags_read" on public.show_tags for select using (true);
+create policy "show_tags_insert" on public.show_tags for insert with check (
+  exists (select 1 from public.logged_shows where id = show_tags.logged_show_id and user_id = auth.uid())
+);
+create policy "show_tags_delete" on public.show_tags for delete using (
+  exists (select 1 from public.logged_shows where id = show_tags.logged_show_id and user_id = auth.uid())
+);

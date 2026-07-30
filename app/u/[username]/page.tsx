@@ -5,6 +5,7 @@ import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
+import { FollowButton } from '@/components/FollowButton'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -22,10 +23,11 @@ export default async function PublicProfile({ params }: { params: { username: st
 
   if (!profile) notFound()
 
-  const { data: showsRaw } = await supabase
-    .from('logged_shows')
-    .select('*')
-    .eq('user_id', profile.id)
+  const [{ data: showsRaw }, { count: followerCount }, { count: followingCount }] = await Promise.all([
+    supabase.from('logged_shows').select('*').eq('user_id', profile.id),
+    supabase.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', profile.id),
+    supabase.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', profile.id),
+  ])
 
   const shows = (showsRaw ?? []).slice().sort((a, b) => showScore(b) - showScore(a))
   const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.vibe_rating != null)
@@ -68,36 +70,51 @@ export default async function PublicProfile({ params }: { params: { username: st
           fontSize: 10, color: T.accent, letterSpacing: '0.14em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
         }}>Festival Season 2026</div>
-        <div style={{
-          fontFamily: T.serif, fontSize: 28, fontWeight: 700,
-          lineHeight: 1.1, letterSpacing: '-1px', marginBottom: 8, color: '#4A3528',
-        }}>
-          {profile.display_name}&apos;s<br />
-          <span>rankings</span><span style={{ color: T.accent }}>.</span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+          <div style={{
+            fontFamily: T.serif, fontSize: 28, fontWeight: 700,
+            lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',
+          }}>
+            {profile.display_name}&apos;s<br />
+            <span>rankings</span><span style={{ color: T.accent }}>.</span>
+          </div>
+          <div style={{ paddingTop: 4, flexShrink: 0 }}>
+            <FollowButton targetUserId={profile.id} />
+          </div>
         </div>
         <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>@{profile.username}</div>
       </div>
 
       {/* ── Stats bar ────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-        borderTop: '1px solid rgba(74,53,40,0.1)',
-        borderBottom: '1px solid rgba(74,53,40,0.1)',
-        background: T.bg,
-      }}>
-        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
-          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{shows.length}</div>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Sets logged</div>
+      <div style={{ borderTop: '1px solid rgba(74,53,40,0.1)', borderBottom: '1px solid rgba(74,53,40,0.1)', background: T.bg }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+          <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
+            <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{shows.length}</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Sets logged</div>
+          </div>
+          <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {ratedShows.length > 0
+              ? <StarDisplay score={avgScore} size={20} accent={T.accent} />
+              : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
+          </div>
+          <div style={{ padding: '14px 0', textAlign: 'center' }}>
+            <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>2026</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Festival</div>
+          </div>
         </div>
-        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {ratedShows.length > 0
-            ? <StarDisplay score={avgScore} size={20} accent={T.accent} />
-            : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
-        </div>
-        <div style={{ padding: '14px 0', textAlign: 'center' }}>
-          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>2026</div>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Festival</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(74,53,40,0.1)' }}>
+          <a href={`/u/${profile.username}/followers`} style={{
+            padding: '12px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)',
+            textDecoration: 'none', display: 'block',
+          }}>
+            <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: '#4A3528' }}>{followerCount ?? 0}</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Followers</div>
+          </a>
+          <a href={`/u/${profile.username}/following`} style={{ padding: '12px 0', textAlign: 'center', textDecoration: 'none', display: 'block' }}>
+            <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: '#4A3528' }}>{followingCount ?? 0}</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Following</div>
+          </a>
         </div>
       </div>
 

@@ -8,6 +8,8 @@ import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
+import { TagFriendsModal, type TaggedFriend } from '@/components/TagFriendsModal'
+import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/components/AuthProvider'
 import { enqueuePendingLog, getPendingLogForArtist, flushPendingLogs } from '@/lib/pendingLogs'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
@@ -146,6 +148,9 @@ function LogShowInner() {
   const [media, setMedia] = useState<MediaItem[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [taggedFriends, setTaggedFriends] = useState<TaggedFriend[]>([])
+  const [tagModalOpen, setTagModalOpen]   = useState(false)
+
   const [saving, setSaving] = useState(false)
   const [celebration, setCelebration] = useState<{ username: string | null } | null>(null)
   const [battleUnlock, setBattleUnlock] = useState(false)
@@ -180,6 +185,33 @@ function LogShowInner() {
         const existingUrls = resolveMediaUrls(data)
         if (existingUrls.length > 0) {
           setMedia(existingUrls.map(url => ({ url, isVideo: isVideoUrl(url) })))
+        }
+
+        const { data: tagRows } = await timeQuery('log-show:show_tags', supabase
+          .from('show_tags')
+          .select('tagged_user_id, pending_invite, invite_contact')
+          .eq('logged_show_id', data.id))
+
+        if (tagRows && tagRows.length > 0) {
+          const confirmedIds = tagRows.filter(r => !r.pending_invite && r.tagged_user_id).map(r => r.tagged_user_id as string)
+          const profileMap = new Map<string, { username: string; display_name: string }>()
+          if (confirmedIds.length > 0) {
+            const { data: profs } = await supabase.from('profiles').select('id, username, display_name').in('id', confirmedIds)
+            profs?.forEach(p => profileMap.set(p.id, p))
+          }
+          setTaggedFriends(tagRows.map(r => {
+            if (r.pending_invite) {
+              return { userId: null, username: null, displayName: r.invite_contact ?? 'Invited', pendingInvite: true, inviteContact: r.invite_contact }
+            }
+            const prof = r.tagged_user_id ? profileMap.get(r.tagged_user_id) : undefined
+            return {
+              userId: r.tagged_user_id,
+              username: prof?.username ?? null,
+              displayName: prof?.display_name ?? prof?.username ?? 'Friend',
+              pendingInvite: false,
+              inviteContact: null,
+            }
+          }))
         }
       }
 
@@ -250,6 +282,27 @@ function LogShowInner() {
 
   function removeMedia(index: number) {
     setMedia(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Deletes and re-inserts every show_tags row for this show — simpler than
+  // diffing against what's already there, and cheap since a show is tagged
+  // with at most a handful of friends. Best-effort: the rating itself is
+  // already safely queued by the time this runs, so a failure here just
+  // means tags can be re-added later from the edit screen.
+  async function persistShowTags(loggedShowId: string) {
+    try {
+      await supabase.from('show_tags').delete().eq('logged_show_id', loggedShowId)
+      if (taggedFriends.length > 0) {
+        await supabase.from('show_tags').insert(taggedFriends.map(f => ({
+          logged_show_id: loggedShowId,
+          tagged_user_id: f.userId,
+          pending_invite: f.pendingInvite,
+          invite_contact: f.inviteContact,
+        })))
+      }
+    } catch {
+      // best-effort, see comment above
+    }
   }
 
   const canSave = performance > 0 && venue > 0 && vibe > 0
@@ -341,11 +394,30 @@ function LogShowInner() {
       }
     }
 
-    // Fire-and-forget — PendingLogsSync retries this in the background
-    // regardless (on foreground/reconnect) if it fails here. Never await
-    // this on the critical path; festival wifi is exactly the case this
-    // queue exists for.
-    void flushPendingLogs()
+    if (existingId) {
+      // Fire-and-forget — PendingLogsSync retries this in the background
+      // regardless (on foreground/reconnect) if it fails here. Never await
+      // this on the critical path; festival wifi is exactly the case this
+      // queue exists for.
+      void flushPendingLogs()
+      void persistShowTags(existingId)
+    } else if (taggedFriends.length > 0) {
+      // Unlike the rating itself, tags can't ride along in the pending-log
+      // queue entry above — they need the row's real id, which only exists
+      // once it's actually synced. Only take this slower, awaited path when
+      // there's something to tag; the untagged case stays fully
+      // fire-and-forget like before.
+      try {
+        await flushPendingLogs()
+        const { data: row } = await timeQuery('log-show:show_tags-lookup', supabase
+          .from('logged_shows').select('id').eq('user_id', user.id).eq('artist_id', artistId).single())
+        if (row) await persistShowTags(row.id)
+      } catch {
+        // best-effort — the rating itself is already safely queued regardless
+      }
+    } else {
+      void flushPendingLogs()
+    }
 
     // Optimistic: this save is about to push shows_logged_count past the
     // trigger's threshold, so we celebrate immediately from data already in
@@ -528,6 +600,51 @@ function LogShowInner() {
           </div>
         </div>
 
+        {/* ── Tag friends ─────────────────────────────────────────────────────── */}
+        <div>
+          <div style={{
+            fontSize: 9, color: T.muted, letterSpacing: '0.12em',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
+          }}>Tag friends</div>
+          <button
+            type="button"
+            onClick={() => setTagModalOpen(true)}
+            style={{
+              width: '100%', background: T.card, border: T.cardBorder, borderRadius: 5,
+              padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10,
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            {taggedFriends.length > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                {taggedFriends.slice(0, 3).map((f, i) => (
+                  <div key={f.userId ?? f.inviteContact ?? i} style={{
+                    marginLeft: i === 0 ? 0 : -10, borderRadius: '50%',
+                    border: `2px solid ${T.card}`, lineHeight: 0,
+                  }}>
+                    <Avatar name={f.displayName} size={26} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+            )}
+            <span style={{ flex: 1, fontSize: 13, color: '#4A3528', fontFamily: T.sans, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {taggedFriends.length === 0
+                ? 'Tag friends who were there'
+                : taggedFriends.length <= 3
+                ? taggedFriends.map(f => f.displayName).join(', ')
+                : `${taggedFriends.slice(0, 2).map(f => f.displayName).join(', ')} +${taggedFriends.length - 2} more`}
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+
         {/* ── Media ───────────────────────────────────────────────────────────── */}
         <div>
           <div style={{
@@ -602,6 +719,14 @@ function LogShowInner() {
           }}>{saving ? 'Saving...' : 'Save log'}</span>
         </button>
       </div>
+
+      {tagModalOpen && (
+        <TagFriendsModal
+          initialSelected={taggedFriends}
+          onClose={() => setTagModalOpen(false)}
+          onDone={friends => { setTaggedFriends(friends); setTagModalOpen(false) }}
+        />
+      )}
 
       {celebration && <FirstShowCelebration username={celebration.username} />}
       {battleUnlock && (
