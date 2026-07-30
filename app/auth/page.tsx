@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
 
 const ink    = '#4A3528'
 const cream  = '#FAF3E2'
@@ -27,19 +28,23 @@ export default function AuthPage() {
 
   async function handleSubmit() {
     setError(null)
-    setLoading(true)
 
     if (mode === 'signup') {
+      const cleaned = normalizeUsername(username)
+      if (!isValidUsername(cleaned)) { setError(USERNAME_RULES_TEXT); return }
+
+      setLoading(true)
       const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
       if (signUpError) { setError(signUpError.message); setLoading(false); return }
       if (data.user) {
         await supabase.from('profiles').upsert({
           id:           data.user.id,
-          username:     username.trim().toLowerCase().replace(/\s+/g, '_'),
+          username:     cleaned,
           username_set: true,
         })
       }
     } else {
+      setLoading(true)
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) { setError(signInError.message); setLoading(false); return }
     }

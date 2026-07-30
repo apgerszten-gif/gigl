@@ -259,3 +259,39 @@ create policy "show_tags_insert" on public.show_tags for insert with check (
 create policy "show_tags_delete" on public.show_tags for delete using (
   exists (select 1 from public.logged_shows where id = show_tags.logged_show_id and user_id = auth.uid())
 );
+
+-- Usernames are embedded directly into /u/[username] URLs, so any
+-- character outside a safe set can end up broken there. This was never
+-- enforced anywhere before now - manual signup only substituted whitespace
+-- (app/auth, app/choose-username), and the Google OAuth auto-username
+-- below used the raw email local-part completely unsanitized (email local-
+-- parts are allowed to contain characters like $ + ! that a username
+-- shouldn't) - so a profile could end up with e.g. "big$money" and 404 on
+-- its own profile link. lib/username.ts now enforces the same [a-z0-9_]
+-- pattern client-side before either page ever writes a username.
+--
+-- Existing rows are normalized first so the constraint below can actually
+-- be added. Safe to rerun. If two existing usernames happen to normalize
+-- to the same string this update will fail on the unique constraint -
+-- resolve that collision by hand (pick a different username for one of
+-- them) and rerun.
+update public.profiles
+set username = regexp_replace(lower(username), '[^a-z0-9_]', '_', 'g')
+where username ~ '[^a-z0-9_]';
+
+alter table public.profiles
+  add constraint username_format check (username ~ '^[a-z0-9_]+$');
+
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, username, display_name, username_set)
+  values (
+    new.id,
+    regexp_replace(lower(split_part(new.email, '@', 1)), '[^a-z0-9_]', '_', 'g'),
+    split_part(new.email, '@', 1),
+    false
+  );
+  return new;
+end;
+$$ language plpgsql security definer;

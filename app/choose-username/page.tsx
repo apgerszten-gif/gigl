@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useAuth } from '@/components/AuthProvider'
+import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
 
 const ink    = '#4A3528'
 const cream  = '#FAF3E2'
@@ -36,8 +37,9 @@ export default function ChooseUsernamePage() {
 
   async function handleSubmit() {
     setError(null)
-    const cleaned = username.trim().toLowerCase().replace(/\s+/g, '_')
+    const cleaned = normalizeUsername(username)
     if (!cleaned) { setError('Pick a username to continue.'); return }
+    if (!isValidUsername(cleaned)) { setError(USERNAME_RULES_TEXT); return }
     if (!user) { router.replace('/'); return }
     setLoading(true)
 
