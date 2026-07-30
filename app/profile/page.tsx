@@ -282,7 +282,7 @@ export default function ProfilePage() {
               <span style={{
                 fontSize: 11, fontWeight: 700, color: T.accent, fontFamily: T.sans,
                 letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-              }}>{copied ? 'Copied!' : 'Share with friends'}</span>
+              }}>{copied ? 'Copied!' : 'Invite friends to Gigl'}</span>
             </button>
           </div>
         </div>
