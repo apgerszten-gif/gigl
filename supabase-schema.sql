@@ -308,3 +308,54 @@ alter table public.logged_shows alter column genre drop not null;
 -- in the realtime publication (off by default for tables created before
 -- Realtime was enabled on the project).
 alter publication supabase_realtime add table public.logged_shows;
+
+-- Social interactions on a logged show: like, emoji reaction, and comment.
+-- Unrelated to the performance/venue/vibe star ratings and to the legacy
+-- `emoji` sentiment column above - this is a plain social layer, one row
+-- per interaction. show_likes is one row per (user, show); show_reactions
+-- allows a user to react with more than one distinct emoji on the same
+-- show but not the same emoji twice; show_comments is a flat list (no
+-- threading), oldest first, and comments can only be deleted by their
+-- author, never edited.
+create table public.show_likes (
+  id uuid default gen_random_uuid() primary key,
+  logged_show_id uuid references public.logged_shows(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamp with time zone default now(),
+  unique(logged_show_id, user_id)
+);
+
+create table public.show_reactions (
+  id uuid default gen_random_uuid() primary key,
+  logged_show_id uuid references public.logged_shows(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  emoji text not null,
+  created_at timestamp with time zone default now(),
+  unique(logged_show_id, user_id, emoji)
+);
+
+create table public.show_comments (
+  id uuid default gen_random_uuid() primary key,
+  logged_show_id uuid references public.logged_shows(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  body text not null,
+  created_at timestamp with time zone default now()
+);
+
+alter table public.show_likes enable row level security;
+alter table public.show_reactions enable row level security;
+alter table public.show_comments enable row level security;
+
+-- Public read (matches logged_shows/follows), owner-only write - same
+-- pattern as follows/show_tags above.
+create policy "show_likes_read"   on public.show_likes for select using (true);
+create policy "show_likes_insert" on public.show_likes for insert with check (auth.uid() = user_id);
+create policy "show_likes_delete" on public.show_likes for delete using (auth.uid() = user_id);
+
+create policy "show_reactions_read"   on public.show_reactions for select using (true);
+create policy "show_reactions_insert" on public.show_reactions for insert with check (auth.uid() = user_id);
+create policy "show_reactions_delete" on public.show_reactions for delete using (auth.uid() = user_id);
+
+create policy "show_comments_read"   on public.show_comments for select using (true);
+create policy "show_comments_insert" on public.show_comments for insert with check (auth.uid() = user_id);
+create policy "show_comments_delete" on public.show_comments for delete using (auth.uid() = user_id);
