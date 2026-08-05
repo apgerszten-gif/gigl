@@ -360,7 +360,7 @@ const OUTSIDE_LANDS: Festival = {
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 
-export const FESTIVALS: Festival[] = [LOLLAPALOOZA, OUTSIDE_LANDS]
+export const FESTIVALS: Festival[] = [OUTSIDE_LANDS, LOLLAPALOOZA]
 
 export function getFestival(id: string): Festival | null {
   return FESTIVALS.find(f => f.id === id) ?? null
