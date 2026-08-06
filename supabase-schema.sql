@@ -317,7 +317,7 @@ alter publication supabase_realtime add table public.logged_shows;
 -- show but not the same emoji twice; show_comments is a flat list (no
 -- threading), oldest first, and comments can only be deleted by their
 -- author, never edited.
-create table public.show_likes (
+create table if not exists public.show_likes (
   id uuid default gen_random_uuid() primary key,
   logged_show_id uuid references public.logged_shows(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -325,7 +325,7 @@ create table public.show_likes (
   unique(logged_show_id, user_id)
 );
 
-create table public.show_reactions (
+create table if not exists public.show_reactions (
   id uuid default gen_random_uuid() primary key,
   logged_show_id uuid references public.logged_shows(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -334,7 +334,7 @@ create table public.show_reactions (
   unique(logged_show_id, user_id, emoji)
 );
 
-create table public.show_comments (
+create table if not exists public.show_comments (
   id uuid default gen_random_uuid() primary key,
   logged_show_id uuid references public.logged_shows(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -347,15 +347,27 @@ alter table public.show_reactions enable row level security;
 alter table public.show_comments enable row level security;
 
 -- Public read (matches logged_shows/follows), owner-only write - same
--- pattern as follows/show_tags above.
-create policy "show_likes_read"   on public.show_likes for select using (true);
+-- pattern as follows/show_tags above. drop-then-create (rather than plain
+-- create) so this whole block is safe to rerun after a partial failure
+-- (see chat history - a paste corruption mid-run left this half-applied
+-- more than once).
+drop policy if exists "show_likes_read" on public.show_likes;
+drop policy if exists "show_likes_insert" on public.show_likes;
+drop policy if exists "show_likes_delete" on public.show_likes;
+create policy "show_likes_read" on public.show_likes for select using (true);
 create policy "show_likes_insert" on public.show_likes for insert with check (auth.uid() = user_id);
 create policy "show_likes_delete" on public.show_likes for delete using (auth.uid() = user_id);
 
-create policy "show_reactions_read"   on public.show_reactions for select using (true);
+drop policy if exists "show_reactions_read" on public.show_reactions;
+drop policy if exists "show_reactions_insert" on public.show_reactions;
+drop policy if exists "show_reactions_delete" on public.show_reactions;
+create policy "show_reactions_read" on public.show_reactions for select using (true);
 create policy "show_reactions_insert" on public.show_reactions for insert with check (auth.uid() = user_id);
 create policy "show_reactions_delete" on public.show_reactions for delete using (auth.uid() = user_id);
 
-create policy "show_comments_read"   on public.show_comments for select using (true);
+drop policy if exists "show_comments_read" on public.show_comments;
+drop policy if exists "show_comments_insert" on public.show_comments;
+drop policy if exists "show_comments_delete" on public.show_comments;
+create policy "show_comments_read" on public.show_comments for select using (true);
 create policy "show_comments_insert" on public.show_comments for insert with check (auth.uid() = user_id);
 create policy "show_comments_delete" on public.show_comments for delete using (auth.uid() = user_id);
