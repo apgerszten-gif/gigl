@@ -243,11 +243,11 @@ export default function ProfilePage() {
             Gigl<span style={{ color: T.accent }}>/</span>
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, marginRight: 4 }}>
           <button onClick={() => router.push('/select-festival')} style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: 0,
             color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
-          }}>switch</button>
+          }}>switch fest</button>
           <span style={{ fontSize: 10, color: T.faint }}>·</span>
           <button onClick={signOut} style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: 0,
