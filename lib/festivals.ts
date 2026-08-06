@@ -443,6 +443,13 @@ export function getArtistsByDay(festival: Festival, day: string): FestivalArtist
   return festival.artists.filter(a => a.day === day)
 }
 
+// startTime/endTime are stored as bare 'h:mm' (see FestivalArtist above) -
+// every set falls between noon and 10pm, so appending PM is unambiguous.
+export function formatSetTime(a: FestivalArtist): string | null {
+  if (!a.startTime) return null
+  return a.endTime ? `${a.startTime}–${a.endTime} PM` : `${a.startTime} PM`
+}
+
 // Shows can only be logged starting the calendar day they actually happen -
 // never in advance. Compares by local calendar date only (time-of-day
 // ignored), so a show unlocks first thing in the morning of its day rather

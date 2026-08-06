@@ -2,7 +2,7 @@
 
 import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { getFestival, getArtistsByDay, hasDayOccurred, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
+import { getFestival, getArtistsByDay, hasDayOccurred, formatSetTime, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
 import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
@@ -226,7 +226,7 @@ function LogInner() {
                     <div style={{
                       fontSize: 9, color: T.muted, letterSpacing: '0.06em',
                       textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
-                    }}>{a.stage}</div>
+                    }}>{a.stage}{formatSetTime(a) ? ` · ${formatSetTime(a)}` : ''}</div>
                   </div>
                   {existing && <StarDisplay score={existing.score} size={17} accent={T.accent} />}
                   {locked ? (

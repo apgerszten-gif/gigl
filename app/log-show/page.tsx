@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { createClient } from '@/lib/supabase/client'
-import { getFestival, hasDayOccurred, LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { getFestival, hasDayOccurred, formatSetTime, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
@@ -129,10 +129,6 @@ function LogShowInner() {
 
   const [stage, setStage] = useState(stageParam)
   const [day, setDay]     = useState(dayParam)
-  const venueDate = [stage, day].filter(Boolean).join(' · ') || 'Venue & date unavailable'
-
-  const [loadingExisting, setLoadingExisting] = useState(true)
-  const [existingId, setExistingId]           = useState<string | null>(null)
 
   // Shows can only be logged starting the calendar day they happen -
   // re-rating an already-logged show is exempt, since it can only exist if
@@ -142,6 +138,17 @@ function LogShowInner() {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
     setFestival(id ? getFestival(id) : null)
   }, [])
+
+  // Set time isn't stored on logged_shows (only stage/day are, via query
+  // params / the prefill below) - looked up from the static schedule by
+  // artistId instead, so it shows up on both the fresh-log and re-rate paths.
+  const scheduledArtist = festival?.artists.find(a => a.id === artistId)
+  const setTime = scheduledArtist ? formatSetTime(scheduledArtist) : null
+  const venueDate = [stage, day, setTime].filter(Boolean).join(' · ') || 'Venue & date unavailable'
+
+  const [loadingExisting, setLoadingExisting] = useState(true)
+  const [existingId, setExistingId]           = useState<string | null>(null)
+
   const dayLocked = !existingId && !!festival && !!day && !hasDayOccurred(festival, day)
 
   const [performance, setPerformance] = useState(0)
