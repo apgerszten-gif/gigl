@@ -78,6 +78,8 @@ export default function ProfilePage() {
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [battleMap, setBattleMap] = useState<Record<string, { wins: number; losses: number }>>({})
+  const [followerCount, setFollowerCount]   = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -112,6 +114,13 @@ export default function ProfilePage() {
       const map: Record<string, { wins: number; losses: number }> = {}
       battleRows?.forEach(r => { map[r.artist_id] = { wins: r.wins, losses: r.losses } })
       setBattleMap(map)
+
+      const [{ count: followers }, { count: following }] = await Promise.all([
+        timeQuery('profile:followers', supabase.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId)),
+        timeQuery('profile:following', supabase.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId)),
+      ])
+      setFollowerCount(followers ?? 0)
+      setFollowingCount(following ?? 0)
 
       setLoading(false)
       timeMark(`profile:load total (${(showData || []).length} shows)`, loadStart)
@@ -310,6 +319,24 @@ export default function ProfilePage() {
           <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>2026</div>
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Festival</div>
         </div>
+      </div>
+
+      {/* ── Followers / following ────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid rgba(74,53,40,0.1)' }}>
+        <button onClick={() => profile && router.push(`/u/${profile.username}/followers`)} style={{
+          background: 'none', border: 'none', borderRight: '1px solid rgba(74,53,40,0.1)',
+          padding: '12px 0', textAlign: 'center', cursor: 'pointer',
+        }}>
+          <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: '#4A3528' }}>{followerCount}</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Followers</div>
+        </button>
+        <button onClick={() => profile && router.push(`/u/${profile.username}/following`)} style={{
+          background: 'none', border: 'none',
+          padding: '12px 0', textAlign: 'center', cursor: 'pointer',
+        }}>
+          <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: '#4A3528' }}>{followingCount}</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Following</div>
+        </button>
       </div>
 
       {/* ── Rankings list ────────────────────────────────────────────────────── */}
