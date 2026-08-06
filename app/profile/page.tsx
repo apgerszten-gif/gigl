@@ -262,7 +262,7 @@ export default function ProfilePage() {
           fontSize: 10, color: T.accent, letterSpacing: '0.14em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
         }}>{festivalLabel}</div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
           <div style={{
             fontFamily: T.serif, fontSize: 28, fontWeight: 700,
             lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',
@@ -272,24 +272,24 @@ export default function ProfilePage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', paddingTop: 4, flexShrink: 0 }}>
             <button onClick={copyLink} aria-label={copied ? 'Link copied' : 'Share my rankings with friends'} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '8px 12px', borderRadius: 20,
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '16px 24px', borderRadius: 40,
               background: copied ? T.accentDim : T.card,
               border: T.cardBorder,
               cursor: 'pointer', flexShrink: 0,
             }}>
               {copied ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               ) : (
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <svg width="26" height="26" viewBox="0 0 14 14" fill="none">
                   <path d="M8 1h5v5M13 1L6 8M5.5 3H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8.5"
                     stroke={T.accent} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               )}
               <span style={{
-                fontSize: 11, fontWeight: 700, color: T.accent, fontFamily: T.sans,
+                fontSize: 22, fontWeight: 700, color: T.accent, fontFamily: T.sans,
                 letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.35, textAlign: 'left',
               }}>{copied ? 'Copied!' : <>Invite friends<br />to Gigl</>}</span>
             </button>
