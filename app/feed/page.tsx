@@ -201,6 +201,7 @@ function FeedInner() {
       : await supabase.from('show_likes').delete().eq('logged_show_id', showId).eq('user_id', user.id)
 
     if (error) {
+      console.error('show_likes toggle failed:', error.message)
       setInteractions(prev => {
         const entry = prev[showId] ?? EMPTY_INTERACTIONS
         return { ...prev, [showId]: { ...entry, likedByMe: !next, likeCount: entry.likeCount + (next ? -1 : 1) } }
@@ -228,7 +229,10 @@ function FeedInner() {
       ? await supabase.from('show_reactions').delete().eq('logged_show_id', showId).eq('user_id', user.id).eq('emoji', emoji)
       : await supabase.from('show_reactions').insert({ logged_show_id: showId, user_id: user.id, emoji })
 
-    if (error) applyDelta(alreadyReacted ? 1 : -1, alreadyReacted)
+    if (error) {
+      console.error('show_reactions toggle failed:', error.message)
+      applyDelta(alreadyReacted ? 1 : -1, alreadyReacted)
+    }
   }
 
   function bumpCommentCount(showId: string, delta: number) {

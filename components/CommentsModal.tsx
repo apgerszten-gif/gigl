@@ -91,7 +91,10 @@ export function CommentsModal({
       .select('id, created_at')
       .single()
     setPosting(false)
-    if (error || !data) return
+    if (error || !data) {
+      console.error('show_comments insert failed:', error?.message)
+      return
+    }
 
     setBody('')
     setComments(prev => [...prev, {
