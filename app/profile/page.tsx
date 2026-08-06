@@ -301,22 +301,22 @@ export default function ProfilePage() {
       {/* ── Stats bar ────────────────────────────────────────────────────────── */}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr',
-        borderTop: '1px solid rgba(74,53,40,0.1)',
-        borderBottom: '1px solid rgba(74,53,40,0.1)',
+        borderTop: '2px solid rgba(74,53,40,0.22)',
+        borderBottom: '2px solid rgba(74,53,40,0.22)',
         background: T.bg,
       }}>
-        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
+        <div style={{ padding: '14px 0', textAlign: 'center' }}>
           <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: '#4A3528' }}>{shows.length}</div>
           <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Sets logged</div>
         </div>
-        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '2px solid rgba(74,53,40,0.22)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {ratedShows.length > 0
             ? <StarDisplay score={avgScore} size={18} accent={T.accent} />
             : <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: T.accent }}>—</div>}
           <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
         </div>
         <button onClick={() => profile && router.push(`/u/${profile.username}/followers`)} style={{
-          background: 'none', border: 'none', borderRight: '1px solid rgba(74,53,40,0.1)',
+          background: 'none', border: 'none',
           padding: '14px 0', textAlign: 'center', cursor: 'pointer',
         }}>
           <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: '#4A3528' }}>{followerCount}</div>
