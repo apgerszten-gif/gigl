@@ -371,3 +371,37 @@ drop policy if exists "show_comments_delete" on public.show_comments;
 create policy "show_comments_read" on public.show_comments for select using (true);
 create policy "show_comments_insert" on public.show_comments for insert with check (auth.uid() = user_id);
 create policy "show_comments_delete" on public.show_comments for delete using (auth.uid() = user_id);
+
+-- Phone-based sign-in (Twilio Verify via Supabase's Phone auth provider,
+-- see app/auth/page.tsx) creates auth.users rows with email = null. The
+-- handle_new_user() trigger derived username/display_name from
+-- split_part(new.email, '@', 1), which is null for these rows - and
+-- profiles.username is `not null unique`, so every phone sign-up would
+-- fail this trigger and, since it runs on the same insert as the
+-- auth.users row, take the whole sign-up down with it. Fall back to the
+-- phone number (digits only, so it still matches the ^[a-z0-9_]+$ format
+-- constraint) when there's no email.
+create or replace function public.handle_new_user()
+returns trigger as $$
+declare
+  base_handle text;
+begin
+  base_handle := coalesce(
+    nullif(regexp_replace(lower(split_part(new.email, '@', 1)), '[^a-z0-9_]', '_', 'g'), ''),
+    nullif(regexp_replace(new.phone, '[^a-z0-9]', '', 'g'), '')
+  );
+
+  insert into public.profiles (id, username, display_name, username_set)
+  values (
+    new.id,
+    -- Extremely unlikely fallback (neither email nor phone present) so the
+    -- insert never fails outright; username_set stays false either way and
+    -- /choose-username makes them pick a real one before they can do
+    -- anything with the account.
+    coalesce(base_handle, 'user_' || replace(new.id::text, '-', '')),
+    split_part(new.email, '@', 1),
+    false
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
