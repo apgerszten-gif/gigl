@@ -28,9 +28,10 @@ export default function AuthPage() {
   const [loading, setLoading]   = useState(false)
 
   // Phone sign-in (Twilio Verify, configured as the SMS provider on
-  // Supabase's Phone auth). 'phone' collects the number, 'code' collects
-  // the OTP Supabase/Twilio just texted them.
-  const [phoneStep, setPhoneStep]     = useState<'idle' | 'phone' | 'code'>('idle')
+  // Supabase's Phone auth). Starts straight at 'phone' — the number input
+  // is the first thing on the page, no extra click to get there. 'code'
+  // collects the OTP Supabase/Twilio just texted them.
+  const [phoneStep, setPhoneStep]     = useState<'phone' | 'code'>('phone')
   const [phoneInput, setPhoneInput]   = useState('')
   const [otpInput, setOtpInput]       = useState('')
   const [phoneError, setPhoneError]   = useState<string | null>(null)
@@ -160,31 +161,8 @@ export default function AuthPage() {
       </div>
 
       {/* Phone sign-in (Twilio Verify) — the featured, primary path, shown
-          above the traditional email/password flow. Same idle/phone/code
-          shape as SmsScoringSection, since that's the phone+OTP pattern
-          already in the app. */}
-      {phoneStep === 'idle' && (
-        <button
-          onClick={() => { setPhoneStep('phone'); setPhoneError(null) }}
-          style={{
-            width: '100%', background: sienna,
-            border: `1.5px solid ${ink}`,
-            boxShadow: '2px 2px 0 #4A3528',
-            borderRadius: 5, padding: 16,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            cursor: 'pointer', marginBottom: 16,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cream} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: cream,
-            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: sans,
-          }}>Continue with phone</span>
-        </button>
-      )}
-
+          above the traditional email/password flow. The number input is
+          front and center on load, no "continue with phone" click needed. */}
       {phoneStep === 'phone' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
           <div style={{
@@ -217,28 +195,17 @@ export default function AuthPage() {
             }}>{phoneError}</div>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => { setPhoneStep('idle'); setPhoneError(null); setPhoneInput('') }}
-              style={{
-                flex: 1, padding: '12px 0', borderRadius: 5,
-                background: 'none', border: '1px solid rgba(74,53,40,0.2)',
-                color: muted, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                fontFamily: sans, letterSpacing: '0.06em', textTransform: 'uppercase',
-              }}
-            >Cancel</button>
-            <button
-              onClick={handleSendPhoneCode}
-              disabled={phoneLoading}
-              style={{
-                flex: 2, padding: '12px 0', borderRadius: 5,
-                background: sienna, border: `1.5px solid ${ink}`, boxShadow: '2px 2px 0 #4A3528',
-                color: cream, fontSize: 11, fontWeight: 700,
-                cursor: phoneLoading ? 'not-allowed' : 'pointer', opacity: phoneLoading ? 0.7 : 1,
-                fontFamily: sans, letterSpacing: '0.06em', textTransform: 'uppercase',
-              }}
-            >{phoneLoading ? 'Sending...' : 'Send code'}</button>
-          </div>
+          <button
+            onClick={handleSendPhoneCode}
+            disabled={phoneLoading}
+            style={{
+              width: '100%', padding: '12px 0', borderRadius: 5,
+              background: sienna, border: `1.5px solid ${ink}`, boxShadow: '2px 2px 0 #4A3528',
+              color: cream, fontSize: 11, fontWeight: 700,
+              cursor: phoneLoading ? 'not-allowed' : 'pointer', opacity: phoneLoading ? 0.7 : 1,
+              fontFamily: sans, letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}
+          >{phoneLoading ? 'Sending...' : 'Send code'}</button>
         </div>
       )}
 
