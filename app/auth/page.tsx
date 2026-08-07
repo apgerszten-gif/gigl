@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
+import { normalizePhoneNumber } from '@/lib/phone'
 
 const ink    = '#4A3528'
 const cream  = '#FAF3E2'
@@ -25,6 +26,15 @@ export default function AuthPage() {
   const [username, setUsername] = useState('')
   const [error, setError]       = useState<string | null>(null)
   const [loading, setLoading]   = useState(false)
+
+  // Phone sign-in (Twilio Verify, configured as the SMS provider on
+  // Supabase's Phone auth). 'phone' collects the number, 'code' collects
+  // the OTP Supabase/Twilio just texted them.
+  const [phoneStep, setPhoneStep]     = useState<'idle' | 'phone' | 'code'>('idle')
+  const [phoneInput, setPhoneInput]   = useState('')
+  const [otpInput, setOtpInput]       = useState('')
+  const [phoneError, setPhoneError]   = useState<string | null>(null)
+  const [phoneLoading, setPhoneLoading] = useState(false)
 
   async function handleSubmit() {
     setError(null)
@@ -54,13 +64,56 @@ export default function AuthPage() {
     router.push(hasFestival ? '/feed' : '/select-festival')
   }
 
-  async function handleGoogle() {
-    setError(null)
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+  // Where to send someone once they have a session: straight into the app
+  // if they've already picked a username, otherwise /choose-username first
+  // (mirrors app/auth/callback/page.tsx).
+  async function routeAfterSignIn(userId: string) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username_set')
+      .eq('id', userId)
+      .single()
+
+    if (!profile || profile.username_set === false) {
+      router.push('/choose-username')
+      return
+    }
+    const hasFestival = typeof window !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_KEY)
+    router.push(hasFestival ? '/feed' : '/select-festival')
+  }
+
+  async function handleSendPhoneCode() {
+    setPhoneError(null)
+    const normalized = normalizePhoneNumber(phoneInput)
+    if (!normalized) { setPhoneError('Enter a valid phone number.'); return }
+
+    setPhoneLoading(true)
+    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: normalized })
+    setPhoneLoading(false)
+    if (otpError) { setPhoneError(otpError.message); return }
+
+    setPhoneInput(normalized)
+    setPhoneStep('code')
+  }
+
+  async function handleVerifyPhoneCode() {
+    setPhoneError(null)
+    if (!otpInput.trim()) { setPhoneError('Enter the code.'); return }
+
+    setPhoneLoading(true)
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      phone: phoneInput,
+      token: otpInput.trim(),
+      type: 'sms',
     })
-    if (oauthError) setError(oauthError.message)
+    if (verifyError || !data.user) {
+      setPhoneError(verifyError?.message ?? 'Incorrect code.')
+      setPhoneLoading(false)
+      return
+    }
+
+    await routeAfterSignIn(data.user.id)
+    setPhoneLoading(false)
   }
 
   return (
@@ -104,6 +157,158 @@ export default function AuthPage() {
             <>Good to have<br />you back<span style={{ color: sienna }}>.</span></>
           )}
         </div>
+      </div>
+
+      {/* Phone sign-in (Twilio Verify) — the featured, primary path, shown
+          above the traditional email/password flow. Same idle/phone/code
+          shape as SmsScoringSection, since that's the phone+OTP pattern
+          already in the app. */}
+      {phoneStep === 'idle' && (
+        <button
+          onClick={() => { setPhoneStep('phone'); setPhoneError(null) }}
+          style={{
+            width: '100%', background: sienna,
+            border: `1.5px solid ${ink}`,
+            boxShadow: '2px 2px 0 #4A3528',
+            borderRadius: 5, padding: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            cursor: 'pointer', marginBottom: 16,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cream} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span style={{
+            fontSize: 12, fontWeight: 700, color: cream,
+            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: sans,
+          }}>Continue with phone</span>
+        </button>
+      )}
+
+      {phoneStep === 'phone' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          <div style={{
+            background: cream, borderRadius: 5,
+            border: `1.5px solid ${ink}`,
+            padding: '14px 16px',
+          }}>
+            <div style={{
+              fontSize: 9, color: muted, letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
+            }}>Phone number</div>
+            <input
+              type="tel"
+              value={phoneInput}
+              onChange={e => setPhoneInput(e.target.value)}
+              placeholder="(555) 123-4567"
+              style={{
+                width: '100%', background: 'none', border: 'none', outline: 'none',
+                color: ink, fontSize: 16, fontFamily: sans,
+              }}
+            />
+          </div>
+
+          {phoneError && (
+            <div style={{
+              fontSize: 12, color: '#B03030', fontFamily: sans,
+              padding: '10px 14px', background: 'rgba(160,40,40,0.08)',
+              border: '1px solid rgba(160,40,40,0.2)',
+              borderRadius: 5, lineHeight: 1.5,
+            }}>{phoneError}</div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => { setPhoneStep('idle'); setPhoneError(null); setPhoneInput('') }}
+              style={{
+                flex: 1, padding: '12px 0', borderRadius: 5,
+                background: 'none', border: '1px solid rgba(74,53,40,0.2)',
+                color: muted, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                fontFamily: sans, letterSpacing: '0.06em', textTransform: 'uppercase',
+              }}
+            >Cancel</button>
+            <button
+              onClick={handleSendPhoneCode}
+              disabled={phoneLoading}
+              style={{
+                flex: 2, padding: '12px 0', borderRadius: 5,
+                background: sienna, border: `1.5px solid ${ink}`, boxShadow: '2px 2px 0 #4A3528',
+                color: cream, fontSize: 11, fontWeight: 700,
+                cursor: phoneLoading ? 'not-allowed' : 'pointer', opacity: phoneLoading ? 0.7 : 1,
+                fontFamily: sans, letterSpacing: '0.06em', textTransform: 'uppercase',
+              }}
+            >{phoneLoading ? 'Sending...' : 'Send code'}</button>
+          </div>
+        </div>
+      )}
+
+      {phoneStep === 'code' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: muted, fontFamily: sans }}>
+            We texted a 6-digit code to {phoneInput}.
+          </div>
+
+          <div style={{
+            background: cream, borderRadius: 5,
+            border: `1.5px solid ${ink}`,
+            padding: '14px 16px',
+          }}>
+            <div style={{
+              fontSize: 9, color: muted, letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
+            }}>Code</div>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={otpInput}
+              onChange={e => setOtpInput(e.target.value)}
+              placeholder="123456"
+              style={{
+                width: '100%', background: 'none', border: 'none', outline: 'none',
+                color: ink, fontSize: 16, fontFamily: sans, letterSpacing: '0.2em',
+              }}
+            />
+          </div>
+
+          {phoneError && (
+            <div style={{
+              fontSize: 12, color: '#B03030', fontFamily: sans,
+              padding: '10px 14px', background: 'rgba(160,40,40,0.08)',
+              border: '1px solid rgba(160,40,40,0.2)',
+              borderRadius: 5, lineHeight: 1.5,
+            }}>{phoneError}</div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => { setPhoneStep('phone'); setPhoneError(null); setOtpInput('') }}
+              style={{
+                flex: 1, padding: '12px 0', borderRadius: 5,
+                background: 'none', border: '1px solid rgba(74,53,40,0.2)',
+                color: muted, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                fontFamily: sans, letterSpacing: '0.06em', textTransform: 'uppercase',
+              }}
+            >Back</button>
+            <button
+              onClick={handleVerifyPhoneCode}
+              disabled={phoneLoading}
+              style={{
+                flex: 2, padding: '12px 0', borderRadius: 5,
+                background: sienna, border: `1.5px solid ${ink}`, boxShadow: '2px 2px 0 #4A3528',
+                color: cream, fontSize: 11, fontWeight: 700,
+                cursor: phoneLoading ? 'not-allowed' : 'pointer', opacity: phoneLoading ? 0.7 : 1,
+                fontFamily: sans, letterSpacing: '0.06em', textTransform: 'uppercase',
+              }}
+            >{phoneLoading ? 'Verifying...' : 'Verify'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
+        <span style={{ fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>or</span>
+        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
       </div>
 
       {/* Form */}
@@ -202,37 +407,6 @@ export default function AuthPage() {
           </span>
         </button>
       </div>
-
-      {/* Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-        <span style={{ fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>or</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-      </div>
-
-      {/* Google sign-in — kept below the normal fields, deliberately the
-          less prominent path */}
-      <button
-        onClick={handleGoogle}
-        style={{
-          width: '100%', background: 'none',
-          border: '1px solid rgba(74,53,40,0.2)',
-          borderRadius: 5, padding: 12,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          cursor: 'pointer', marginBottom: 16,
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 18 18">
-          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-        </svg>
-        <span style={{
-          fontSize: 11, fontWeight: 600, color: muted,
-          letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: sans,
-        }}>Continue with Google</span>
-      </button>
 
       {/* Toggle */}
       <div style={{ textAlign: 'center', fontSize: 13, color: muted, fontFamily: sans }}>
