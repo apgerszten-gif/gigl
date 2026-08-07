@@ -194,34 +194,6 @@ export default function AuthPage() {
         </button>
       </div>
 
-      {/* Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-        <span style={{ fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>or</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(74,53,40,0.15)' }} />
-      </div>
-
-      {/* Phone sign-in entry point — routes to its own page (/auth/phone),
-          which handles the OTP send/verify flow. */}
-      <button
-        onClick={() => router.push('/auth/phone')}
-        style={{
-          width: '100%', background: 'none',
-          border: '1px solid rgba(74,53,40,0.2)',
-          borderRadius: 5, padding: 12,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          cursor: 'pointer', marginBottom: 16,
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-        <span style={{
-          fontSize: 11, fontWeight: 600, color: muted,
-          letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: sans,
-        }}>Continue with phone</span>
-      </button>
-
       {/* Toggle */}
       <div style={{ textAlign: 'center', fontSize: 13, color: muted, fontFamily: sans }}>
         {mode === 'signup' ? 'Already have an account? ' : 'New here? '}
