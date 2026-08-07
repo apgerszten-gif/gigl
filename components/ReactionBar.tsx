@@ -88,17 +88,19 @@ interface GlyphProps { active: boolean; T: FestivalTheme }
 
 function HeartGlyph({ active, T }: GlyphProps) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill={active ? T.accent : 'none'} stroke={active ? T.accent : T.muted} strokeWidth="2">
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill={active ? T.accent : 'none'} stroke={active ? T.accent : T.muted} strokeWidth="2">
       <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
     </svg>
   )
 }
 
+// Flame silhouette (filled, not stroked) - the outline version read as an
+// ambiguous blob at 14-16px, a solid tongue-of-flame shape is legible small.
 function FireGlyph({ active, T }: GlyphProps) {
   const c = active ? T.accent : T.muted
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill={active ? T.accent : 'none'} stroke={c} strokeWidth="2" strokeLinejoin="round">
-      <path d="M12 2.5c.9 3.4-3 4.9-3 8.9a3 3 0 0 0 6 0c0-1.1-.4-2.1-.9-3 1.5.6 2.9 2.4 2.9 5.1a5 5 0 1 1-10 0c0-5 3.6-7.1 5-11z" />
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill={c} stroke="none">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
     </svg>
   )
 }
@@ -106,7 +108,7 @@ function FireGlyph({ active, T }: GlyphProps) {
 function LaughGlyph({ active, T }: GlyphProps) {
   const c = active ? T.accent : T.muted
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
       <circle cx="12" cy="12" r="9" />
       <path d="M8 9.5q1-1.5 2-.2M14 9.5q1-1.5 2-.2" />
       <path d="M7.5 13.5a4.5 3.5 0 0 0 9 0z" fill={c} stroke="none" />
@@ -117,7 +119,7 @@ function LaughGlyph({ active, T }: GlyphProps) {
 function WowGlyph({ active, T }: GlyphProps) {
   const c = active ? T.accent : T.muted
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <circle cx="9" cy="10" r="1" fill={c} stroke="none" />
       <circle cx="15" cy="10" r="1" fill={c} stroke="none" />
