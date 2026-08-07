@@ -329,7 +329,7 @@ function FeedInner() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
               }}
-            >switch</button>
+            >switch fest</button>
             <span style={{ fontSize: 10, color: T.faint }}>·</span>
             <button
               onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
