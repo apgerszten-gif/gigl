@@ -49,15 +49,15 @@ function LogInner() {
       const loadStart = Date.now()
       const { data } = await timeQuery('log:logged_shows', supabase
         .from('logged_shows')
-        .select('artist_id, performance_rating, venue_rating, vibe_rating')
+        .select('artist_id, performance_rating, venue_rating, crowd_rating')
         .eq('user_id', userId))
 
       if (data) {
         const map = new Map<string, ExistingLog>()
         data.forEach(r => {
-          if (r.performance_rating && r.venue_rating && r.vibe_rating) {
+          if (r.performance_rating && r.venue_rating && r.crowd_rating) {
             map.set(r.artist_id, {
-              score: computeShowScore(r.performance_rating, r.venue_rating, r.vibe_rating),
+              score: computeShowScore(r.performance_rating, r.venue_rating, r.crowd_rating),
             })
           }
         })

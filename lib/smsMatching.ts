@@ -1,12 +1,12 @@
 import type { Festival, FestivalArtist } from './festivals'
 
-// "Artist Name Performance Venue Vibe" — the last three space-separated
+// "Artist Name Performance Venue Crowd" — the last three space-separated
 // tokens must be integers 1-5; everything before that is the artist name.
 export interface ParsedLog {
   artistNameRaw: string
   performance:   number
   venue:         number
-  vibe:          number
+  crowd:         number
 }
 
 export function parseLogMessage(body: string): ParsedLog | null {
@@ -24,7 +24,7 @@ export function parseLogMessage(body: string): ParsedLog | null {
     artistNameRaw: nameTokens.join(' '),
     performance: nums[0],
     venue: nums[1],
-    vibe: nums[2],
+    crowd: nums[2],
   }
 }
 

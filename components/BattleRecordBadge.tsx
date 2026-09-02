@@ -6,7 +6,7 @@ import { useTheme } from '@/components/FestivalThemeProvider'
 
 // Small inline W-L indicator shown next to a show's star rating. Purely a
 // display of battle_records data - never reads or writes performance_rating/
-// venue_rating/vibe_rating. `context` controls copy only:
+// venue_rating/crowd_rating. `context` controls copy only:
 // 'aggregate' = this artist's all-time record across every user (Feed),
 // 'personal' = the viewer's own record with this artist (Profile).
 export function BattleRecordBadge({

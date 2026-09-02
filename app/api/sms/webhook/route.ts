@@ -41,12 +41,12 @@ export async function POST(req: NextRequest) {
     return twiml("This number isn't linked to a Gigl account yet. Add it under Profile > SMS Scoring in the app.")
   }
 
-  // 2. Parse "Artist Name Performance Venue Vibe"
+  // 2. Parse "Artist Name Performance Venue Crowd"
   const parsed = parseLogMessage(body)
   if (!parsed) {
-    return twiml('Format: Artist Performance Venue Vibe, each 1-5. e.g. Tate McRae 5 4 5')
+    return twiml('Format: Artist Performance Venue Crowd, each 1-5. e.g. Tate McRae 5 4 5')
   }
-  const { artistNameRaw, performance, venue, vibe } = parsed
+  const { artistNameRaw, performance, venue, crowd } = parsed
 
   // 3. Active festival + today's day, in the festival's own local time
   if (!profile.active_festival_id) {
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   const artist = match.artist
 
   // 5. Upsert the rating
-  const score = computeShowScore(performance, venue, vibe)
+  const score = computeShowScore(performance, venue, crowd)
   const { error } = await supabaseAdmin().from('logged_shows').upsert({
     user_id:            profile.id,
     artist_id:          artist.id,
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     day:                artist.day,
     performance_rating: performance,
     venue_rating:       venue,
-    vibe_rating:        vibe,
+    crowd_rating:       crowd,
     emoji:              deriveLegacyEmoji(score),
     sms_logged:         true,
   }, { onConflict: 'user_id,artist_id' })
@@ -94,5 +94,5 @@ export async function POST(req: NextRequest) {
   }
 
   // 6. Confirm
-  return twiml(`✓ Logged ${artist.name} — ${performance}/${venue}/${vibe} (${score.toFixed(1)}★) at ${festival.shortName}`)
+  return twiml(`✓ Logged ${artist.name} — ${performance}/${venue}/${crowd} (${score.toFixed(1)}★) at ${festival.shortName}`)
 }

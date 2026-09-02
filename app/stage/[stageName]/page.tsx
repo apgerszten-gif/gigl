@@ -14,18 +14,18 @@ export default async function StagePage({ params }: { params: { stageName: strin
 
   const { data: logs } = await supabase
     .from('logged_shows')
-    .select('artist_id, artist_name, performance_rating, venue_rating, vibe_rating, day')
+    .select('artist_id, artist_name, performance_rating, venue_rating, crowd_rating, day')
     .eq('stage', stageName)
 
   if (!logs || logs.length === 0) notFound()
 
   const map: Record<string, { name: string; scores: number[]; day: string }> = {}
   logs.forEach(l => {
-    if (l.performance_rating == null || l.venue_rating == null || l.vibe_rating == null) return
+    if (l.performance_rating == null || l.venue_rating == null || l.crowd_rating == null) return
     if (!map[l.artist_id]) {
       map[l.artist_id] = { name: l.artist_name ?? 'Unknown', scores: [], day: l.day ?? '' }
     }
-    map[l.artist_id].scores.push(computeShowScore(l.performance_rating, l.venue_rating, l.vibe_rating))
+    map[l.artist_id].scores.push(computeShowScore(l.performance_rating, l.venue_rating, l.crowd_rating))
   })
 
   const rows = Object.entries(map)

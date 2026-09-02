@@ -32,7 +32,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   const { data: logs } = await timeQuery(`artist:logged_shows(${params.artistId})`, supabase
     .from('logged_shows')
-    .select('user_id, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, media_urls, artist_name, stage, day')
+    .select('user_id, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls, artist_name, stage, day')
     .eq('artist_id', params.artistId))
 
   if (!logs || logs.length === 0) notFound()
@@ -49,8 +49,8 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   const day        = logs[0]?.day   ?? ''
 
   const rated = logs
-    .filter(l => l.performance_rating != null && l.venue_rating != null && l.vibe_rating != null)
-    .map(l => ({ ...l, score: computeShowScore(l.performance_rating!, l.venue_rating!, l.vibe_rating!) }))
+    .filter(l => l.performance_rating != null && l.venue_rating != null && l.crowd_rating != null)
+    .map(l => ({ ...l, score: computeShowScore(l.performance_rating!, l.venue_rating!, l.crowd_rating!) }))
     .sort((a, b) => b.score - a.score)
 
   const avgScore  = rated.length > 0 ? rated.reduce((a, l) => a + l.score, 0) / rated.length : 0
@@ -58,7 +58,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   const avgPerformance = rated.length > 0 ? rated.reduce((a, l) => a + l.performance_rating!, 0) / rated.length : 0
   const avgVenue       = rated.length > 0 ? rated.reduce((a, l) => a + l.venue_rating!,       0) / rated.length : 0
-  const avgVibe        = rated.length > 0 ? rated.reduce((a, l) => a + l.vibe_rating!,        0) / rated.length : 0
+  const avgCrowd       = rated.length > 0 ? rated.reduce((a, l) => a + l.crowd_rating!,       0) / rated.length : 0
   const reviews = rated.filter(l => l.review)
 
   const photos = logs
@@ -163,7 +163,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           {[
             { label: 'Performance', value: avgPerformance },
             { label: 'Venue',       value: avgVenue },
-            { label: 'Vibe',        value: avgVibe },
+            { label: 'Crowd',       value: avgCrowd },
           ].map(row => (
             <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 11, color: 'rgba(74,53,40,0.55)' }}>{row.label}</div>

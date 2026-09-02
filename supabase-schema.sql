@@ -163,7 +163,7 @@ create table public.sms_verification_codes (
 alter table public.sms_verification_codes enable row level security;
 
 -- Battle Mode: an optional, purely additive gamified layer. Nothing here
--- ever reads from or writes to performance_rating/venue_rating/vibe_rating
+-- ever reads from or writes to performance_rating/venue_rating/crowd_rating
 -- or anything computeShowScore() touches.
 
 alter table public.profiles add column shows_logged_count integer not null default 0;
@@ -181,7 +181,7 @@ alter table public.profiles add column battle_card_dismissed boolean not null de
 -- One row per (user, artist) that's ever been battled - a show accumulates
 -- many battle outcomes over time, this is a running tally, not a single
 -- field on logged_shows. Completely separate from performance_rating/
--- venue_rating/vibe_rating and everything computeShowScore() touches.
+-- venue_rating/crowd_rating and everything computeShowScore() touches.
 --
 -- Publicly readable (like logged_shows/profiles already are) so the Feed
 -- can show an artist's all-time battle record aggregated across every
@@ -310,7 +310,7 @@ alter table public.logged_shows alter column genre drop not null;
 alter publication supabase_realtime add table public.logged_shows;
 
 -- Social interactions on a logged show: like, emoji reaction, and comment.
--- Unrelated to the performance/venue/vibe star ratings and to the legacy
+-- Unrelated to the performance/venue/crowd star ratings and to the legacy
 -- `emoji` sentiment column above - this is a plain social layer, one row
 -- per interaction. show_likes is one row per (user, show); show_reactions
 -- allows a user to react with more than one distinct emoji on the same
@@ -405,3 +405,8 @@ begin
   return new;
 end;
 $$ language plpgsql security definer;
+
+-- Renamed from vibe_rating: the third star category is "how was the crowd",
+-- not a vague "vibe" catch-all. Existing values carry over unchanged - this
+-- is a rename, not a new column.
+alter table public.logged_shows rename column vibe_rating to crowd_rating;

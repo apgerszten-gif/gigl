@@ -153,7 +153,7 @@ function LogShowInner() {
 
   const [performance, setPerformance] = useState(0)
   const [venue, setVenue]             = useState(0)
-  const [vibe, setVibe]               = useState(0)
+  const [crowd, setCrowd]             = useState(0)
 
   const [thoughts, setThoughts] = useState('')
 
@@ -183,7 +183,7 @@ function LogShowInner() {
       const loadStart = Date.now()
       const { data } = await timeQuery('log-show:logged_shows', supabase
         .from('logged_shows')
-        .select('id, stage, day, performance_rating, venue_rating, vibe_rating, review, tags, photo_url, media_urls')
+        .select('id, stage, day, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls')
         .eq('user_id', userId)
         .eq('artist_id', artistId)
         .maybeSingle())
@@ -194,7 +194,7 @@ function LogShowInner() {
         if (data.day) setDay(data.day)
         if (data.performance_rating) setPerformance(data.performance_rating)
         if (data.venue_rating) setVenue(data.venue_rating)
-        if (data.vibe_rating) setVibe(data.vibe_rating)
+        if (data.crowd_rating) setCrowd(data.crowd_rating)
         if (data.review) setThoughts(data.review)
         if (data.tags && data.tags.length > 0) {
           setSelectedTags(data.tags)
@@ -241,7 +241,7 @@ function LogShowInner() {
       if (pending) {
         setPerformance(pending.performance_rating)
         setVenue(pending.venue_rating)
-        setVibe(pending.vibe_rating)
+        setCrowd(pending.crowd_rating)
         setThoughts(pending.review ?? '')
         if (pending.tags && pending.tags.length > 0) {
           setSelectedTags(pending.tags)
@@ -323,7 +323,7 @@ function LogShowInner() {
     }
   }
 
-  const canSave = performance > 0 && venue > 0 && vibe > 0
+  const canSave = performance > 0 && venue > 0 && crowd > 0
   const mediaVideoCount = media.filter(m => m.isVideo).length
   const mediaPhotoCount = media.filter(m => !m.isVideo).length
   const mediaFull = mediaVideoCount >= MAX_VIDEOS && mediaPhotoCount >= MAX_PHOTOS
@@ -335,7 +335,7 @@ function LogShowInner() {
     const saveStart = Date.now()
     console.log('[perf] log-show:save start')
 
-    const score = computeShowScore(performance, venue, vibe)
+    const score = computeShowScore(performance, venue, crowd)
 
     // Queue the rating locally before anything else touches the network.
     // From this line on, the rating itself can't be lost to a dropped
@@ -348,7 +348,7 @@ function LogShowInner() {
       day,
       performance_rating: performance,
       venue_rating:        venue,
-      vibe_rating:         vibe,
+      crowd_rating:        crowd,
       review:              thoughts.trim() || null,
       tags:                selectedTags.length > 0 ? selectedTags : null,
       photo_url:           null,
@@ -386,7 +386,7 @@ function LogShowInner() {
         day,
         performance_rating: performance,
         venue_rating:        venue,
-        vibe_rating:         vibe,
+        crowd_rating:        crowd,
         review:              thoughts.trim() || null,
         tags:                selectedTags.length > 0 ? selectedTags : null,
         photo_url:           mediaUrls[0],
@@ -574,7 +574,7 @@ function LogShowInner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <StarRow label="Performance" value={performance} onChange={setPerformance} T={T} />
             <StarRow label="Venue"       value={venue}       onChange={setVenue}       T={T} />
-            <StarRow label="Vibe"        value={vibe}        onChange={setVibe}        T={T} />
+            <StarRow label="Crowd"       value={crowd}       onChange={setCrowd}       T={T} />
           </div>
           <div style={{ fontSize: 11, color: T.faint, marginTop: 12, fontStyle: 'italic' }}>
             All three ratings are required

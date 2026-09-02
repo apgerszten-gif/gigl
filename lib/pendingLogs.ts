@@ -12,7 +12,7 @@ export interface PendingLogPayload {
   day:                string
   performance_rating: number
   venue_rating:       number
-  vibe_rating:        number
+  crowd_rating:       number
   review:             string | null
   tags:               string[] | null
   photo_url:          string | null

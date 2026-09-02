@@ -264,7 +264,7 @@ function RateScene({ T }: { T: ReturnType<typeof useTheme> }) {
   const rows = [
     { label: 'Performance', count: 5, dotDelay: 8.35, starDelay: 8.45 },
     { label: 'Venue',       count: 4, dotDelay: 9.15, starDelay: 9.25 },
-    { label: 'Vibe',        count: 5, dotDelay: 9.85, starDelay: 9.95 },
+    { label: 'Crowd',       count: 5, dotDelay: 9.85, starDelay: 9.95 },
   ]
   return (
     <div style={{ padding: '16px 16px', height: '100%', boxSizing: 'border-box', background: T.bg }}>

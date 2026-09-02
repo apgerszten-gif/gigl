@@ -40,7 +40,7 @@ interface GlobalLog {
   artist_name:        string
   performance_rating: number | null
   venue_rating:        number | null
-  vibe_rating:          number | null
+  crowd_rating:         number | null
   created_at:  string
   user_id:     string
   stage:       string
@@ -108,7 +108,7 @@ function FeedInner() {
 
     let logsQuery = supabase
       .from('logged_shows')
-      .select('id, artist_id, artist_name, performance_rating, venue_rating, vibe_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
+      .select('id, artist_id, artist_name, performance_rating, venue_rating, crowd_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
       .order('created_at', { ascending: false })
       .limit(200)
     if (festival) logsQuery = logsQuery.in('artist_id', festival.artists.map(a => a.id))
@@ -423,9 +423,9 @@ function FeedInner() {
             const isMe      = item.user_id === user?.id
             const username  = item.username ?? 'anonymous'
             const isTop     = i === 0
-            const hasScore  = item.performance_rating != null && item.venue_rating != null && item.vibe_rating != null
+            const hasScore  = item.performance_rating != null && item.venue_rating != null && item.crowd_rating != null
             const score     = hasScore
-              ? computeShowScore(item.performance_rating!, item.venue_rating!, item.vibe_rating!)
+              ? computeShowScore(item.performance_rating!, item.venue_rating!, item.crowd_rating!)
               : null
             const hasTags    = !!item.tags && item.tags.length > 0
             const isFeatured = hasScore || hasTags || !!item.review

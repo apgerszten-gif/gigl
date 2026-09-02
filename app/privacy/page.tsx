@@ -23,7 +23,7 @@ export default function PrivacyPage() {
       <P><strong>Content you create.</strong> We collect the information you submit while using Gigl, including:</P>
       <Ul>
         <li>Festival and artist selections</li>
-        <li>Show ratings (performance, venue, and vibe scores)</li>
+        <li>Show ratings (performance, venue, and crowd scores)</li>
         <li>Written reviews and tags you attach to a show</li>
         <li>Photos or media you upload</li>
         <li>Head-to-head comparisons and resulting rankings</li>

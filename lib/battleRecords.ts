@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Purely additive gamification bookkeeping - never touches performance_rating/
-// venue_rating/vibe_rating or anything computeShowScore() reads. Read-then-
+// venue_rating/crowd_rating or anything computeShowScore() reads. Read-then-
 // upsert (not a single atomic increment) since this runs through the anon
 // client under RLS; a rare lost update from battling in two tabs at once
 // is an acceptable tradeoff for a fun side leaderboard.

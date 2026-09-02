@@ -46,7 +46,7 @@ interface Show {
   day:                 string
   performance_rating:  number | null
   venue_rating:        number | null
-  vibe_rating:         number | null
+  crowd_rating:        number | null
   review:              string | null
   tags:                string[] | null
   photo_url:           string | null
@@ -106,7 +106,7 @@ export default function ProfilePage() {
       setShows((showData || []).slice().sort((a, b) => showScore(b) - showScore(a)))
 
       // This viewer's own battle record per artist - never another user's,
-      // and never blended into performance_rating/venue_rating/vibe_rating.
+      // and never blended into performance_rating/venue_rating/crowd_rating.
       const { data: battleRows } = await timeQuery('profile:battle_records', supabase
         .from('battle_records')
         .select('artist_id, wins, losses')
@@ -213,7 +213,7 @@ export default function ProfilePage() {
     }
   }
 
-  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.vibe_rating != null)
+  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.crowd_rating != null)
   const avgScore = ratedShows.length > 0
     ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
     : 0
@@ -353,7 +353,7 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {shows.map((show, i) => {
               const score     = showScore(show)
-              const hasScore  = show.performance_rating != null && show.venue_rating != null && show.vibe_rating != null
+              const hasScore  = show.performance_rating != null && show.venue_rating != null && show.crowd_rating != null
               const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
               const isEditing = editingId === show.id
               const isTop     = i === 0

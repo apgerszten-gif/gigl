@@ -6,7 +6,7 @@ import { sendSms } from '@/lib/twilio'
 
 const WELCOME_MESSAGE = [
   'Welcome to Gigl SMS scoring! 🎪',
-  'Text: Artist Performance Venue Vibe (1-5 each)',
+  'Text: Artist Performance Venue Crowd (1-5 each)',
   'e.g. Tate McRae 5 4 5',
   "We'll log it and text back a confirmation. Reply STOP to opt out anytime.",
 ].join('\n')
