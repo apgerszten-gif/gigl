@@ -5,6 +5,8 @@ export interface ArtistRow {
   name:      string
   stage:     string
   day:       string
+  venue:     string
+  showDate:  string
   avgScore:  number
   count:     number
 }
@@ -14,6 +16,8 @@ export interface LoggedShowForRanking {
   artist_name:        string | null
   stage:              string | null
   day:                string | null
+  venue:              string | null
+  show_date:          string | null
   performance_rating: number | null
   venue_rating:       number | null
   crowd_rating:       number | null
@@ -23,11 +27,15 @@ export interface LoggedShowForRanking {
 // client-side realtime refetch (RankingsClient) so both ever compute the
 // leaderboard the same way.
 export function aggregateArtistRows(logs: LoggedShowForRanking[] | null | undefined): ArtistRow[] {
-  const map: Record<string, { scores: number[]; name: string; stage: string; day: string }> = {}
+  const map: Record<string, { scores: number[]; name: string; stage: string; day: string; venue: string; showDate: string }> = {}
   logs?.forEach(l => {
     if (l.performance_rating == null || l.venue_rating == null || l.crowd_rating == null) return
     if (!map[l.artist_id]) {
-      map[l.artist_id] = { scores: [], name: l.artist_name ?? 'Unknown', stage: l.stage ?? '', day: l.day ?? '' }
+      map[l.artist_id] = {
+        scores: [], name: l.artist_name ?? 'Unknown',
+        stage: l.stage ?? '', day: l.day ?? '',
+        venue: l.venue ?? '', showDate: l.show_date ?? '',
+      }
     }
     map[l.artist_id].scores.push(computeShowScore(l.performance_rating, l.venue_rating, l.crowd_rating))
   })
@@ -38,10 +46,12 @@ export function aggregateArtistRows(logs: LoggedShowForRanking[] | null | undefi
       name:     v.name,
       stage:    v.stage,
       day:      v.day,
+      venue:    v.venue,
+      showDate: v.showDate,
       avgScore: v.scores.reduce((a, b) => a + b, 0) / v.scores.length,
       count:    v.scores.length,
     }))
     .sort((a, b) => b.avgScore - a.avgScore)
 }
 
-export const RANKINGS_SELECT = 'artist_id, performance_rating, venue_rating, crowd_rating, artist_name, stage, day'
+export const RANKINGS_SELECT = 'artist_id, performance_rating, venue_rating, crowd_rating, artist_name, stage, day, venue, show_date'

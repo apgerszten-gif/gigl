@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { setActiveShow } from '@/lib/activeShow'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -15,6 +16,7 @@ interface Show {
   city: string
   state: string
   date: string
+  isoDate: string | null
   emoji: string
 }
 
@@ -73,6 +75,13 @@ export default function SelectShowPage() {
 
   function select(show: Show) {
     localStorage.setItem(LOCAL_STORAGE_KEY, show.id)
+
+    // Every result on this page comes from Ticketmaster search now (the
+    // old two-festival picker is gone), so it's always a single
+    // fully-specified show, never a bare festival id. Persisted separately
+    // from LOCAL_STORAGE_KEY (which only holds the id) so /log can pull the
+    // artist/venue/date back out without re-fetching - see lib/activeShow.
+    setActiveShow({ id: show.id, artist: show.artist, venue: show.venue, city: show.city, state: show.state, isoDate: show.isoDate })
 
     // Best-effort, fire-and-forget — this is only needed so the SMS webhook
     // (which has no access to a browser's localStorage) knows which show

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getFestival, LOCAL_STORAGE_KEY, type Festival } from '@/lib/festivals'
+import { formatShowDate } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { StarDisplay } from '@/components/StarDisplay'
 import { BattleModeCard } from '@/components/BattleModeCard'
@@ -299,13 +300,16 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
                     fontSize: 9, color: T.muted, letterSpacing: '0.06em',
                     textTransform: 'uppercase', fontWeight: 600,
                   }}>
-                    {row.stage && (
+                    {row.stage ? (
                       <span
                         onClick={e => { e.stopPropagation(); router.push(`/stage/${encodeURIComponent(row.stage)}`) }}
                         style={{ cursor: 'pointer' }}
                       >{row.stage}</span>
-                    )}
-                    {row.day ? ` · ${dayLabel(row.day)}` : ''} · {row.count} {row.count === 1 ? 'rating' : 'ratings'}
+                    ) : row.venue || null}
+                    {row.stage
+                      ? (row.day ? ` · ${dayLabel(row.day)}` : '')
+                      : (row.showDate ? ` · ${formatShowDate(row.showDate)}` : '')}
+                    {' · '}{row.count} {row.count === 1 ? 'rating' : 'ratings'}
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { DEFAULT_THEME as T } from '@/lib/theme'
 import { computeShowScore } from '@/lib/rating'
+import { formatShowDate } from '@/lib/dates'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
@@ -32,7 +33,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   const { data: logs } = await timeQuery(`artist:logged_shows(${params.artistId})`, supabase
     .from('logged_shows')
-    .select('user_id, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls, artist_name, stage, day')
+    .select('user_id, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls, artist_name, stage, day, venue, show_date')
     .eq('artist_id', params.artistId))
 
   if (!logs || logs.length === 0) notFound()
@@ -47,6 +48,8 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   const artistName = logs[0]?.artist_name ?? 'Unknown'
   const stage      = logs[0]?.stage ?? ''
   const day        = logs[0]?.day   ?? ''
+  const venueName  = logs[0]?.venue ?? ''
+  const showDate   = logs[0]?.show_date ?? null
 
   const rated = logs
     .filter(l => l.performance_rating != null && l.venue_rating != null && l.crowd_rating != null)
@@ -102,7 +105,11 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           fontSize: 10, color: T.muted, letterSpacing: '0.08em',
           textTransform: 'uppercase', marginBottom: 4, fontWeight: 600,
         }}>
-          {stage}{day ? ` · ${dayLabel(day)}` : ''}
+          {stage
+            ? <>{stage}{day ? ` · ${dayLabel(day)}` : ''}</>
+            : venueName
+            ? <>{venueName}{showDate ? ` · ${formatShowDate(showDate)}` : ''}</>
+            : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <div style={{

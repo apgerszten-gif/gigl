@@ -8,8 +8,10 @@ export interface PendingLogPayload {
   user_id:            string
   artist_id:          string
   artist_name:        string
-  stage:              string
-  day:                string
+  stage:              string | null
+  day:                string | null
+  venue:              string | null
+  show_date:          string | null
   performance_rating: number
   venue_rating:       number
   crowd_rating:       number

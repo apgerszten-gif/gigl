@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { DEFAULT_THEME as T } from '@/lib/theme'
 import { showScore } from '@/lib/rating'
+import { formatShowDate } from '@/lib/dates'
 import { resolveMediaUrls } from '@/lib/media'
 import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
@@ -158,7 +159,13 @@ export default async function PublicProfile({ params }: { params: { username: st
                       <div style={{
                         fontSize: 10, color: T.muted, letterSpacing: '0.06em',
                         textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
-                      }}>{show.stage} · {show.day}</div>
+                      }}>
+                        {show.stage
+                          ? <>{show.stage} · {show.day}</>
+                          : show.venue
+                          ? <>{show.venue}{show.show_date ? ` · ${formatShowDate(show.show_date)}` : ''}</>
+                          : null}
+                      </div>
                       <div style={{ fontSize: 10, color: T.accent, marginTop: 2, fontWeight: 600 }}>{rankLabel}</div>
                     </div>
                   </div>

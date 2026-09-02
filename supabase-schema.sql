@@ -410,3 +410,22 @@ $$ language plpgsql security definer;
 -- not a vague "vibe" catch-all. Existing values carry over unchanged - this
 -- is a rename, not a new column.
 alter table public.logged_shows rename column vibe_rating to crowd_rating;
+
+-- Show search (app/select-festival) now sources from Ticketmaster in
+-- addition to the two hardcoded festival lineups in lib/festivals.ts. A
+-- Ticketmaster-sourced show has a specific venue and calendar date, not a
+-- festival `stage`/`day` - those two columns predate this and are still
+-- required in practice for a festival-lineup log, but can no longer be
+-- enforced not-null at the table level since a Ticketmaster-sourced row
+-- populates venue/show_date instead. See lib/rankings.ts, app/log-show,
+-- app/select-festival, and every reader listed in that PR for how both
+-- shapes now coexist.
+--
+-- Not adding a CHECK constraint enforcing "(stage and day) or (venue and
+-- show_date)" - flagging that as worth considering rather than adding it
+-- unasked; happy to add it if you want the DB to guarantee that invariant
+-- rather than just the application code.
+alter table public.logged_shows alter column stage drop not null;
+alter table public.logged_shows alter column day drop not null;
+alter table public.logged_shows add column venue text;
+alter table public.logged_shows add column show_date date;

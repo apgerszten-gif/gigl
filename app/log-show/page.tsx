@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { createClient } from '@/lib/supabase/client'
 import { getFestival, hasDayOccurred, formatSetTime, LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { formatShowDate } from '@/lib/dates'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
@@ -122,17 +123,22 @@ function LogShowInner() {
   const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
-  const artistId    = searchParams.get('artistId') ?? ''
-  const artistName  = searchParams.get('artistName') ?? 'Unknown artist'
-  const stageParam  = searchParams.get('stage') ?? ''
-  const dayParam    = searchParams.get('day') ?? ''
+  const artistId       = searchParams.get('artistId') ?? ''
+  const artistName     = searchParams.get('artistName') ?? 'Unknown artist'
+  const stageParam     = searchParams.get('stage') ?? ''
+  const dayParam       = searchParams.get('day') ?? ''
+  const venueParam     = searchParams.get('venue') ?? ''
+  const showDateParam  = searchParams.get('showDate') ?? ''
 
-  const [stage, setStage] = useState(stageParam)
-  const [day, setDay]     = useState(dayParam)
+  const [stage, setStage]         = useState(stageParam)
+  const [day, setDay]             = useState(dayParam)
+  const [showVenue, setShowVenue] = useState(venueParam)
+  const [showDate, setShowDate]   = useState(showDateParam)
 
   // Shows can only be logged starting the calendar day they happen -
   // re-rating an already-logged show is exempt, since it can only exist if
-  // the show already happened.
+  // the show already happened. Only applies to the festival-lineup path;
+  // a Ticketmaster-sourced show has no `festival` and so is never locked.
   const [festival, setFestival] = useState<ReturnType<typeof getFestival>>(null)
   useEffect(() => {
     const id = localStorage.getItem(LOCAL_STORAGE_KEY)
@@ -144,7 +150,9 @@ function LogShowInner() {
   // artistId instead, so it shows up on both the fresh-log and re-rate paths.
   const scheduledArtist = festival?.artists.find(a => a.id === artistId)
   const setTime = scheduledArtist ? formatSetTime(scheduledArtist) : null
-  const venueDate = [stage, day, setTime].filter(Boolean).join(' · ') || 'Venue & date unavailable'
+  const venueDate = stage
+    ? [stage, day, setTime].filter(Boolean).join(' · ') || 'Venue & date unavailable'
+    : [showVenue, showDate ? formatShowDate(showDate) : null].filter(Boolean).join(' · ') || 'Venue & date unavailable'
 
   const [loadingExisting, setLoadingExisting] = useState(true)
   const [existingId, setExistingId]           = useState<string | null>(null)
@@ -183,7 +191,7 @@ function LogShowInner() {
       const loadStart = Date.now()
       const { data } = await timeQuery('log-show:logged_shows', supabase
         .from('logged_shows')
-        .select('id, stage, day, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls')
+        .select('id, stage, day, venue, show_date, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls')
         .eq('user_id', userId)
         .eq('artist_id', artistId)
         .maybeSingle())
@@ -192,6 +200,8 @@ function LogShowInner() {
         setExistingId(data.id)
         if (data.stage) setStage(data.stage)
         if (data.day) setDay(data.day)
+        if (data.venue) setShowVenue(data.venue)
+        if (data.show_date) setShowDate(data.show_date)
         if (data.performance_rating) setPerformance(data.performance_rating)
         if (data.venue_rating) setVenue(data.venue_rating)
         if (data.crowd_rating) setCrowd(data.crowd_rating)
@@ -344,8 +354,10 @@ function LogShowInner() {
       user_id:            user.id,
       artist_id:          artistId,
       artist_name:        artistName,
-      stage,
-      day,
+      stage:              stage || null,
+      day:                day || null,
+      venue:              showVenue || null,
+      show_date:          showDate || null,
       performance_rating: performance,
       venue_rating:        venue,
       crowd_rating:        crowd,
@@ -382,8 +394,10 @@ function LogShowInner() {
         user_id:            user.id,
         artist_id:          artistId,
         artist_name:        artistName,
-        stage,
-        day,
+        stage:              stage || null,
+        day:                day || null,
+        venue:              showVenue || null,
+        show_date:          showDate || null,
         performance_rating: performance,
         venue_rating:        venue,
         crowd_rating:        crowd,

@@ -10,6 +10,7 @@ import { MediaGrid } from '@/components/MediaGrid'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { formatShowDate } from '@/lib/dates'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
@@ -42,8 +43,10 @@ interface Show {
   id:                  string
   artist_id:           string
   artist_name:         string
-  stage:               string
-  day:                 string
+  stage:               string | null
+  day:                 string | null
+  venue:               string | null
+  show_date:           string | null
   performance_rating:  number | null
   venue_rating:        number | null
   crowd_rating:        number | null
@@ -390,7 +393,13 @@ export default function ProfilePage() {
                       <div style={{
                         fontSize: 10, color: T.muted, letterSpacing: '0.06em',
                         textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
-                      }}>{show.stage} · {show.day}</div>
+                      }}>
+                        {show.stage
+                          ? <>{show.stage} · {show.day}</>
+                          : show.venue
+                          ? <>{show.venue}{show.show_date ? ` · ${formatShowDate(show.show_date)}` : ''}</>
+                          : null}
+                      </div>
                       <div style={{ fontSize: 10, color: T.accent, marginTop: 2, fontWeight: 600 }}>{rankLabel}</div>
                     </div>
                     <button onClick={() => isEditing ? setEditingId(null) : startEdit(show)}
@@ -505,8 +514,10 @@ export default function ProfilePage() {
                           const params = new URLSearchParams({
                             artistId:   show.artist_id,
                             artistName: show.artist_name,
-                            stage:      show.stage,
-                            day:        show.day,
+                            ...(show.stage ? { stage: show.stage } : {}),
+                            ...(show.day ? { day: show.day } : {}),
+                            ...(show.venue ? { venue: show.venue } : {}),
+                            ...(show.show_date ? { showDate: show.show_date } : {}),
                           })
                           router.push(`/log-show?${params.toString()}`)
                         }} style={{

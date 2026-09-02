@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { formatShowDate } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -43,8 +44,10 @@ interface GlobalLog {
   crowd_rating:         number | null
   created_at:  string
   user_id:     string
-  stage:       string
-  day:         string
+  stage:       string | null
+  day:         string | null
+  venue:       string | null
+  show_date:   string | null
   username:    string | null
   photo_url:   string | null
   media_urls:  string[] | null
@@ -108,7 +111,7 @@ function FeedInner() {
 
     let logsQuery = supabase
       .from('logged_shows')
-      .select('id, artist_id, artist_name, performance_rating, venue_rating, crowd_rating, created_at, user_id, stage, day, photo_url, media_urls, review, tags')
+      .select('id, artist_id, artist_name, performance_rating, venue_rating, crowd_rating, created_at, user_id, stage, day, venue, show_date, photo_url, media_urls, review, tags')
       .order('created_at', { ascending: false })
       .limit(200)
     if (festival) logsQuery = logsQuery.in('artist_id', festival.artists.map(a => a.id))
@@ -420,6 +423,8 @@ function FeedInner() {
             const name      = item.artist_name ?? 'Unknown'
             const stageName = item.stage       ?? ''
             const day       = item.day         ?? ''
+            const venueName = item.venue       ?? ''
+            const showDate  = item.show_date   ?? null
             const isMe      = item.user_id === user?.id
             const username  = item.username ?? 'anonymous'
             const isTop     = i === 0
@@ -476,7 +481,11 @@ function FeedInner() {
                         cursor: stageName ? 'pointer' : 'default',
                       }}
                     >
-                      {stageName}{day ? ` · ${dayLabel(day)}` : ''}
+                      {stageName
+                        ? <>{stageName}{day ? ` · ${dayLabel(day)}` : ''}</>
+                        : venueName
+                        ? <>{venueName}{showDate ? ` · ${formatShowDate(showDate)}` : ''}</>
+                        : null}
                     </div>
                     <div
                       onClick={() => router.push(isMe ? '/profile' : `/u/${username}`)}

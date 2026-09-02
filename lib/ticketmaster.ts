@@ -2,6 +2,8 @@
 // TICKETMASTER_API_KEY must never reach the browser - only called from
 // app/api/shows/search/route.ts.
 
+import { formatShowDate } from './dates'
+
 const TICKETMASTER_API_KEY = process.env.TICKETMASTER_API_KEY!
 
 export interface Show {
@@ -11,7 +13,8 @@ export interface Show {
   venue: string
   city: string
   state: string
-  date: string
+  date: string          // display-formatted, e.g. 'Sep 12'
+  isoDate: string | null // 'YYYY-MM-DD', carried through so a picked show can be logged with a real show_date
   emoji: string
 }
 
@@ -82,16 +85,6 @@ function emojiFor(event: TMEvent, headliner?: TMAttraction): string {
   return GENRE_EMOJI[genreName.toLowerCase()] ?? DEFAULT_EMOJI
 }
 
-// '2026-09-12' -> 'Sep 12'. Parsed with an explicit local-midnight time so
-// this doesn't shift a day when the server's timezone isn't UTC-aligned
-// with a bare 'YYYY-MM-DD' (which Date parses as UTC).
-function formatDate(localDate: string | undefined): string {
-  if (!localDate) return 'TBA'
-  const d = new Date(`${localDate}T00:00:00`)
-  if (isNaN(d.getTime())) return 'TBA'
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 function toShow(event: TMEvent): Show {
   const venue = event._embedded?.venues?.[0]
   const attractions = event._embedded?.attractions ?? []
@@ -110,7 +103,8 @@ function toShow(event: TMEvent): Show {
     venue:   venue?.name ?? 'Venue TBA',
     city:    venue?.city?.name ?? '',
     state:   venue?.state?.stateCode ?? venue?.state?.name ?? '',
-    date:    formatDate(event.dates?.start?.localDate),
+    date:    formatShowDate(event.dates?.start?.localDate),
+    isoDate: event.dates?.start?.localDate ?? null,
     emoji:   emojiFor(event, headliner),
   }
 }

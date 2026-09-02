@@ -3,6 +3,7 @@
 import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getFestival, getArtistsByDay, hasDayOccurred, formatSetTime, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
+import { getActiveShow } from '@/lib/activeShow'
 import { createClient } from '@/lib/supabase/client'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
@@ -32,13 +33,29 @@ function LogInner() {
   const [loadingLogged, setLoadingLogged] = useState(true)
 
   useEffect(() => {
-    const festivalId = localStorage.getItem(LOCAL_STORAGE_KEY)
-    if (!festivalId) { router.replace('/select-festival'); return }
-    const f = getFestival(festivalId)
-    if (f) {
-      setFestival(f)
-      setActiveDay(f.days[0])
+    const activeId = localStorage.getItem(LOCAL_STORAGE_KEY)
+    if (!activeId) { router.replace('/select-festival'); return }
+
+    const f = getFestival(activeId)
+    if (f) { setFestival(f); setActiveDay(f.days[0]); return }
+
+    // Not a real festival id - the active selection is a single
+    // fully-specified Ticketmaster show, which has no lineup to pick an
+    // artist from. Skip this screen entirely and go straight to logging it.
+    const activeShow = getActiveShow()
+    if (activeShow && activeShow.id === activeId) {
+      const params = new URLSearchParams({
+        artistId:   activeShow.id,
+        artistName: activeShow.artist,
+        venue:      activeShow.venue,
+      })
+      if (activeShow.isoDate) params.set('showDate', activeShow.isoDate)
+      router.replace(`/log-show?${params.toString()}`)
+      return
     }
+
+    // Stale or unrecognized id with no matching show details - nothing to log.
+    router.replace('/select-festival')
   }, [])
 
   useEffect(() => {
