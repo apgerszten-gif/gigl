@@ -2,18 +2,37 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { FESTIVALS, LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 
-export default function SelectFestivalPage() {
+interface Show {
+  id: string
+  artist: string
+  support?: string[]
+  venue: string
+  city: string
+  state: string
+  date: string
+  emoji: string
+}
+
+const SEARCH_DEBOUNCE_MS = 350
+
+export default function SelectShowPage() {
   const router   = useRouter()
   const supabase = createClient()
   const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
   const [isSwitching, setIsSwitching] = useState(false)
+  const [query, setQuery] = useState('')
+
+  const [results, setResults] = useState<Show[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/')
@@ -23,15 +42,47 @@ export default function SelectFestivalPage() {
     setIsSwitching(!!localStorage.getItem(LOCAL_STORAGE_KEY))
   }, [])
 
-  function select(id: string) {
-    localStorage.setItem(LOCAL_STORAGE_KEY, id)
+  // Debounced so typing doesn't fire a request per keystroke — a cleared or
+  // empty query still fetches (the trending/browse list), but fires
+  // immediately rather than waiting out the debounce, so first paint and
+  // "backspaced to empty" don't sit on an artificial delay.
+  useEffect(() => {
+    const trimmed = query.trim()
+    const controller = new AbortController()
+    const timeoutId = setTimeout(async () => {
+      setLoading(true)
+      setError(false)
+      try {
+        const res = await fetch(`/api/shows/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal })
+        if (!res.ok) throw new Error(`search failed: ${res.status}`)
+        const data = await res.json()
+        setResults(data.shows ?? [])
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('show search failed:', err)
+          setError(true)
+          setResults([])
+        }
+      } finally {
+        setLoading(false)
+      }
+    }, trimmed ? SEARCH_DEBOUNCE_MS : 0)
+
+    return () => { clearTimeout(timeoutId); controller.abort() }
+  }, [query, retryToken])
+
+  function select(show: Show) {
+    localStorage.setItem(LOCAL_STORAGE_KEY, show.id)
 
     // Best-effort, fire-and-forget — this is only needed so the SMS webhook
-    // (which has no access to a browser's localStorage) knows which
-    // festival to match artist names against. The in-app UI never depends
-    // on this write completing.
+    // (which has no access to a browser's localStorage) knows which show
+    // to match artist names against. The in-app UI never depends on this
+    // write completing.
+    // NOTE: active_festival_id is a holdover column name from the
+    // festival-only model — it's being repurposed here to hold whichever
+    // show id the person picked. Renaming it is a backend follow-up.
     if (user) {
-      supabase.from('profiles').update({ active_festival_id: id }).eq('id', user.id).then(({ error }) => {
+      supabase.from('profiles').update({ active_festival_id: show.id }).eq('id', user.id).then(({ error }) => {
         if (error) console.error('active_festival_id update failed:', error.message)
       })
     }
@@ -51,7 +102,7 @@ export default function SelectFestivalPage() {
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div style={{
-        padding: '52px 24px 32px',
+        padding: '52px 24px 24px',
         borderBottom: '1px solid rgba(74,53,40,0.1)',
       }}>
         {isSwitching && (
@@ -78,31 +129,106 @@ export default function SelectFestivalPage() {
         <div style={{
           fontSize: 10, color: T.accent, letterSpacing: '0.14em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-        }}>Choose your festival</div>
+        }}>Find your show</div>
 
         <div style={{
           fontFamily: T.serif, fontSize: 30, fontWeight: 700,
           lineHeight: 1.1, letterSpacing: '-1px', marginBottom: 10, color: '#4A3528',
         }}>
-          Where are you<br />
-          <span>headed</span><span style={{ color: T.accent }}>?</span>
+          What are you<br />
+          <span>seeing</span><span style={{ color: T.accent }}>?</span>
         </div>
 
-        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
-          We&apos;ll load the full lineup so you can start logging sets.
+        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 20 }}>
+          Any artist, venue, or city — we&apos;ll pull it up so you can start logging sets.
+        </div>
+
+        {/* ── Search ────────────────────────────────────────────────────────── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: T.card, border: T.cardBorder, borderRadius: 5,
+          padding: '12px 14px',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search artist, venue, or city"
+            style={{
+              flex: 1, border: 'none', outline: 'none', background: 'transparent',
+              fontFamily: T.sans, fontSize: 14, color: '#4A3528',
+            }}
+          />
         </div>
       </div>
 
-      {/* ── Festival list ────────────────────────────────────────────────────── */}
-      <div style={{ padding: '16px 24px 100px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {FESTIVALS.map((f, i) => (
+      {/* ── Show list ─────────────────────────────────────────────────────────── */}
+      <div style={{ padding: '20px 24px 100px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{
+          fontSize: 10, color: T.muted, letterSpacing: '0.12em',
+          textTransform: 'uppercase', fontWeight: 700, marginBottom: 2,
+        }}>
+          {query.trim() ? `Results for "${query.trim()}"` : 'Upcoming'}
+        </div>
+
+        {loading && (
+          <>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} style={{
+                background: T.card, border: T.cardBorder, borderRadius: 5,
+                padding: '18px 20px', display: 'flex', alignItems: 'flex-start', gap: 16,
+              }}>
+                <div className="shimmer" style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="shimmer" style={{ width: '55%', height: 16, borderRadius: 3 }} />
+                  <div className="shimmer" style={{ width: '75%', height: 10, borderRadius: 3 }} />
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {!loading && error && (
+          <div style={{
+            background: T.card, border: `1.5px dashed ${T.muted}`, borderRadius: 5,
+            padding: '20px', textAlign: 'center', fontSize: 13, color: T.muted,
+          }}>
+            Couldn&apos;t load shows right now.
+            <button
+              onClick={() => setRetryToken(t => t + 1)}
+              style={{
+                display: 'block', margin: '10px auto 0', background: 'none', border: 'none',
+                color: T.accent, fontFamily: T.sans, fontSize: 12, fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer', padding: 0,
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && results.length === 0 && (
+          <div style={{
+            background: T.card, border: `1.5px dashed ${T.muted}`, borderRadius: 5,
+            padding: '20px', textAlign: 'center', fontSize: 13, color: T.muted,
+          }}>
+            {query.trim()
+              ? <>No shows matched &quot;{query.trim()}&quot; yet.</>
+              : 'No upcoming shows to show right now.'}
+          </div>
+        )}
+
+        {!loading && !error && results.map(s => (
           <button
-            key={f.id}
-            onClick={() => select(f.id)}
+            key={s.id}
+            onClick={() => select(s)}
             style={{
               background: T.card,
               border: T.cardBorder,
-              boxShadow: i === 0 ? T.cardShadow : 'none',
+              boxShadow: 'none',
               borderRadius: 5,
               padding: '18px 20px',
               display: 'flex',
@@ -114,35 +240,37 @@ export default function SelectFestivalPage() {
               transition: 'box-shadow 0.15s ease',
             }}
             onMouseEnter={e => (e.currentTarget.style.boxShadow = T.cardShadow)}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = i === 0 ? T.cardShadow : 'none')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
-            <div style={{ fontSize: 28, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>{f.emoji}</div>
+            <div style={{ fontSize: 28, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>{s.emoji}</div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontFamily: T.serif, fontSize: 18, fontWeight: 700,
                 color: '#4A3528', letterSpacing: '-0.5px', marginBottom: 3, lineHeight: 1.2,
-              }}>{f.name}</div>
+              }}>{s.artist}</div>
 
               <div style={{
                 fontSize: 10, color: T.muted, letterSpacing: '0.08em',
                 textTransform: 'uppercase', fontFamily: T.sans,
-                fontWeight: 600, marginBottom: 10,
+                fontWeight: 600, marginBottom: s.support ? 10 : 0,
               }}>
-                {f.dates} · {f.city}, {f.state}
+                {s.date} · {s.venue} · {s.city}, {s.state}
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {f.headliners.map(h => (
-                  <span key={h} style={{
-                    fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                    background: T.accentDim,
-                    color: T.accent,
-                    border: `1.5px solid ${T.accentBorder}`,
-                    fontFamily: T.sans, fontWeight: 600,
-                  }}>{h}</span>
-                ))}
-              </div>
+              {s.support && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {s.support.map(h => (
+                    <span key={h} style={{
+                      fontSize: 10, padding: '3px 10px', borderRadius: 20,
+                      background: T.accentDim,
+                      color: T.accent,
+                      border: `1.5px solid ${T.accentBorder}`,
+                      fontFamily: T.sans, fontWeight: 600,
+                    }}>{h}</span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div style={{ flexShrink: 0, marginTop: 4 }}>
@@ -153,7 +281,7 @@ export default function SelectFestivalPage() {
           </button>
         ))}
 
-        {/* ── Venues tile — disabled / coming soon ──────────────────────────── */}
+        {/* ── Can't find it — disabled / coming soon ─────────────────────────── */}
         <div
           aria-disabled="true"
           style={{
@@ -176,8 +304,8 @@ export default function SelectFestivalPage() {
             flexShrink: 0, marginTop: 2,
           }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
-              <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </div>
 
@@ -185,23 +313,15 @@ export default function SelectFestivalPage() {
             <div style={{
               fontFamily: T.serif, fontSize: 18, fontWeight: 700,
               color: T.muted, letterSpacing: '-0.5px', marginBottom: 3, lineHeight: 1.2,
-            }}>Venues</div>
+            }}>Can&apos;t find your show?</div>
 
             <div style={{
               fontSize: 10, color: T.faint, letterSpacing: '0.08em',
               textTransform: 'uppercase', fontFamily: T.sans,
               fontWeight: 600,
             }}>
-              Coming soon
+              Add it yourself — coming soon
             </div>
-          </div>
-
-          <div style={{ flexShrink: 0, marginTop: 4 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" />
-              <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-              <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
-            </svg>
           </div>
         </div>
       </div>
