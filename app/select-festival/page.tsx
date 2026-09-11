@@ -96,7 +96,10 @@ export default function SelectShowPage() {
       })
     }
 
-    router.push('/feed')
+    // /log already knows how to take a Ticketmaster-sourced active show
+    // (set above) straight into /log-show, skipping the festival lineup
+    // picker entirely - see app/log/page.tsx.
+    router.push('/log')
   }
 
   return (
