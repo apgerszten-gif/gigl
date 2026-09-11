@@ -9,7 +9,7 @@ import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
-import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { formatShowDate } from '@/lib/dates'
 import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
@@ -68,7 +68,6 @@ export default function ProfilePage() {
   const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
-  const [festivalLabel, setFestivalLabel]   = useState('Festival Season 2026')
   const [profile, setProfile]               = useState<Profile | null>(null)
   const [shows, setShows]                   = useState<Show[]>([])
   const [loading, setLoading]               = useState(true)
@@ -84,14 +83,6 @@ export default function ProfilePage() {
   const [followerCount, setFollowerCount]   = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    const id = localStorage.getItem(LOCAL_STORAGE_KEY)
-    if (id) {
-      const f = getFestival(id)
-      if (f) setFestivalLabel(`${f.emoji} ${f.shortName} ${f.dates.slice(-4)}`)
-    }
-  }, [])
 
   useEffect(() => {
     if (authLoading) return
@@ -240,9 +231,9 @@ export default function ProfilePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
       }}>
         {T.logoUrl ? (
-          <img src={T.logoUrl} alt="Festival" style={{ height: 20, objectFit: 'contain', filter: T.logoFilter }} />
+          <img src={T.logoUrl} alt="Gigl" style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }} />
         ) : (
-          <div style={{ fontFamily: T.serif, fontSize: 19, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
+          <div style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
             Gigl<span style={{ color: T.accent }}>/</span>
           </div>
         )}
@@ -250,7 +241,7 @@ export default function ProfilePage() {
           <button onClick={() => router.push('/select-festival')} style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: 0,
             color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
-          }}>switch fest</button>
+          }}>search shows</button>
           <span style={{ fontSize: 10, color: T.faint }}>·</span>
           <button onClick={signOut} style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: 0,
@@ -261,11 +252,7 @@ export default function ProfilePage() {
 
       {/* ── Profile header ───────────────────────────────────────────────────── */}
       <div style={{ padding: '20px 24px 0' }}>
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
-        }}>{festivalLabel}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 4, marginBottom: 10 }}>
           <div style={{
             fontFamily: T.serif, fontSize: 28, fontWeight: 700,
             lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',

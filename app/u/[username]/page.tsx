@@ -67,11 +67,7 @@ export default async function PublicProfile({ params }: { params: { username: st
 
       {/* ── Profile header ───────────────────────────────────────────────────── */}
       <div style={{ padding: '20px 24px 0' }}>
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 4,
-        }}>Festival Season 2026</div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 4, marginBottom: 8 }}>
           <div style={{
             fontFamily: T.serif, fontSize: 28, fontWeight: 700,
             lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',

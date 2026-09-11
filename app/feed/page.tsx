@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { getFestival, LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { formatShowDate } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
@@ -63,7 +63,6 @@ function FeedInner() {
 
   const [globalFeed, setGlobalFeed]       = useState<GlobalLog[]>([])
   const [loading, setLoading]             = useState(true)
-  const [festivalName, setFestivalName]   = useState<string | null>(null)
   const [showLogTip, setShowLogTip]       = useState(false)
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
@@ -71,14 +70,6 @@ function FeedInner() {
   const [followingIds, setFollowingIds]   = useState<Set<string>>(new Set())
   const [interactions, setInteractions]   = useState<Record<string, Interactions>>({})
   const [activeComments, setActiveComments] = useState<string | null>(null)
-
-  useEffect(() => {
-    const id = localStorage.getItem(LOCAL_STORAGE_KEY)
-    if (id) {
-      const f = getFestival(id)
-      if (f) setFestivalName(f.emoji + ' ' + f.shortName + ' ' + f.dates.slice(-4))
-    }
-  }, [])
 
   // Stale-while-revalidate: show whatever we last fetched immediately, so a
   // repeat visit never has to sit on a blank spinner while the real fetch
@@ -101,20 +92,11 @@ function FeedInner() {
     const loadStart = Date.now()
     console.log(`[perf] feed:load start userId=${userId}`)
 
-    // Scope to whichever festival is currently selected (artist_id is
-    // festival-specific, e.g. 'lolla-...' vs 'osl-...') so activity from one
-    // festival never bleeds into another's feed. No filter is applied if no
-    // festival is selected yet, matching this page's existing lenient
-    // fallback for that edge case.
-    const festivalId = localStorage.getItem(LOCAL_STORAGE_KEY)
-    const festival    = festivalId ? getFestival(festivalId) : null
-
-    let logsQuery = supabase
+    const logsQuery = supabase
       .from('logged_shows')
       .select('id, artist_id, artist_name, performance_rating, venue_rating, crowd_rating, created_at, user_id, stage, day, venue, show_date, photo_url, media_urls, review, tags')
       .order('created_at', { ascending: false })
       .limit(200)
-    if (festival) logsQuery = logsQuery.in('artist_id', festival.artists.map(a => a.id))
 
     const [{ data: profileRow, error: tipError }, { data: logs }, { data: followRows }] = await Promise.all([
       timeQuery('feed:profiles', supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single()),
@@ -285,7 +267,7 @@ function FeedInner() {
       {/* ── Top: combined identity row + tab toggle ─────────────────────────── */}
       <div style={{ flex: '0 0 auto' }}>
 
-        {/* Logo · festival pill · switch/sign-out — one row */}
+        {/* Logo · search shows/sign-out — one row */}
         <div style={{
           padding: '11px 20px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
@@ -295,34 +277,17 @@ function FeedInner() {
             {T.logoUrl ? (
               <img
                 src={T.logoUrl}
-                alt="Festival"
-                style={{ height: 20, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
+                alt="Gigl"
+                style={{ height: 22, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
               />
             ) : (
               <div style={{
-                fontFamily: T.serif, fontSize: 19, fontWeight: 700,
+                fontFamily: T.serif, fontSize: 21, fontWeight: 700,
                 color: '#4A3528', letterSpacing: '-0.5px', flexShrink: 0,
               }}>
                 Gigl<span style={{ color: T.accent }}>/</span>
               </div>
             )}
-
-            <button
-              onClick={() => router.push('/select-festival')}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                display: 'flex', alignItems: 'center', gap: 3, minWidth: 0,
-              }}
-            >
-              <span style={{
-                fontSize: 11, color: T.accent, letterSpacing: '0.1em',
-                textTransform: 'uppercase', fontWeight: 700,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>{festivalName ?? 'Festival Season 2026'}</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" style={{ flexShrink: 0 }}>
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
@@ -332,7 +297,7 @@ function FeedInner() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
               }}
-            >switch fest</button>
+            >search shows</button>
             <span style={{ fontSize: 10, color: T.faint }}>·</span>
             <button
               onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
