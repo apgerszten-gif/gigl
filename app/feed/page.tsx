@@ -612,7 +612,7 @@ function FeedInner() {
             </div>
           )}
           <div
-            onClick={() => router.push('/log')}
+            onClick={() => router.push('/select-festival')}
             style={{
               width: 42, height: 42,
               background: T.accent, borderRadius: '50%',
