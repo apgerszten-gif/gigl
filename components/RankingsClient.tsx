@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getFestival, LOCAL_STORAGE_KEY, type Festival } from '@/lib/festivals'
+import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { formatShowDate } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { StarDisplay } from '@/components/StarDisplay'
@@ -15,6 +15,14 @@ import { aggregateArtistRows, RANKINGS_SELECT, type ArtistRow } from '@/lib/rank
 
 export type { ArtistRow }
 
+const WEEKDAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+// Unknown day strings sort after the real weekdays instead of ahead of them.
+function weekdayIndex(d: string): number {
+  const i = WEEKDAY_ORDER.indexOf(d.toLowerCase())
+  return i === -1 ? WEEKDAY_ORDER.length : i
+}
+
 export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const router   = useRouter()
   const supabase = createClient()
@@ -22,7 +30,6 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const { user, loading: authLoading } = useAuth()
 
   const [rows, setRows]         = useState<ArtistRow[]>(initialRows)
-  const [festival, setFestival] = useState<Festival | null>(null)
   const [filter, setFilter]     = useState<string>('all')
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
@@ -44,14 +51,6 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       .subscribe()
 
     return () => { void supabase.removeChannel(channel) }
-  }, [])
-
-  useEffect(() => {
-    const id = localStorage.getItem(LOCAL_STORAGE_KEY)
-    if (id) {
-      const f = getFestival(id)
-      if (f) setFestival(f)
-    }
   }, [])
 
   // Rankings is server-rendered and user-agnostic, so battle_mode_unlocked/
@@ -101,23 +100,22 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       })
   }, [rows])
 
-  // rows starts from the server-rendered snapshot and is kept current by the
-  // realtime subscription above; scope it here to whichever festival is
-  // currently selected (RankingsPage has no access to the client's
-  // localStorage festival selection), same as the day filter below, so
-  // ratings from one festival never bleed into another's leaderboard.
-  const festivalArtistIds = festival ? new Set(festival.artists.map(a => a.id)) : null
-  const scopedRows = festivalArtistIds ? rows.filter(r => festivalArtistIds.has(r.artist_id)) : rows
+  // Day chips are derived from the logged shows themselves rather than from a
+  // festival lineup. Show search moved to Ticketmaster, so there is no lineup
+  // to read, and the festival id this used to pull from localStorage only made
+  // the chips depend on whatever stale value the browser was still carrying.
+  const loggedDays = Array.from(new Set(rows.map(r => r.day).filter(Boolean)))
+    .sort((a, b) => weekdayIndex(a) - weekdayIndex(b))
+  const days = ['all', ...loggedDays]
 
-  const days    = festival ? ['all', ...festival.days] : ['all', 'friday', 'saturday', 'sunday']
-  const visible = filter === 'all' ? scopedRows : scopedRows.filter(r => r.day === filter)
+  // A day can disappear from the list on a realtime update; fall back to 'all'
+  // rather than stranding the user on a filter that now matches nothing.
+  const activeFilter = days.includes(filter) ? filter : 'all'
+  const visible = activeFilter === 'all' ? rows : rows.filter(r => r.day === activeFilter)
 
   function dayLabel(d: string) {
-    if (festival?.dayDates[d]) return festival.dayDates[d]
     return d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)
   }
-
-  const festivalLabel = festival ? `${festival.emoji} ${festival.shortName} ${festival.dates.slice(-4)}` : 'Festival Season 2026'
 
   return (
     <div style={{
@@ -126,7 +124,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       maxWidth: 430, margin: '0 auto',
     }}>
 
-      {/* ── Top bar: logo · festival pill · switch/sign-out — one row ────────── */}
+      {/* ── Top bar: logo · search shows/sign-out — one row ───────────────────── */}
       <div style={{
         padding: '11px 20px',
         position: 'sticky', top: 0, zIndex: 10,
@@ -139,34 +137,17 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
           {T.logoUrl ? (
             <img
               src={T.logoUrl}
-              alt="Festival"
-              style={{ height: 20, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
+              alt="Gigl"
+              style={{ height: 22, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
             />
           ) : (
             <div style={{
-              fontFamily: T.serif, fontSize: 19, fontWeight: 700,
+              fontFamily: T.serif, fontSize: 21, fontWeight: 700,
               color: '#4A3528', letterSpacing: '-0.5px', flexShrink: 0,
             }}>
               Gigl<span style={{ color: T.accent }}>/</span>
             </div>
           )}
-
-          <button
-            onClick={() => router.push('/select-festival')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              display: 'flex', alignItems: 'center', gap: 3, minWidth: 0,
-            }}
-          >
-            <span style={{
-              fontSize: 11, color: T.accent, letterSpacing: '0.1em',
-              textTransform: 'uppercase', fontWeight: 700,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>{festivalLabel}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" style={{ flexShrink: 0 }}>
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
@@ -176,7 +157,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
               background: 'none', border: 'none', cursor: 'pointer', padding: 0,
               color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
             }}
-          >switch fest</button>
+          >search shows</button>
           <span style={{ fontSize: 10, color: T.faint }}>·</span>
           <button
             onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
@@ -217,22 +198,25 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
           }}>Rankings</button>
         </div>
 
-        {/* Day filter — the dates, right below the header/tabs and above the list */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {days.map(d => (
-            <button key={d} onClick={() => setFilter(d)} style={{
-              flex: 1, padding: '6px 0', borderRadius: 4,
-              background: filter === d ? T.accentDim : 'transparent',
-              border: filter === d ? `1.5px solid ${T.accentBorder}` : '1.5px solid rgba(74,53,40,0.15)',
-              color: filter === d ? T.accent : T.muted,
-              fontSize: 9, cursor: 'pointer',
-              fontFamily: T.sans, fontWeight: filter === d ? 700 : 500,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}>
-              {d === 'all' ? 'All' : dayLabel(d)}
-            </button>
-          ))}
-        </div>
+        {/* Day filter — only worth showing once the logged shows actually span
+            more than one day; with a single day 'All' is the whole list. */}
+        {loggedDays.length > 1 && (
+          <div style={{ display: 'flex', gap: 6 }}>
+            {days.map(d => (
+              <button key={d} onClick={() => setFilter(d)} style={{
+                flex: 1, padding: '6px 0', borderRadius: 4,
+                background: activeFilter === d ? T.accentDim : 'transparent',
+                border: activeFilter === d ? `1.5px solid ${T.accentBorder}` : '1.5px solid rgba(74,53,40,0.15)',
+                color: activeFilter === d ? T.accent : T.muted,
+                fontSize: 9, cursor: 'pointer',
+                fontFamily: T.sans, fontWeight: activeFilter === d ? 700 : 500,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>
+                {d === 'all' ? 'All' : dayLabel(d)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── List ────────────────────────────────────────────────────────────── */}
