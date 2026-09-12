@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getFestival, LOCAL_STORAGE_KEY, type Festival } from '@/lib/festivals'
+import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { formatShowDate } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { StarDisplay } from '@/components/StarDisplay'
@@ -15,6 +15,14 @@ import { aggregateArtistRows, RANKINGS_SELECT, type ArtistRow } from '@/lib/rank
 
 export type { ArtistRow }
 
+const WEEKDAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+// Unknown day strings sort after the real weekdays instead of ahead of them.
+function weekdayIndex(d: string): number {
+  const i = WEEKDAY_ORDER.indexOf(d.toLowerCase())
+  return i === -1 ? WEEKDAY_ORDER.length : i
+}
+
 export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const router   = useRouter()
   const supabase = createClient()
@@ -22,7 +30,6 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const { user, loading: authLoading } = useAuth()
 
   const [rows, setRows]         = useState<ArtistRow[]>(initialRows)
-  const [festival, setFestival] = useState<Festival | null>(null)
   const [filter, setFilter]     = useState<string>('all')
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
@@ -44,14 +51,6 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       .subscribe()
 
     return () => { void supabase.removeChannel(channel) }
-  }, [])
-
-  useEffect(() => {
-    const id = localStorage.getItem(LOCAL_STORAGE_KEY)
-    if (id) {
-      const f = getFestival(id)
-      if (f) setFestival(f)
-    }
   }, [])
 
   // Rankings is server-rendered and user-agnostic, so battle_mode_unlocked/
@@ -101,11 +100,20 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       })
   }, [rows])
 
-  const days    = festival ? ['all', ...festival.days] : ['all', 'friday', 'saturday', 'sunday']
-  const visible = filter === 'all' ? rows : rows.filter(r => r.day === filter)
+  // Day chips are derived from the logged shows themselves rather than from a
+  // festival lineup. Show search moved to Ticketmaster, so there is no lineup
+  // to read, and the festival id this used to pull from localStorage only made
+  // the chips depend on whatever stale value the browser was still carrying.
+  const loggedDays = Array.from(new Set(rows.map(r => r.day).filter(Boolean)))
+    .sort((a, b) => weekdayIndex(a) - weekdayIndex(b))
+  const days = ['all', ...loggedDays]
+
+  // A day can disappear from the list on a realtime update; fall back to 'all'
+  // rather than stranding the user on a filter that now matches nothing.
+  const activeFilter = days.includes(filter) ? filter : 'all'
+  const visible = activeFilter === 'all' ? rows : rows.filter(r => r.day === activeFilter)
 
   function dayLabel(d: string) {
-    if (festival?.dayDates[d]) return festival.dayDates[d]
     return d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)
   }
 
@@ -190,22 +198,25 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
           }}>Rankings</button>
         </div>
 
-        {/* Day filter — the dates, right below the header/tabs and above the list */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {days.map(d => (
-            <button key={d} onClick={() => setFilter(d)} style={{
-              flex: 1, padding: '6px 0', borderRadius: 4,
-              background: filter === d ? T.accentDim : 'transparent',
-              border: filter === d ? `1.5px solid ${T.accentBorder}` : '1.5px solid rgba(74,53,40,0.15)',
-              color: filter === d ? T.accent : T.muted,
-              fontSize: 9, cursor: 'pointer',
-              fontFamily: T.sans, fontWeight: filter === d ? 700 : 500,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}>
-              {d === 'all' ? 'All' : dayLabel(d)}
-            </button>
-          ))}
-        </div>
+        {/* Day filter — only worth showing once the logged shows actually span
+            more than one day; with a single day 'All' is the whole list. */}
+        {loggedDays.length > 1 && (
+          <div style={{ display: 'flex', gap: 6 }}>
+            {days.map(d => (
+              <button key={d} onClick={() => setFilter(d)} style={{
+                flex: 1, padding: '6px 0', borderRadius: 4,
+                background: activeFilter === d ? T.accentDim : 'transparent',
+                border: activeFilter === d ? `1.5px solid ${T.accentBorder}` : '1.5px solid rgba(74,53,40,0.15)',
+                color: activeFilter === d ? T.accent : T.muted,
+                fontSize: 9, cursor: 'pointer',
+                fontFamily: T.sans, fontWeight: activeFilter === d ? 700 : 500,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>
+                {d === 'all' ? 'All' : dayLabel(d)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── List ────────────────────────────────────────────────────────────── */}

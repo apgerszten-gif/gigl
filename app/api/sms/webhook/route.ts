@@ -50,11 +50,16 @@ export async function POST(req: NextRequest) {
 
   // 3. Active festival + today's day, in the festival's own local time
   if (!profile.active_festival_id) {
-    return twiml('Pick a festival in the Gigl app first (Profile > Switch festival), then text your rating again.')
+    return twiml('Pick a show in the Gigl app first - tap "search shows" - then text your rating again.')
   }
+  // Only the built-in festival lineups can be scored over SMS: matching a
+  // texted artist name needs a day's lineup to match against, and show search
+  // now writes Ticketmaster show ids here, which getFestival never resolves.
+  // Say so plainly rather than sending people back to reselect a show, which
+  // would just write another unresolvable id and loop them straight back here.
   const festival = getFestival(profile.active_festival_id)
   if (!festival) {
-    return twiml("We couldn't find your selected festival. Please reselect it in the app.")
+    return twiml("Texting ratings only works for festival lineups right now. Log this one in the Gigl app instead.")
   }
   const day = resolveFestivalDay(festival)
   if (!day) {
