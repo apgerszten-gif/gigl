@@ -429,3 +429,73 @@ alter table public.logged_shows alter column stage drop not null;
 alter table public.logged_shows alter column day drop not null;
 alter table public.logged_shows add column venue text;
 alter table public.logged_shows add column show_date date;
+
+-- Cached show listings, populated by the nightly sync at
+-- app/api/cron/sync-shows rather than by users. Show search
+-- (app/select-festival -> /api/shows/search) reads this table instead of
+-- proxying Ticketmaster on every keystroke, which is what previously made
+-- every visitor cost an upstream API call against a 5000/day free-tier cap.
+-- Now the cost is fixed per night regardless of traffic, search can be
+-- fuzzy and fast, and rows can be corrected or added by hand.
+--
+-- Distinct from logged_shows: this is the catalogue of shows that exist,
+-- logged_shows is what users attended and rated. They're joined only by
+-- logged_shows.artist_id carrying this table's id for a search-sourced log.
+--
+-- id is text, not uuid, and carries a source prefix ('tm-<eventid>') so a
+-- row's origin is legible in the id itself and so re-syncing is a plain
+-- upsert on the same primary key rather than a match-and-merge. This is the
+-- same 'tm-' convention lib/ticketmaster.ts already stamped onto search
+-- results before any of them were persisted.
+create extension if not exists pg_trgm;
+
+create table if not exists public.shows (
+  id           text primary key,
+  -- 'ticketmaster' today; 'user' once manual submissions land, which is how
+  -- the DIY/small-venue shows no aggregator carries are meant to get in.
+  source       text not null default 'ticketmaster',
+  artist       text not null,
+  support      text[],
+  venue        text not null,
+  city         text not null,
+  state        text not null,
+  show_date    date,
+  -- Venue coordinates where Ticketmaster provides them, metro centroid
+  -- otherwise (see lib/shows/cities.ts). Nullable because a user-submitted
+  -- row may have neither.
+  lat          double precision,
+  lng          double precision,
+  emoji        text not null default '🎵',
+  -- Which SYNC_CITIES entry pulled this row in; not necessarily the venue's
+  -- own city, since a metro query returns surrounding towns too.
+  metro        text,
+  -- Bumped on every sync that still sees this event. A future-dated row
+  -- whose last_seen_at has gone stale has most likely been cancelled or
+  -- pulled from Ticketmaster - see the pruning note below.
+  last_seen_at timestamp with time zone not null default now(),
+  created_at   timestamp with time zone not null default now()
+);
+
+-- Search is "type a few characters and see matches", so trigram indexes
+-- (which ILIKE '%foo%' can actually use) rather than full-text search,
+-- which handles whole-word queries well but partial ones poorly.
+create index if not exists shows_artist_trgm_idx on public.shows using gin (artist gin_trgm_ops);
+create index if not exists shows_venue_trgm_idx  on public.shows using gin (venue  gin_trgm_ops);
+create index if not exists shows_show_date_idx   on public.shows (show_date);
+create index if not exists shows_city_idx        on public.shows (city);
+
+-- Public read, no write policies at all: every write goes through the cron
+-- route using the service role key, which bypasses RLS. Same pattern as
+-- sms_verification_codes above - RLS stays on with zero grants so the
+-- anon/client key can never write here even by accident.
+alter table public.shows enable row level security;
+drop policy if exists "shows_read" on public.shows;
+create policy "shows_read" on public.shows for select using (true);
+
+-- Pruning is left to the sync job rather than a DB-side job: it deletes
+-- rows whose show_date has already passed. Deliberately NOT deleting
+-- future-dated rows that stopped appearing in Ticketmaster's responses -
+-- an event vanishing from one night's API results is at least as likely to
+-- be a partial upstream failure as a real cancellation, and dropping a
+-- valid show is worse than briefly keeping a cancelled one. Revisit with a
+-- "missing from N consecutive syncs" rule if stale rows become a problem.
