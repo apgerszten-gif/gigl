@@ -22,24 +22,21 @@ A Letterboxd-style app for live music. People log shows they've been to (a festi
 
 ## Design system
 
-`DESIGN.md` is the source of truth for Gigl's visual language: warm parchment surfaces, a terracotta accent, amber star ratings and the Epilogue font. **Read `DESIGN.md` before creating or changing any UI.**
+`DESIGN.md` is the source of truth for Gigl's visual language, **Warm Riso Zine**: paper and cream surfaces, dark-brown ink, a burnt-sienna accent, 1.5px ink borders with hard offset shadows, and Space Grotesk + Inter. **Read `DESIGN.md` before creating or changing any UI.** `/design` (`app/design/DesignPreview.tsx`) renders every pattern with sample data. It only exists in local dev and preview deployments.
 
 How to apply it:
 
-- Style with the Tailwind tokens in `tailwind.config.js`:
-  - surfaces: `bg-surface`, `bg-surface-container-lowest|low|high|highest`
-  - accent: `bg-primary`, `hover:bg-primary-hover`, `bg-primary-light`
-  - text: `text-ink-title|body|muted|faint`
-  - ratings: `text-star`
-  - `shadow-warm-sm|md|lg`, `rounded-squircle`, `font-epilogue`
-- The HTML in `DESIGN.md` is a visual reference, not code to paste. Where it uses arbitrary values (`bg-[#FFF8F5]`, `font-['Epilogue',sans-serif]`) or a default Tailwind colour for something a token covers, use the token. Tailwind's `stone` scale is fine for neutral borders, dividers and fills, as the templates use it.
-- **A rating is only ever shown as stars.** Use `components/StarDisplay.tsx`, which handles partial fills. Inside a `text-star` element, pass `accent="currentColor"`. Don't add numeric score badges or tier descriptors (Elite, Epic, Top Tier…).
-- The mockups show features Gigl doesn't have yet: the Popular Gigs tab, filter chips, Want to See, Gig Map, streaks, goals, Buddies, city rank, verified badges, field notes, highlight/vibe tags and setlists. They also use sample data. Don't build those features or ship that data without asking. The following filter, friend tagging and photos do already exist.
+- Style with the Tailwind tokens and the class recipes in `DESIGN.md`:
+  - colours: `paper`, `cream`, `cream-alt`, `ink`, `ink-muted`, `ink-faint`, `accent`, `accent-hover`, `terra`, `star`
+  - `font-display` / `font-sans`, `border-1.5`, `rounded-card`, `shadow-riso` / `shadow-riso-lg`, `tracking-label`
+  - Use opacity modifiers for tints (`bg-accent/10`, `border-ink/15`) rather than new hex values.
+- The logo is `components/Logo.tsx`: "Gigl" with a capital G and a sienna slash.
+- Icons come from `lucide-react`.
+- **A rating is only ever shown as stars.** Use `components/StarDisplay.tsx`, which handles partial fills. Inside a `text-star` element, pass `accent="currentColor"`. Don't add numeric scores or tier descriptors (Elite, Epic, Top Tier…).
+- Several features in the design exist only as mockups and are marked *(mockup)* in `DESIGN.md`: Popular tab, filter chips, Want to see, Gig map, streaks, goals, buddies, city rank, field notes, highlight tags and setlists. Don't build them without asking. The following filter, friend tagging and photos do already exist.
 
 ### Migration status
 
-The app is partway between the old and new look:
-
-- Most screens are still styled with inline `style={{}}` objects from `useTheme()` (`components/FestivalThemeProvider.tsx`, `lib/theme.ts`). That is the older "Warm Riso Zine" look, set in Space Grotesk and Inter. When you rework a screen, move it to the Tailwind tokens instead of adding more theme-object styling.
-- The legacy Tailwind colours (`paper`, `cream`, bare `ink`, `sienna`, `terra`, `taupe`, `faint`) and the `display` / `sans` fonts stay only until migration is finished. Don't use them in new code.
+- Most screens are still styled with inline `style={{}}` objects from `useTheme()` (`components/FestivalThemeProvider.tsx`, `lib/theme.ts`). The token values match `DEFAULT_THEME`, so moving a screen to Tailwind is mostly mechanical. When you rework a screen, move it to the tokens instead of adding more theme-object styling. Many of those screens also inline their own copy of the logo.
+- `useTheme()` swaps the accent per festival (Bonnaroo is amber), but the Tailwind tokens are fixed. Ask before migrating a screen whether festival accents should survive. If so, back `accent` with a CSS variable.
 - `components/BottomNav.tsx` isn't used anywhere, and it references a `brand` colour that doesn't exist.

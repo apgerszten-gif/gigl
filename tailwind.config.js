@@ -1,67 +1,47 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class',
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
-      // Design system tokens - DESIGN.md is the source of truth.
+      // Design system tokens - DESIGN.md is the source of truth. Values match
+      // DEFAULT_THEME in lib/theme.ts, the Warm Riso Zine look.
       colors: {
-        surface: {
-          DEFAULT: '#FFF8F5',
-          dim:     '#E2D8D2',
-          bright:  '#FFF8F5',
-          container: {
-            lowest:  '#FFFFFF',
-            low:     '#FCF2EB',
-            DEFAULT: '#F5ECE5',
-            high:    '#EFE5DF',
-            highest: '#E8DED8',
-          },
-        },
-        primary: {
-          DEFAULT: '#D95D39',
-          hover:   '#C2410C',
-          light:   '#FFEDD5',
+        paper: '#EDE3D0',             // page background, inset surfaces
+        cream: {
+          DEFAULT: '#FAF3E2',         // cards
+          alt:     '#F5EDD8',         // alternating rows
         },
         ink: {
-          // DEFAULT is the legacy Warm Riso Zine ink, kept so existing
-          // `text-ink` usages don't break mid-migration. New code uses the
-          // named shades.
-          DEFAULT: '#4A3528',
-          title:   '#1C1917',
-          body:    '#44403C',
-          muted:   '#78716C',
-          faint:   '#A8A29E',
+          DEFAULT: '#4A3528',         // text, borders, riso shadows
+          muted:   '#8B7560',         // secondary text
+          faint:   '#B8A898',         // timestamps, placeholders, inactive icons
         },
-        // Ratings are stars only - no numeric badges or tier colours.
-        star: '#F59E0B',
-
-        // Legacy Warm Riso Zine palette - remove once every screen is on the
-        // tokens above (see "Migration status" in CLAUDE.md).
-        paper:  '#EDE3D0',
-        cream:  '#FAF3E2',
-        sienna: '#B85827',
-        terra:  '#D4845A',
-        taupe:  '#8B7560',
-        faint:  '#B8A898',
+        accent: {
+          DEFAULT: '#B85827',         // burnt sienna: CTAs, active states, the logo slash
+          hover:   '#9C4B21',
+        },
+        terra: '#D4845A',             // soft secondary accent
+        star:  '#B85827',             // star ratings - stars only, no numbers or tiers
       },
       fontFamily: {
-        epilogue: ['var(--font-epilogue)', 'Epilogue', 'sans-serif'],
-        // Legacy - see above.
         display: ['var(--font-space-grotesk)', 'sans-serif'],
         sans:    ['var(--font-inter)', 'sans-serif'],
       },
+      borderWidth: {
+        '1.5': '1.5px',
+      },
       borderRadius: {
-        inherit:  'inherit',
-        squircle: '14px',
+        card: '5px',
       },
       boxShadow: {
-        'warm-sm': '0 1px 3px rgba(41, 37, 36, 0.05)',
-        'warm-md': '0 4px 14px rgba(217, 93, 57, 0.08), 0 2px 6px rgba(41, 37, 36, 0.04)',
-        'warm-lg': '0 10px 25px -5px rgba(217, 93, 57, 0.15)',
+        riso:      '2px 2px 0 #4A3528',
+        'riso-lg': '3px 3px 0 #4A3528',
+      },
+      letterSpacing: {
+        label: '0.08em',
       },
     },
   },

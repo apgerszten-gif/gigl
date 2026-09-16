@@ -1,15 +1,17 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { DesignPreview } from './DesignPreview'
 
-// Visual preview of the four core screens in DESIGN.md, built from the
-// Tailwind tokens with sample data so the design can be judged in the real
-// app with the real font. Nothing links here. Delete this route once the
-// actual screens have moved to the design system.
+// Living style guide: the four core screens from DESIGN.md, built from the
+// Tailwind tokens with sample data. It's the rendered reference for the
+// design system, so it stays in the repo, but it only exists in local dev
+// and preview deployments - production builds render a 404.
 export const metadata: Metadata = {
-  title: 'Design preview — Gigl',
+  title: 'Style guide — Gigl',
   robots: { index: false, follow: false },
 }
 
 export default function DesignPage() {
+  if (process.env.VERCEL_ENV === 'production') notFound()
   return <DesignPreview />
 }
