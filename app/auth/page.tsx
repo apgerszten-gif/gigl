@@ -1,25 +1,24 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
+import { Logo } from '@/components/Logo'
+import {
+  ArtistPhoto, Card, DateTag, ErrorNote, Field, Label, PersonPhoto, Place, PullQuote, Segmented, Stars,
+  btnPrimary, fieldInput,
+} from '@/components/ui'
 
-const ink    = '#4A3528'
-const cream  = '#FAF3E2'
-const paper  = '#EDE3D0'
-const sienna = '#B85827'
-const muted  = '#8B7560'
-const faint  = '#B8A898'
-const serif  = 'var(--font-space-grotesk), sans-serif'
-const sans   = 'var(--font-inter), sans-serif'
+type Mode = 'signup' | 'signin'
 
 export default function AuthPage() {
   const router   = useRouter()
   const supabase = createClient()
 
-  const [mode, setMode]         = useState<'signup' | 'signin'>('signup')
+  const [mode, setMode]         = useState<Mode>('signup')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -54,164 +53,107 @@ export default function AuthPage() {
     router.push(hasFestival ? '/feed' : '/select-festival')
   }
 
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError(null)
+  }
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: paper,
-      fontFamily: sans,
-      color: ink,
-      maxWidth: 430,
-      margin: '0 auto',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '0 24px',
-    }}>
+    <div className="min-h-screen bg-paper text-ink px-5 pb-8 flex flex-col">
+      <header className="pt-5 flex items-center justify-between">
+        <Logo size="text-[28px]" />
+        <Label>Live music, logged</Label>
+      </header>
 
-      {/* Wordmark */}
-      <div style={{ paddingTop: 40, marginBottom: 28 }}>
-        <div style={{
-          fontFamily: serif, fontSize: 48, fontWeight: 700,
-          color: ink, letterSpacing: '-1px',
-        }}>
-          Gigl<span style={{ color: sienna }}>/</span>
-        </div>
+      {/* A cut-and-paste collage of the app's own cards. */}
+      <div className="relative h-[168px] mt-5 mb-4" aria-hidden>
+        <Card className="absolute left-0 right-8 top-0 -rotate-2 p-3 flex items-center gap-3">
+          <ArtistPhoto name="Turnstile" className="w-14 h-14" iconSize={18}>
+            <DateTag isoDate="2026-09-24" />
+          </ArtistPhoto>
+          <div className="min-w-0 space-y-1">
+            <p className="font-display text-lg font-bold leading-none">Turnstile</p>
+            <Place>Hollywood Palladium</Place>
+            <Stars score={5} size={13} />
+          </div>
+        </Card>
+        <Card className="absolute left-10 right-0 top-[92px] rotate-[1.5deg] p-3 space-y-2">
+          <PullQuote>The pit never stopped moving.</PullQuote>
+          <div className="flex items-center gap-1.5">
+            <PersonPhoto name="sam_hears" className="w-5 h-5 text-[10px] border border-ink/15" />
+            <span className="text-[11px] text-ink-muted">@sam_hears</span>
+          </div>
+        </Card>
       </div>
 
-      {/* Headline */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{
-          fontSize: 10, color: sienna, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 10,
-        }}>
-          {mode === 'signup' ? 'Create your account' : 'Welcome back'}
-        </div>
-        <div style={{
-          fontFamily: serif, fontSize: 34, fontWeight: 700,
-          lineHeight: 1.1, letterSpacing: '-1px', color: ink,
-        }}>
-          {mode === 'signup' ? (
-            <>Be the critic<span style={{ color: sienna }}>.</span><br />Own the moment<span style={{ color: sienna }}>.</span></>
-          ) : (
-            <>Good to have<br />you back<span style={{ color: sienna }}>.</span></>
-          )}
-        </div>
-      </div>
+      <h1 className="font-display text-[32px] font-bold tracking-tight leading-[1.05] mb-4">
+        {mode === 'signup' ? (
+          <>Be the critic<span className="text-accent">.</span><br />Own the moment<span className="text-accent">.</span></>
+        ) : (
+          <>Good to have<br />you back<span className="text-accent">.</span></>
+        )}
+      </h1>
 
-      {/* Form */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+      <Segmented
+        options={[{ value: 'signup', label: 'Sign up' }, { value: 'signin', label: 'Sign in' }]}
+        value={mode}
+        onChange={switchMode}
+      />
+
+      <Card className="mt-3 p-3.5 flex flex-col gap-2.5">
         {mode === 'signup' && (
-          <div style={{
-            background: cream, borderRadius: 5,
-            border: `1.5px solid ${ink}`,
-            padding: '14px 16px',
-          }}>
-            <div style={{
-              fontSize: 9, color: muted, letterSpacing: '0.12em',
-              textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
-            }}>Username</div>
+          <Field label="Username">
             <input
               value={username}
               onChange={e => setUsername(e.target.value)}
               placeholder="how you'll appear in the feed"
-              style={{
-                width: '100%', background: 'none', border: 'none', outline: 'none',
-                color: ink, fontSize: 16, fontFamily: sans,
-              }}
+              className={fieldInput}
             />
-          </div>
+          </Field>
         )}
 
-        <div style={{
-          background: cream, borderRadius: 5,
-          border: `1.5px solid ${ink}`,
-          padding: '14px 16px',
-        }}>
-          <div style={{
-            fontSize: 9, color: muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
-          }}>Email</div>
+        <Field label="Email">
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="your@email.com"
-            style={{
-              width: '100%', background: 'none', border: 'none', outline: 'none',
-              color: ink, fontSize: 16, fontFamily: sans,
-            }}
+            className={fieldInput}
           />
-        </div>
+        </Field>
 
-        <div style={{
-          background: cream, borderRadius: 5,
-          border: `1.5px solid ${ink}`,
-          padding: '14px 16px',
-        }}>
-          <div style={{
-            fontSize: 9, color: muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
-          }}>Password <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500, color: faint }}>(6 character min)</span></div>
+        <Field label="Password" hint="(6 character min)">
           <input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="••••••••"
-            style={{
-              width: '100%', background: 'none', border: 'none', outline: 'none',
-              color: ink, fontSize: 16, fontFamily: sans,
-            }}
+            className={fieldInput}
           />
-        </div>
+        </Field>
 
-        {error && (
-          <div style={{
-            fontSize: 12, color: '#B03030', fontFamily: sans,
-            padding: '10px 14px', background: 'rgba(160,40,40,0.08)',
-            border: '1px solid rgba(160,40,40,0.2)',
-            borderRadius: 5, lineHeight: 1.5,
-          }}>{error}</div>
-        )}
+        {error && <ErrorNote>{error}</ErrorNote>}
 
         <button
+          type="button"
           onClick={handleSubmit}
           disabled={loading}
-          style={{
-            width: '100%', background: sienna,
-            border: `1.5px solid ${ink}`,
-            boxShadow: '2px 2px 0 #4A3528',
-            borderRadius: 5, padding: 16,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-            marginTop: 4,
-          }}
+          className={`${btnPrimary} w-full mt-1 py-4 text-xs ${loading ? 'opacity-70' : ''}`}
         >
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: cream,
-            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: sans,
-          }}>
-            {loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}
-          </span>
+          {loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}
         </button>
-      </div>
+      </Card>
 
-      {/* Toggle */}
-      <div style={{ textAlign: 'center', fontSize: 13, color: muted, fontFamily: sans }}>
-        {mode === 'signup' ? 'Already have an account? ' : 'New here? '}
-        <span
-          onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(null) }}
-          style={{ color: sienna, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
-        >
-          {mode === 'signup' ? 'Sign in' : 'Sign up'}
-        </span>
-      </div>
-
-      <div style={{ flex: 1 }} />
-      <div style={{
-        paddingBottom: 32, textAlign: 'center',
-        fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase',
-      }}>
-        Rate every set<span style={{ color: sienna }}>.</span> Rank every moment<span style={{ color: sienna }}>.</span>
-      </div>
+      <div className="flex-1 min-h-6" />
+      <footer className="pt-6 flex flex-col items-center gap-2 text-center">
+        <p className="text-[10px] uppercase tracking-[0.1em] text-ink-faint">
+          Rate every set<span className="text-accent">.</span> Rank every moment<span className="text-accent">.</span>
+        </p>
+        <p className="flex gap-3 text-[11px] text-ink-faint">
+          <Link href="/privacy" className="underline underline-offset-[3px]">Privacy</Link>
+          <Link href="/terms" className="underline underline-offset-[3px]">Terms</Link>
+        </p>
+      </footer>
     </div>
   )
 }

@@ -1,14 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
-
-const ink   = '#4A3528'
-const paper = '#EDE3D0'
-const muted = '#8B7560'
-const sans  = 'var(--font-inter), sans-serif'
+import { LoadingLabel } from '@/components/ui'
 
 export default function AuthCallbackPage() {
   const router   = useRouter()
@@ -41,21 +38,14 @@ export default function AuthCallbackPage() {
   }, [])
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: paper, fontFamily: sans, color: ink, padding: 24,
-    }}>
+    <div className="min-h-screen bg-paper text-ink p-6 flex items-center justify-center">
       {error ? (
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: '#B03030', marginBottom: 12 }}>{error}</div>
-          <a href="/auth" style={{ color: '#B85827', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 3 }}>
-            Back to sign in
-          </a>
+        <div className="text-center">
+          <p className="mb-3 text-[13px] text-[#B03030]">{error}</p>
+          <Link href="/auth" className="text-[13px] text-accent underline underline-offset-[3px]">Back to sign in</Link>
         </div>
       ) : (
-        <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: muted, fontWeight: 600 }}>
-          Signing you in&hellip;
-        </div>
+        <LoadingLabel>Signing you in&hellip;</LoadingLabel>
       )}
     </div>
   )

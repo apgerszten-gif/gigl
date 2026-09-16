@@ -1,12 +1,14 @@
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
-import { DEFAULT_THEME as T } from '@/lib/theme'
 import { showScore } from '@/lib/rating'
-import { formatShowDate } from '@/lib/dates'
 import { resolveMediaUrls } from '@/lib/media'
-import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
 import { FollowButton } from '@/components/FollowButton'
+import { Logo } from '@/components/Logo'
+import {
+  ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf, btnPrimary,
+} from '@/components/ui'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -37,166 +39,93 @@ export default async function PublicProfile({ params }: { params: { username: st
     : 0
 
   return (
-    <div style={{
-      minHeight: '100vh', background: T.bg,
-      fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-    }}>
+    <div className="min-h-screen bg-paper text-ink">
+      <BackHeader title={<Logo />} href="/feed" />
 
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '18px 24px 14px',
-        position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <a href="/feed" style={{
-          display: 'flex', alignItems: 'center', textDecoration: 'none',
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </a>
-        <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
-          Gigl<span style={{ color: T.accent }}>/</span>
-        </div>
-        <div style={{ width: 18 }} />
-      </div>
-
-      {/* ── Profile header ───────────────────────────────────────────────────── */}
-      <div style={{ padding: '20px 24px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 4, marginBottom: 8 }}>
-          <div style={{
-            fontFamily: T.serif, fontSize: 28, fontWeight: 700,
-            lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',
-          }}>
-            {profile.display_name}&apos;s<br />
-            <span>rankings</span><span style={{ color: T.accent }}>.</span>
-          </div>
-          <div style={{ paddingTop: 4, flexShrink: 0 }}>
+      <div className="px-5 pt-4 pb-24 space-y-4">
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <PersonPhoto name={profile.display_name || profile.username} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">{profile.display_name}</h1>
+              <p className="text-xs text-ink-muted">@{profile.username}</p>
+            </div>
             <FollowButton targetUserId={profile.id} />
           </div>
-        </div>
-        <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>@{profile.username}</div>
-      </div>
 
-      {/* ── Stats bar ────────────────────────────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid rgba(74,53,40,0.1)', borderBottom: '1px solid rgba(74,53,40,0.1)', background: T.bg }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
-          <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
-            <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{shows.length}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Sets logged</div>
+          <div className="flex border-t border-ink/10 pt-3">
+            <div className="flex-1 flex">
+              <Stat value={shows.length} label="Gigs" />
+              <div className="flex-1 flex border-l border-ink/10">
+                <Stat
+                  value={ratedShows.length > 0 ? <Stars score={avgScore} size={11} /> : <span className="text-accent">—</span>}
+                  label="Avg rating"
+                />
+              </div>
+            </div>
+            <div className="flex-1 flex border-l-1.5 border-ink">
+              <Link href={`/u/${profile.username}/followers`} className="flex-1 flex">
+                <Stat value={followerCount ?? 0} label="Followers" />
+              </Link>
+              <Link href={`/u/${profile.username}/following`} className="flex-1 flex border-l border-ink/10">
+                <Stat value={followingCount ?? 0} label="Following" />
+              </Link>
+            </div>
           </div>
-          <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            {ratedShows.length > 0
-              ? <StarDisplay score={avgScore} size={20} accent={T.accent} />
-              : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
-          </div>
-          <div style={{ padding: '14px 0', textAlign: 'center' }}>
-            <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>2026</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Festival</div>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(74,53,40,0.1)' }}>
-          <a href={`/u/${profile.username}/followers`} style={{
-            padding: '12px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)',
-            textDecoration: 'none', display: 'block',
-          }}>
-            <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: '#4A3528' }}>{followerCount ?? 0}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Followers</div>
-          </a>
-          <a href={`/u/${profile.username}/following`} style={{ padding: '12px 0', textAlign: 'center', textDecoration: 'none', display: 'block' }}>
-            <div style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: '#4A3528' }}>{followingCount ?? 0}</div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Following</div>
-          </a>
-        </div>
-      </div>
+        </Card>
 
-      {/* ── Rankings ────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '16px 24px 100px' }}>
-        <div style={{
-          fontSize: 10, color: T.muted, letterSpacing: '0.12em',
-          textTransform: 'uppercase', marginBottom: 12, fontWeight: 600,
-        }}>Their rankings</div>
+        <section>
+          <Label className="mb-2.5">Their rankings</Label>
 
-        {shows.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: 13, color: T.faint }}>No sets logged yet</div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {shows.map((show, i) => {
-              const score     = showScore(show)
-              const hasScore  = show.performance_rating != null && show.venue_rating != null && show.crowd_rating != null
-              const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
-              const isTop     = i === 0
-              return (
-                <div key={show.id} style={{
-                  background: T.card, borderRadius: 5,
-                  border: T.cardBorder,
-                  boxShadow: isTop ? T.cardShadow : 'none',
-                  overflow: 'hidden',
-                }}>
-                  <MediaGrid urls={resolveMediaUrls(show).map(resolvePhotoUrl)} maxHeight={220} />
-                  <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                        <span style={{
-                          fontFamily: T.serif, fontSize: 15, fontWeight: 700,
-                          color: '#4A3528', letterSpacing: '-0.3px',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          minWidth: 0,
-                        }}>{show.artist_name}</span>
-                        {hasScore && <StarDisplay score={score} size={18} accent={T.accent} />}
+          {shows.length === 0 ? (
+            <EmptyState>No shows logged yet</EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {shows.map((show, i) => {
+                const score     = showScore(show)
+                const hasScore  = show.performance_rating != null && show.venue_rating != null && show.crowd_rating != null
+                const mediaUrls = resolveMediaUrls(show).map(resolvePhotoUrl)
+                const place     = placeOf(show)
+                return (
+                  <Card key={show.id} className="overflow-hidden">
+                    {mediaUrls.length > 0 && (
+                      <div className="border-b-1.5 border-ink">
+                        <MediaGrid urls={mediaUrls} maxHeight={220} />
                       </div>
-                      <div style={{
-                        fontSize: 10, color: T.muted, letterSpacing: '0.06em',
-                        textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
-                      }}>
-                        {show.stage
-                          ? <>{show.stage} · {show.day}</>
-                          : show.venue
-                          ? <>{show.venue}{show.show_date ? ` · ${formatShowDate(show.show_date)}` : ''}</>
-                          : null}
+                    )}
+                    <Link href={`/artist/${show.artist_id}`} className="p-3 flex items-center gap-3">
+                      <span className="font-display text-2xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
+                      <ArtistPhoto name={show.artist_name} className="w-12 h-12" iconSize={16}>
+                        <DateTag isoDate={show.show_date} />
+                      </ArtistPhoto>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="font-display text-[15px] font-bold leading-tight truncate">{show.artist_name}</h3>
+                          {hasScore && <Stars score={score} size={12} />}
+                        </div>
+                        {place && <Place className="mt-0.5">{place}</Place>}
                       </div>
-                      <div style={{ fontSize: 10, color: T.accent, marginTop: 2, fontWeight: 600 }}>{rankLabel}</div>
-                    </div>
-                  </div>
-                  {show.review && (
-                    <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(74,53,40,0.65)', fontStyle: 'italic', lineHeight: 1.55 }}>
-                      &ldquo;{show.review}&rdquo;
-                    </div>
-                  )}
-                  {show.tags && show.tags.length > 0 && (
-                    <div style={{ padding: '0 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {show.tags.map((tag: string) => (
-                        <span key={tag} style={{
-                          fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                          background: T.accentDim, color: T.accent,
-                          border: `1.5px solid ${T.accentBorder}`,
-                          fontFamily: T.sans, fontWeight: 600,
-                        }}>{tag}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
+                    </Link>
+                    {(show.review || (show.tags && show.tags.length > 0)) && (
+                      <div className="px-3 pb-3 space-y-2.5">
+                        {show.review && <PullQuote>{show.review}</PullQuote>}
+                        {show.tags && show.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {show.tags.map((tag: string) => <Chip key={tag}>{tag}</Chip>)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </section>
 
-        <div style={{ marginTop: 32, textAlign: 'center' }}>
-          <p style={{ fontSize: 11, color: T.faint, marginBottom: 12 }}>Want to rank your festival sets?</p>
-          <a href="/" style={{
-            display: 'inline-block',
-            background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-            color: '#FAF3E2', borderRadius: 5, padding: '12px 24px',
-            fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
-            textTransform: 'uppercase', textDecoration: 'none', fontFamily: T.sans,
-          }}>Join Gigl →</a>
+        <div className="pt-4 text-center">
+          <p className="text-[11px] text-ink-faint mb-3">Want to rank the shows you&apos;ve seen?</p>
+          <Link href="/" className={`${btnPrimary} px-6 py-3 text-xs`}>Join Gigl →</Link>
         </div>
       </div>
     </div>

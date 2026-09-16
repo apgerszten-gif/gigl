@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
-import { formatShowDate } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
-import { StarDisplay } from '@/components/StarDisplay'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { AppHeader } from '@/components/AppHeader'
+import BottomNav from '@/components/BottomNav'
+import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { timeQuery } from '@/lib/queryTiming'
 import { aggregateArtistRows, RANKINGS_SELECT, type ArtistRow } from '@/lib/rankings'
@@ -26,7 +25,6 @@ function weekdayIndex(d: string): number {
 export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const router   = useRouter()
   const supabase = createClient()
-  const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
   const [rows, setRows]         = useState<ArtistRow[]>(initialRows)
@@ -118,158 +116,76 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', background: T.bg,
-      fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-    }}>
-
-      {/* ── Top bar: logo · search shows/sign-out — one row ───────────────────── */}
-      <div style={{
-        padding: '11px 20px',
-        position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-          {T.logoUrl ? (
-            <img
-              src={T.logoUrl}
-              alt="Gigl"
-              style={{ height: 22, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
-            />
-          ) : (
-            <div style={{
-              fontFamily: T.serif, fontSize: 21, fontWeight: 700,
-              color: '#4A3528', letterSpacing: '-0.5px', flexShrink: 0,
-            }}>
-              Gigl<span style={{ color: T.accent }}>/</span>
-            </div>
-          )}
+    <div className="min-h-screen bg-paper text-ink pb-28">
+      <AppHeader>
+        <div className="min-w-0">
+          <Label>Everyone&apos;s ratings</Label>
+          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Rankings</h1>
         </div>
+      </AppHeader>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-          <button
-            onClick={() => router.push('/select-festival')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
-            }}
-          >search shows</button>
-          <span style={{ fontSize: 10, color: T.faint }}>·</span>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              color: T.muted, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em',
-            }}
-          >sign out</button>
+      {/* Day filter - only worth showing once the logged shows actually span
+          more than one day; with a single day 'All' is the whole list. */}
+      {loggedDays.length > 1 && (
+        <div className="flex gap-5 px-5 border-b border-ink/10 overflow-x-auto no-scrollbar">
+          {days.map(d => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setFilter(d)}
+              className={`py-2.5 text-[10px] font-bold uppercase tracking-label whitespace-nowrap ${
+                activeFilter === d ? 'text-ink border-b-2 border-accent' : 'text-ink-faint'
+              }`}
+            >
+              {d === 'all' ? 'All' : dayLabel(d)}
+            </button>
+          ))}
         </div>
-      </div>
+      )}
 
-      {/* ── Activity / Rankings tab toggle — slim pill ────────────────────────── */}
-      <div style={{ padding: '9px 20px 8px' }}>
-        <div style={{
-          display: 'flex',
-          border: '2px solid #4A3528',
-          borderRadius: 5,
-          overflow: 'hidden',
-          marginBottom: 8,
-        }}>
-          <button
-            onClick={() => router.push('/feed')}
-            style={{
-              flex: 1, padding: '6px 0',
-              background: T.card, border: 'none',
-              borderRight: '2px solid #4A3528',
-              color: '#4A3528', fontSize: 10, cursor: 'pointer',
-              fontFamily: T.sans, fontWeight: 600,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}
-          >Activity</button>
-          <button style={{
-            flex: 1, padding: '6px 0',
-            background: '#4A3528', border: 'none',
-            color: '#FAF3E2', fontSize: 10, cursor: 'default',
-            fontFamily: T.sans, fontWeight: 700,
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-          }}>Rankings</button>
-        </div>
-
-        {/* Day filter — only worth showing once the logged shows actually span
-            more than one day; with a single day 'All' is the whole list. */}
-        {loggedDays.length > 1 && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            {days.map(d => (
-              <button key={d} onClick={() => setFilter(d)} style={{
-                flex: 1, padding: '6px 0', borderRadius: 4,
-                background: activeFilter === d ? T.accentDim : 'transparent',
-                border: activeFilter === d ? `1.5px solid ${T.accentBorder}` : '1.5px solid rgba(74,53,40,0.15)',
-                color: activeFilter === d ? T.accent : T.muted,
-                fontSize: 9, cursor: 'pointer',
-                fontFamily: T.sans, fontWeight: activeFilter === d ? 700 : 500,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-              }}>
-                {d === 'all' ? 'All' : dayLabel(d)}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── List ────────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 24px 100px' }}>
+      <main className="px-5 pt-4 space-y-3">
         {battleModeUnlocked && !battleCardDismissed && (
           <BattleModeCard onDismiss={dismissBattleCard} onEnter={() => router.push('/battle')} />
         )}
 
-        {visible.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 40, fontSize: 13, color: T.faint }}>
-            No ratings yet
-          </div>
-        )}
+        {visible.length === 0 && <EmptyState>No ratings yet</EmptyState>}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {visible.map((row, i) => {
-            const isTop = i === 0
-            return (
-              <div
-                key={row.artist_id}
-                onClick={() => router.push(`/artist/${row.artist_id}`)}
-                style={{
-                  background: i % 2 === 0 ? T.card : T.cardAlt,
-                  border: T.cardBorder,
-                  borderRadius: i === 0 ? '5px 5px 3px 3px'
-                    : i === visible.length - 1 ? '3px 3px 5px 5px' : 3,
-                  boxShadow: isTop ? T.cardShadow : 'none',
-                  padding: '13px 16px',
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  cursor: 'pointer',
-                }}
-              >
-                {/* Rank */}
-                <div style={{
-                  width: 24, flexShrink: 0, textAlign: 'center',
-                  fontFamily: T.serif,
-                  fontSize: i < 3 ? 18 : 12,
-                  color: i < 3 ? T.accent : T.faint,
-                  fontWeight: 700,
-                }}>
-                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{
-                      fontFamily: T.serif, fontSize: 14, fontWeight: 700,
-                      color: '#4A3528', letterSpacing: '-0.3px',
-                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      minWidth: 0,
-                    }}>{row.name}</span>
-                    <StarDisplay score={row.avgScore} size={17} accent={T.accent} />
+        {visible.map((row, i) => {
+          const place = row.stage
+            ? [row.stage, row.day ? dayLabel(row.day) : null].filter(Boolean).join(' · ')
+            : row.venue
+          return (
+            <div
+              key={row.artist_id}
+              role="link"
+              tabIndex={0}
+              onClick={() => router.push(`/artist/${row.artist_id}`)}
+              onKeyDown={e => { if (e.key === 'Enter') router.push(`/artist/${row.artist_id}`) }}
+              className="block cursor-pointer"
+            >
+              <Card className="p-3 flex items-center gap-3">
+                <span className="font-display text-3xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
+                <ArtistPhoto name={row.name} className="w-14 h-14">
+                  <DateTag isoDate={row.showDate} />
+                </ArtistPhoto>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-display text-base font-bold leading-tight truncate">{row.name}</h3>
+                    <Stars score={row.avgScore} size={12} />
+                  </div>
+                  {place && (row.stage ? (
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); router.push(`/stage/${encodeURIComponent(row.stage)}`) }}
+                      className="block max-w-full mt-0.5 text-left"
+                    >
+                      <Place>{place}</Place>
+                    </button>
+                  ) : (
+                    <Place className="mt-0.5">{place}</Place>
+                  ))}
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <Chip>{row.count} {row.count === 1 ? 'rating' : 'ratings'}</Chip>
                     {battleAggMap[row.artist_id] && (
                       <BattleRecordBadge
                         wins={battleAggMap[row.artist_id].wins}
@@ -280,75 +196,14 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
                       />
                     )}
                   </div>
-                  <div style={{
-                    fontSize: 9, color: T.muted, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', fontWeight: 600,
-                  }}>
-                    {row.stage ? (
-                      <span
-                        onClick={e => { e.stopPropagation(); router.push(`/stage/${encodeURIComponent(row.stage)}`) }}
-                        style={{ cursor: 'pointer' }}
-                      >{row.stage}</span>
-                    ) : row.venue || null}
-                    {row.stage
-                      ? (row.day ? ` · ${dayLabel(row.day)}` : '')
-                      : (row.showDate ? ` · ${formatShowDate(row.showDate)}` : '')}
-                    {' · '}{row.count} {row.count === 1 ? 'rating' : 'ratings'}
-                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+              </Card>
+            </div>
+          )
+        })}
+      </main>
 
-      {/* ── Bottom nav ───────────────────────────────────────────────────────── */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 430,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '12px 32px 16px',
-        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-      }}>
-        <button onClick={() => router.push('/feed')} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill={T.accent} stroke="none">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
-          <span style={{ fontSize: 8, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700 }}>Home</span>
-        </button>
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <div onClick={() => router.push('/log')} style={{
-            width: 38, height: 38, background: T.accent, borderRadius: '50%',
-            border: '1.5px solid #4A3528', boxShadow: '2px 2px 0 #4A3528',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginTop: -16, cursor: 'pointer',
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </div>
-          <span style={{ fontSize: 8, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>Log</span>
-        </div>
-
-        <button onClick={() => router.push('/profile')} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-          <span style={{ fontSize: 8, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>You</span>
-        </button>
-      </div>
+      <BottomNav />
     </div>
   )
 }

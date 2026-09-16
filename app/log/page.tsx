@@ -2,12 +2,12 @@
 
 import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ChevronRight, Lock, Search } from 'lucide-react'
 import { getFestival, getArtistsByDay, hasDayOccurred, formatSetTime, LOCAL_STORAGE_KEY, type Festival, type FestivalArtist } from '@/lib/festivals'
 import { getActiveShow } from '@/lib/activeShow'
 import { createClient } from '@/lib/supabase/client'
-import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
-import { StarDisplay } from '@/components/StarDisplay'
+import { ArtistPhoto, BackHeader, EmptyState, LoadingLabel, Place, Segmented, Stars, inputBox } from '@/components/ui'
 import { computeShowScore } from '@/lib/rating'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
 
@@ -21,7 +21,6 @@ function LogInner() {
   const router       = useRouter()
   const supabase     = createClient()
   const searchParams = useSearchParams()
-  const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
   const isRerate = searchParams.get('rerate') === '1'
@@ -105,156 +104,69 @@ function LogInner() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', background: T.bg,
-      fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-    }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', padding: '18px 24px 14px',
-        position: 'sticky', top: 0,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)', zIndex: 10,
-      }}>
-        <button onClick={() => router.push('/feed')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <span style={{
-          fontFamily: T.serif, fontSize: 15, fontWeight: 700,
-          color: '#4A3528', letterSpacing: '-0.3px',
-        }}>
-          {isRerate ? 'Re-rate a Show' : 'Log a Show'}
-        </span>
-        <div style={{ width: 18 }} />
-      </div>
+    <div className="min-h-screen bg-paper text-ink">
+      <BackHeader title={isRerate ? 'Re-rate a show' : 'Log a show'} onBack={() => router.push('/feed')} />
 
-      <div style={{ padding: '16px 24px 100px' }}>
-        {/* Search */}
-        <div style={{
-          background: T.card, borderRadius: 5,
-          border: T.cardBorder,
-          padding: '12px 16px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+      <div className="px-5 pt-4 pb-24 space-y-4">
+        <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5`}>
+          <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search artists..."
-            style={{
-              background: 'none', border: 'none', outline: 'none',
-              color: '#4A3528', fontSize: 16, fontFamily: T.sans, width: '100%',
-            }}
+            className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
           />
-        </div>
+        </label>
 
-        {/* Day tabs */}
         {!search && festival && (
-          <div style={{
-            display: 'flex',
-            border: '2px solid #4A3528',
-            borderRadius: 5, overflow: 'hidden',
-            marginBottom: 16,
-          }}>
-            {festival.days.map((day, idx) => (
-              <button
-                key={day}
-                onClick={() => setActiveDay(day)}
-                style={{
-                  flex: 1,
-                  background: activeDay === day ? '#4A3528' : T.card,
-                  border: 'none',
-                  borderLeft: idx > 0 ? '2px solid #4A3528' : 'none',
-                  cursor: 'pointer',
-                  padding: '8px 4px',
-                }}
-              >
-                <div style={{
-                  fontSize: 9, fontWeight: 700,
-                  color: activeDay === day ? '#FAF3E2' : T.muted,
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                  fontFamily: T.sans, lineHeight: 1.4,
-                }}>
-                  {[day.slice(0, 3).toUpperCase(), festival.dayDates[day]].map((w, i) => (
-                    <span key={i} style={{ display: 'block' }}>{w}</span>
-                  ))}
-                </div>
-              </button>
-            ))}
-          </div>
+          <Segmented
+            options={festival.days.map(day => ({ value: day, label: `${day.slice(0, 3)} ${festival.dayDates[day] ?? ''}`.trim() }))}
+            value={activeDay}
+            onChange={setActiveDay}
+          />
         )}
 
         {loadingLogged ? (
-          <div style={{
-            textAlign: 'center', padding: 40,
-            fontSize: 11, color: T.faint, letterSpacing: '0.1em',
-            textTransform: 'uppercase', fontWeight: 600,
-          }}>Loading...</div>
+          <LoadingLabel />
         ) : allArtists.length === 0 ? (
-          <div style={{
-            background: T.card, borderRadius: 5,
-            border: T.cardBorder, boxShadow: T.cardShadow,
-            padding: 32, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
-              {search
-                ? 'No artists match your search'
-                : isRerate
-                ? 'No rated shows on this day yet'
-                : "You've reviewed everyone on this day!"}
-            </div>
-          </div>
+          <EmptyState>
+            {search
+              ? 'No artists match your search'
+              : isRerate
+              ? 'No rated shows on this day yet'
+              : "You've reviewed everyone on this day!"}
+          </EmptyState>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
             {allArtists.map((a, i) => {
               const existing = loggedMap.get(a.id)
               // Re-rating an already-logged show is always allowed - it can
               // only exist if the show already happened. Only gate the
               // first-time log.
               const locked = !isRerate && !!festival && !hasDayOccurred(festival, a.day)
+              const setTime = formatSetTime(a)
               return (
                 <button
                   key={a.id}
+                  type="button"
                   onClick={() => { if (!locked) openLogShow(a) }}
                   disabled={locked}
-                  style={{
-                    background: i % 2 === 0 ? T.card : T.cardAlt,
-                    border: T.cardBorder,
-                    borderRadius: i === 0 ? '5px 5px 3px 3px'
-                      : i === allArtists.length - 1 ? '3px 3px 5px 5px' : 3,
-                    padding: '14px 16px',
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    cursor: locked ? 'default' : 'pointer', width: '100%', textAlign: 'left',
-                    opacity: locked ? 0.5 : 1,
-                  }}
+                  className={`w-full text-left flex items-center gap-3 px-3 py-2.5 ${i % 2 ? 'bg-cream-alt' : ''} ${
+                    i > 0 ? 'border-t border-ink/10' : ''
+                  } ${locked ? 'opacity-50 cursor-default' : 'hover:bg-accent/5'}`}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontFamily: T.serif, fontSize: 14, fontWeight: 700,
-                      color: '#4A3528', letterSpacing: '-0.3px', marginBottom: 2,
-                    }}>{a.name}</div>
-                    <div style={{
-                      fontSize: 9, color: T.muted, letterSpacing: '0.06em',
-                      textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
-                    }}>{a.stage}{formatSetTime(a) ? ` · ${formatSetTime(a)}` : ''}</div>
+                  <ArtistPhoto name={a.name} className="w-12 h-12" iconSize={16} />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display text-[15px] font-bold leading-tight truncate">{a.name}</h3>
+                    <Place className="mt-0.5">{a.stage}{setTime ? ` · ${setTime}` : ''}</Place>
                   </div>
-                  {existing && <StarDisplay score={existing.score} size={17} accent={T.accent} />}
+                  {existing && <Stars score={existing.score} size={12} />}
                   {locked ? (
-                    <span style={{
-                      fontSize: 9, color: T.faint, fontFamily: T.sans, fontWeight: 600,
-                      letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0,
-                    }}>🔒 {festival?.dayDates[a.day] ?? ''}</span>
+                    <span className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap text-[10px] font-semibold uppercase tracking-label text-ink-faint">
+                      <Lock className="w-3 h-3" /> {festival?.dayDates[a.day] ?? ''}
+                    </span>
                   ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
+                    <ChevronRight className="w-4 h-4 flex-shrink-0 text-ink-faint" />
                   )}
                 </button>
               )

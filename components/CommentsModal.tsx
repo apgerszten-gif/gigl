@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { Send } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import { Avatar } from '@/components/Avatar'
+import { BackHeader, LoadingLabel, PersonPhoto } from '@/components/ui'
 
 interface CommentRow {
   id:           string
@@ -34,7 +34,6 @@ export function CommentsModal({
   onClose: () => void
   onCountChange: (delta: number) => void
 }) {
-  const T = useTheme()
   const supabase = createClient()
   const { user } = useAuth()
 
@@ -105,91 +104,50 @@ export function CommentsModal({
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 100,
-      background: T.bg, fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-      display: 'flex', flexDirection: 'column',
-      transform: shown ? 'translateY(0)' : 'translateY(100%)',
-      transition: 'transform 0.28s ease-out',
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '18px 24px', position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
-      }}>
-        <button onClick={onClose} aria-label="Back" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <div style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>Comments</div>
-      </div>
+    <div className={`fixed inset-0 z-[100] mx-auto max-w-md bg-paper text-ink flex flex-col transition-transform duration-[280ms] ease-out ${
+      shown ? 'translate-y-0' : 'translate-y-full'
+    }`}>
+      <BackHeader title="Comments" onBack={onClose} />
 
-      {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 24px' }}>
-        {loading && (
-          <div style={{
-            textAlign: 'center', padding: 40,
-            fontSize: 11, color: T.faint,
-            letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600,
-          }}>Loading...</div>
-        )}
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6">
+        {loading && <LoadingLabel />}
         {!loading && comments.length === 0 && (
-          <div style={{ fontSize: 12, color: T.faint, padding: '8px 2px', textAlign: 'center' }}>
-            No comments yet — be the first
-          </div>
+          <p className="py-2 text-center text-xs text-ink-faint">No comments yet. Be the first.</p>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-3.5">
           {comments.map(c => (
-            <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <Avatar name={c.display_name || c.username || '?'} size={30} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontFamily: T.serif, fontSize: 12, fontWeight: 700, color: '#4A3528' }}>
+            <div key={c.id} className="flex gap-2.5 items-start">
+              <PersonPhoto name={c.display_name || c.username || '?'} className="w-8 h-8 text-xs border border-ink/15" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-display text-xs font-bold">
                     {c.display_name || (c.username ? `@${c.username}` : 'someone')}
                   </span>
-                  <span style={{ fontSize: 9, color: T.faint }}>{timeAgo(c.created_at)}</span>
+                  <span className="text-[10px] text-ink-faint">{timeAgo(c.created_at)}</span>
                 </div>
-                <div style={{ fontSize: 12, color: '#4A3528', lineHeight: 1.5, marginTop: 2 }}>{c.body}</div>
+                <p className="text-[13px] leading-normal mt-0.5">{c.body}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Composer */}
-      <div style={{
-        padding: '10px 16px calc(10px + env(safe-area-inset-bottom))',
-        borderTop: '1px solid rgba(74,53,40,0.1)', flexShrink: 0,
-        display: 'flex', gap: 8, alignItems: 'center',
-      }}>
+      <div className="flex-shrink-0 border-t border-ink/10 px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] flex gap-2 items-center">
         <input
           value={body}
           onChange={e => setBody(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') post() }}
           placeholder="Add a comment..."
-          style={{
-            flex: 1, background: T.cardInner, border: T.cardBorder, borderRadius: 20,
-            padding: '10px 16px', fontSize: 16, color: '#4A3528', fontFamily: T.sans, outline: 'none',
-          }}
+          className="flex-1 min-w-0 rounded-full border-1.5 border-ink bg-cream px-4 py-2.5 text-base text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
         <button
+          type="button"
           onClick={post}
           disabled={!body.trim() || posting}
-          style={{
-            background: T.accent, border: '1.5px solid #4A3528', borderRadius: '50%',
-            width: 38, height: 38, flexShrink: 0,
-            cursor: body.trim() ? 'pointer' : 'default', opacity: body.trim() ? 1 : 0.5,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          aria-label="Post comment"
+          className="w-10 h-10 flex-shrink-0 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center disabled:opacity-50"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="2.5">
-            <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
+          <Send className="w-4 h-4" strokeWidth={2.25} />
         </button>
       </div>
     </div>

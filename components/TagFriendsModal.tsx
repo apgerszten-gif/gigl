@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { Check, Plus, Search, X } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import { Avatar } from '@/components/Avatar'
+import { BackHeader, Card, Label, PersonPhoto, btnPrimary, inputBox } from '@/components/ui'
 
 // A friend tagged on a show - either a confirmed Gigl profile (userId set)
 // or a pending invite for someone not on Gigl yet (pendingInvite true,
@@ -36,7 +36,6 @@ export function TagFriendsModal({
   onClose: () => void
   onDone: (friends: TaggedFriend[]) => void
 }) {
-  const T = useTheme()
   const supabase = createClient()
   const { user } = useAuth()
 
@@ -126,169 +125,100 @@ export function TagFriendsModal({
   const listToShow = query.trim() ? results : suggested
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 100,
-      background: T.bg, fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-      display: 'flex', flexDirection: 'column',
-      transform: shown ? 'translateY(0)' : 'translateY(100%)',
-      transition: 'transform 0.28s ease-out',
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '18px 24px', position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
-      }}>
-        <button onClick={onClose} aria-label="Back" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <div style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>Tag friends</div>
-      </div>
+    <div className={`fixed inset-0 z-[100] mx-auto max-w-md bg-paper text-ink flex flex-col transition-transform duration-[280ms] ease-out ${
+      shown ? 'translate-y-0' : 'translate-y-full'
+    }`}>
+      <BackHeader title="Tag friends" onBack={onClose} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 24px' }}>
-        {/* Search bar */}
-        <div style={{
-          background: T.card, borderRadius: 5, border: T.cardBorder,
-          padding: '12px 16px', marginBottom: 14,
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6">
+        <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5 mb-3.5`}>
+          <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search by name or username..."
-            style={{ background: 'none', border: 'none', outline: 'none', color: '#4A3528', fontSize: 16, fontFamily: T.sans, width: '100%' }}
+            className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
           />
-        </div>
+        </label>
 
-        {/* Selected pills */}
         {selected.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          <div className="flex flex-wrap gap-2 mb-4">
             {selected.map(f => (
-              <button key={keyOf(f)} onClick={() => removeFriend(f)} style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                background: T.accent, border: '1.5px solid #4A3528',
-                borderRadius: 20, padding: '6px 10px 6px 12px', cursor: 'pointer',
-              }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#FAF3E2', fontFamily: T.sans }}>
-                  {f.pendingInvite ? `${f.displayName} (invite)` : f.displayName}
-                </span>
-                <span style={{ color: '#FAF3E2', fontSize: 13, lineHeight: 1 }}>×</span>
+              <button
+                key={keyOf(f)}
+                type="button"
+                onClick={() => removeFriend(f)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-accent text-cream border-1.5 border-ink pl-3 pr-2 py-1 text-[11px] font-bold"
+              >
+                {f.pendingInvite ? `${f.displayName} (invite)` : f.displayName}
+                <X className="w-3 h-3" strokeWidth={3} />
               </button>
             ))}
           </div>
         )}
 
-        {!query.trim() && (
-          <div style={{ fontSize: 9, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>
-            Suggested
-          </div>
-        )}
+        {!query.trim() && <Label className="mb-2.5">Suggested</Label>}
 
-        {/* Results / suggested */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {listToShow.length === 0 && !searching && (
-            <div style={{ fontSize: 12, color: T.faint, padding: '8px 2px' }}>
+            <p className="px-0.5 py-2 text-xs text-ink-faint">
               {query.trim() ? 'No one matches that search' : 'Follow people to see them here'}
-            </div>
+            </p>
           )}
           {listToShow.map(p => {
             const added = isSelected(p.id)
             return (
-              <button key={p.id} onClick={() => toggleProfile(p)} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                background: T.card, border: T.cardBorder, borderRadius: 5,
-                padding: '10px 12px', cursor: 'pointer', textAlign: 'left', width: '100%',
-              }}>
-                <Avatar name={p.display_name || p.username} size={34} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: T.serif, fontSize: 13, fontWeight: 700, color: '#4A3528' }}>{p.display_name}</div>
-                  <div style={{ fontSize: 10, color: T.muted }}>@{p.username}</div>
-                </div>
-                <div style={{
-                  width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                  background: added ? T.accent : 'none', border: added ? 'none' : `1.5px solid ${T.faint}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {added ? (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2" strokeLinecap="round">
-                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                  )}
-                </div>
+              <button key={p.id} type="button" onClick={() => toggleProfile(p)} className="w-full text-left">
+                <Card flat className="flex items-center gap-3 px-3 py-2.5">
+                  <PersonPhoto name={p.display_name || p.username} className="w-9 h-9 text-sm border border-ink/15" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display text-[13px] font-bold truncate">{p.display_name}</p>
+                    <p className="text-[11px] text-ink-muted">@{p.username}</p>
+                  </div>
+                  <span className={`w-7 h-7 flex-shrink-0 rounded-full flex items-center justify-center ${
+                    added ? 'bg-accent text-cream border-1.5 border-ink' : 'border-1.5 border-ink-faint text-ink-faint'
+                  }`}>
+                    {added ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                  </span>
+                </Card>
               </button>
             )
           })}
         </div>
 
-        {/* Invite by contact */}
-        <div style={{ marginTop: 16 }}>
+        <div className="mt-4">
           {inviteOpen ? (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="flex gap-2">
               <input
                 autoFocus
                 value={inviteValue}
                 onChange={e => setInviteValue(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addPendingInvite() }}
                 placeholder="Phone or email"
-                style={{
-                  flex: 1, background: T.cardInner, border: T.cardBorder, borderRadius: 5,
-                  padding: '10px 12px', fontSize: 13, color: '#4A3528', fontFamily: T.sans, outline: 'none',
-                }}
+                className={`${inputBox} flex-1 min-w-0 px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40`}
               />
-              <button onClick={addPendingInvite} style={{
-                background: T.accent, border: '1.5px solid #4A3528', borderRadius: 5,
-                padding: '0 16px', cursor: 'pointer',
-              }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#FAF3E2', fontFamily: T.sans, textTransform: 'uppercase' }}>Add</span>
-              </button>
+              <button type="button" onClick={addPendingInvite} className={`${btnPrimary} px-4 text-[11px]`}>Add</button>
             </div>
           ) : (
-            <button onClick={() => setInviteOpen(true)} style={{
-              width: '100%', background: 'none', border: '1.5px dashed rgba(74,53,40,0.3)',
-              borderRadius: 5, padding: '14px 16px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}>
-              <span style={{ fontSize: 11, color: T.faint, fontFamily: T.sans, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                Not on Gigl? Invite by contact or link
-              </span>
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className="w-full rounded-card border-1.5 border-dashed border-ink/30 px-4 py-3.5 text-[11px] font-semibold uppercase tracking-label text-ink-faint"
+            >
+              Not on Gigl? Invite by contact or link
             </button>
           )}
           {inviteOpen && (
-            <button onClick={shareInviteLink} style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: '8px 2px', marginTop: 4,
-            }}>
-              <span style={{ fontSize: 11, color: T.accent, fontFamily: T.sans, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                or share an invite link instead
-              </span>
+            <button type="button" onClick={shareInviteLink} className="mt-1 px-0.5 py-2 text-[11px] font-semibold text-accent underline underline-offset-[3px]">
+              or share an invite link instead
             </button>
           )}
         </div>
       </div>
 
-      {/* Done */}
-      <div style={{
-        padding: '12px 24px calc(12px + env(safe-area-inset-bottom))',
-        borderTop: '1px solid rgba(74,53,40,0.1)', flexShrink: 0,
-      }}>
-        <button onClick={() => onDone(selected)} style={{
-          width: '100%', background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-          borderRadius: 5, padding: 16, cursor: 'pointer',
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#FAF3E2', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            Done{selected.length > 0 ? ` · ${selected.length} tagged` : ''}
-          </span>
+      <div className="flex-shrink-0 border-t border-ink/10 px-5 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <button type="button" onClick={() => onDone(selected)} className={`${btnPrimary} w-full py-3.5 text-xs`}>
+          Done{selected.length > 0 ? ` · ${selected.length} tagged` : ''}
         </button>
       </div>
     </div>

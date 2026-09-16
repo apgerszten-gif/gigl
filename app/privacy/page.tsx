@@ -1,17 +1,6 @@
 'use client'
 
-import { LegalPageShell } from '@/components/LegalPageShell'
-import { DEFAULT_THEME as T } from '@/lib/theme'
-
-function H2({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, marginTop: 22, marginBottom: 8, color: '#4A3528' }}>{children}</div>
-}
-function P({ children }: { children: React.ReactNode }) {
-  return <p style={{ marginBottom: 12 }}>{children}</p>
-}
-function Ul({ children }: { children: React.ReactNode }) {
-  return <ul style={{ marginBottom: 12, paddingLeft: 18 }}>{children}</ul>
-}
+import { LegalPageShell, LegalH2 as H2, LegalP as P, LegalUl as Ul } from '@/components/LegalPageShell'
 
 export default function PrivacyPage() {
   return (
@@ -55,7 +44,7 @@ export default function PrivacyPage() {
       <P>Some content you submit — such as your username, public ratings, reviews, and rankings — may be visible to other users or visible publicly (for example, on a shareable profile page). Please don&apos;t include information in reviews or profile fields that you don&apos;t want to be seen publicly.</P>
 
       <H2>5. Data Retention &amp; Deletion</H2>
-      <P>We retain your account information and content for as long as your account is active. You may request deletion of your account and associated data by contacting us at <a href="mailto:a.p.gerszten@gmail.com" style={{ color: T.accent }}>a.p.gerszten@gmail.com</a>. Some information may be retained where required for legal, security, or fraud-prevention purposes.</P>
+      <P>We retain your account information and content for as long as your account is active. You may request deletion of your account and associated data by contacting us at <a href="mailto:a.p.gerszten@gmail.com" className="text-accent underline underline-offset-[3px]">a.p.gerszten@gmail.com</a>. Some information may be retained where required for legal, security, or fraud-prevention purposes.</P>
 
       <H2>6. Children&apos;s Privacy</H2>
       <P>Gigl is not directed to children under 13 (or the relevant minimum age in your jurisdiction), and we do not knowingly collect personal information from children under that age. If you believe a child has provided us with personal information, please contact us so we can remove it.</P>
@@ -67,7 +56,7 @@ export default function PrivacyPage() {
       <P>We may update this Privacy Policy from time to time. If we make material changes, we will update the &quot;Last updated&quot; date above and, where appropriate, provide additional notice.</P>
 
       <H2>9. Contact Us</H2>
-      <P>Questions about this Privacy Policy can be directed to: <a href="mailto:a.p.gerszten@gmail.com" style={{ color: T.accent }}>a.p.gerszten@gmail.com</a></P>
+      <P>Questions about this Privacy Policy can be directed to: <a href="mailto:a.p.gerszten@gmail.com" className="text-accent underline underline-offset-[3px]">a.p.gerszten@gmail.com</a></P>
     </LegalPageShell>
   )
 }

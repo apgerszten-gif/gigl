@@ -1,7 +1,6 @@
 'use client'
 
-import { useTheme } from '@/components/FestivalThemeProvider'
-import type { FestivalTheme } from '@/lib/theme'
+import { MessageCircle } from 'lucide-react'
 
 // Quick-react palette (Slack-style) rather than a full emoji picker - kept
 // small and fast to tap on mobile. Rendered as line icons (not raw emoji
@@ -32,14 +31,8 @@ export function ReactionBar({
   likeCount, likedByMe, reactionCounts, myReactions, commentCount,
   onToggleLike, onToggleReaction, onOpenComments,
 }: ReactionBarProps) {
-  const T = useTheme()
-
   return (
-    <div style={{
-      padding: '8px 14px 10px',
-      display: 'flex', alignItems: 'center', gap: 4,
-      borderTop: '1px solid rgba(74,53,40,0.08)',
-    }}>
+    <div className="px-3 py-2 flex items-center gap-1 border-t border-ink/10">
       {REACTIONS.map(({ emoji, Icon, isLike }) => {
         const count  = isLike ? likeCount : (reactionCounts[emoji] ?? 0)
         const active = isLike ? likedByMe : myReactions.includes(emoji)
@@ -47,48 +40,39 @@ export function ReactionBar({
         return (
           <button
             key={emoji}
+            type="button"
             onClick={onClick}
             aria-label={isLike ? (active ? 'Unlike' : 'Like') : `React ${emoji}`}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 3,
-              background: active ? T.accentDim : 'none',
-              border: active ? `1.5px solid ${T.accentBorder}` : '1.5px solid transparent',
-              borderRadius: 20, padding: '3px 7px', cursor: 'pointer',
-            }}
+            className={`flex items-center gap-1 rounded-full px-2 py-1 border-1.5 ${
+              active ? 'bg-accent/10 border-accent/30 text-accent' : 'border-transparent text-ink-muted'
+            }`}
           >
-            <Icon active={active} T={T} />
-            {count > 0 && (
-              <span style={{ fontSize: 11, fontWeight: 600, color: active ? T.accent : T.muted, fontFamily: T.sans }}>{count}</span>
-            )}
+            <Icon active={active} />
+            {count > 0 && <span className="text-[11px] font-semibold">{count}</span>}
           </button>
         )
       })}
 
       <button
+        type="button"
         onClick={onOpenComments}
         aria-label="Comments"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}
+        className="ml-auto flex items-center gap-1 px-1 text-ink-muted"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-        </svg>
-        {commentCount > 0 && (
-          <span style={{ fontSize: 11, fontWeight: 600, color: T.muted, fontFamily: T.sans }}>{commentCount}</span>
-        )}
+        <MessageCircle className="w-4 h-4" strokeWidth={2} />
+        {commentCount > 0 && <span className="text-[11px] font-semibold">{commentCount}</span>}
       </button>
     </div>
   )
 }
 
 // ── Line icons ─────────────────────────────────────────────────────────────
-// Drawn to match the existing heart / comment-bubble treatment: 16px, 2px
-// stroke, muted by default and filled with the theme accent when active.
+// 15px, 2px stroke, drawn in currentColor so the button's text colour (muted,
+// or sienna when active) carries through. Heart fills in when active.
 
-interface GlyphProps { active: boolean; T: FestivalTheme }
-
-function HeartGlyph({ active, T }: GlyphProps) {
+function HeartGlyph({ active }: { active: boolean }) {
   return (
-    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill={active ? T.accent : 'none'} stroke={active ? T.accent : T.muted} strokeWidth="2">
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
       <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
     </svg>
   )
@@ -96,33 +80,30 @@ function HeartGlyph({ active, T }: GlyphProps) {
 
 // Flame silhouette (filled, not stroked) - the outline version read as an
 // ambiguous blob at 14-16px, a solid tongue-of-flame shape is legible small.
-function FireGlyph({ active, T }: GlyphProps) {
-  const c = active ? T.accent : T.muted
+function FireGlyph(_: { active: boolean }) {
   return (
-    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill={c} stroke="none">
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
     </svg>
   )
 }
 
-function LaughGlyph({ active, T }: GlyphProps) {
-  const c = active ? T.accent : T.muted
+function LaughGlyph(_: { active: boolean }) {
   return (
-    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <circle cx="12" cy="12" r="9" />
       <path d="M8 9.5q1-1.5 2-.2M14 9.5q1-1.5 2-.2" />
-      <path d="M7.5 13.5a4.5 3.5 0 0 0 9 0z" fill={c} stroke="none" />
+      <path d="M7.5 13.5a4.5 3.5 0 0 0 9 0z" fill="currentColor" stroke="none" />
     </svg>
   )
 }
 
-function WowGlyph({ active, T }: GlyphProps) {
-  const c = active ? T.accent : T.muted
+function WowGlyph(_: { active: boolean }) {
   return (
-    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
+    <svg width="15.4" height="15.4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
-      <circle cx="9" cy="10" r="1" fill={c} stroke="none" />
-      <circle cx="15" cy="10" r="1" fill={c} stroke="none" />
+      <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
       <ellipse cx="12" cy="15.5" rx="2" ry="2.5" />
     </svg>
   )
