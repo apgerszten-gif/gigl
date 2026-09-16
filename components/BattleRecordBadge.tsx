@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { Trophy } from 'lucide-react'
 
 // Small inline W-L indicator shown next to a show's star rating. Purely a
 // display of battle_records data - never reads or writes performance_rating/
@@ -18,54 +18,40 @@ export function BattleRecordBadge({
   context: 'aggregate' | 'personal'
   artistName: string
 }) {
-  const T = useTheme()
   const router = useRouter()
   const [open, setOpen] = useState(false)
 
   if (wins + losses === 0) return null
 
   return (
-    <span style={{ position: 'relative', display: 'inline-block' }}>
+    <span className="relative inline-block">
       <button
+        type="button"
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          fontSize: 10, color: T.muted, fontFamily: T.sans, fontWeight: 600,
-          marginLeft: 6, whiteSpace: 'nowrap',
-        }}
+        className="inline-flex items-center gap-0.5 whitespace-nowrap text-[10px] font-semibold text-ink-muted"
       >
-        🏆 {wins}-{losses}
+        <Trophy className="w-3 h-3" strokeWidth={2} /> {wins}-{losses}
       </button>
 
       {open && (
         <div
           onClick={e => e.stopPropagation()}
-          style={{
-            position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 40,
-            width: 216, background: T.card, border: T.cardBorder, boxShadow: T.cardShadow,
-            borderRadius: 5, padding: '12px 14px', fontSize: 11.5, color: '#4A3528', lineHeight: 1.45,
-          }}
+          className="absolute top-full right-0 mt-1.5 z-40 w-[216px] rounded-card border-1.5 border-ink bg-cream shadow-riso px-3.5 py-3 text-[11.5px] leading-snug text-ink"
         >
           {unlocked ? (
             context === 'aggregate' ? (
-              <>🏆 {artistName} has been battled {wins + losses} time{wins + losses === 1 ? '' : 's'} across Gigl — {wins} win{wins === 1 ? '' : 's'}, {losses} loss{losses === 1 ? '' : 'es'} head to head.</>
+              <>{artistName} has been battled {wins + losses} time{wins + losses === 1 ? '' : 's'} across Gigl: {wins} win{wins === 1 ? '' : 's'}, {losses} loss{losses === 1 ? '' : 'es'} head to head.</>
             ) : (
-              <>🏆 You&apos;ve battled {artistName} {wins + losses} time{wins + losses === 1 ? '' : 's'} — {wins} win{wins === 1 ? '' : 's'}, {losses} loss{losses === 1 ? '' : 'es'}.</>
+              <>You&apos;ve battled {artistName} {wins + losses} time{wins + losses === 1 ? '' : 's'}: {wins} win{wins === 1 ? '' : 's'}, {losses} loss{losses === 1 ? '' : 'es'}.</>
             )
           ) : (
-            <>🏆 Battle Mode lets you pit your favorite sets head to head and crown a champion. It unlocks once you&apos;ve logged 10 shows.</>
+            <>Battle Mode lets you pit your favorite sets head to head and crown a champion. It unlocks once you&apos;ve logged 10 shows.</>
           )}
-          <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+          <div className="flex gap-3 mt-2.5 text-[10px] font-bold uppercase tracking-label">
             {unlocked && (
-              <button onClick={() => router.push('/battle')} style={{
-                background: 'none', border: 'none', color: T.accent, fontSize: 10.5, fontWeight: 700,
-                cursor: 'pointer', padding: 0, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans,
-              }}>Battle</button>
+              <button type="button" onClick={() => router.push('/battle')} className="text-accent">Battle</button>
             )}
-            <button onClick={() => setOpen(false)} style={{
-              background: 'none', border: 'none', color: T.muted, fontSize: 10.5, fontWeight: 700,
-              cursor: 'pointer', padding: 0, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: T.sans,
-            }}>Got it</button>
+            <button type="button" onClick={() => setOpen(false)} className="text-ink-muted">Got it</button>
           </div>
         </div>
       )}

@@ -2,7 +2,7 @@
 
 Gigl looks like a well-thumbed gig zine: warm paper, dark-brown ink, a burnt-sienna spot colour, and hard printed edges. The screen layouts come from the Stitch "Option A" exploration (Gigl × Beli / DICE). The visual language is Gigl's own.
 
-This document is the source of truth. The rendered reference is the style guide at `/design` (`app/design/DesignPreview.tsx`). It only exists in local dev and preview deployments.
+This document is the source of truth. Every screen is built from the shared pieces in `components/ui.tsx`, plus `components/AppHeader.tsx`, `components/BottomNav.tsx` and `components/Logo.tsx`. The style guide at `/design` (`app/design/DesignPreview.tsx`) shows the same pieces with sample data. It only exists in local dev and preview deployments.
 
 ---
 
@@ -58,93 +58,105 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 
   The dock is cream with a 1.5px ink top border. Labels are 9px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. Search is the fourth tab so that Log can sit in the middle with two tabs either side.
 
+  Log and Search both open show search (`/select-festival`), because logging always starts by picking a show. Log adds `?mode=log`, which changes the heading to "What did you see?".
+- **Focused pages** (artist, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
+
 ---
 
 ## 4. Component patterns
 
-| Pattern | Classes |
-|---|---|
-| Card | `bg-cream border-1.5 border-ink rounded-card shadow-riso` |
-| Quiet tile (secondary) | `bg-cream border-1.5 border-ink/15 rounded-card` (no shadow) |
-| Inset tile | `bg-paper border border-ink/10 rounded-card` |
-| Label | `text-[10px] font-semibold uppercase tracking-label text-ink-muted` |
-| Chip | `px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-label border-1.5`, plus `border-ink/15 text-ink-muted` when inactive or `bg-accent/10 border-accent/30 text-accent` when active |
-| Segmented toggle | Wrapper `flex border-2 border-ink rounded-card overflow-hidden`. Options `flex-1 py-1.5 text-[10px] font-bold uppercase tracking-label`, divided by `border-l-2 border-ink`. Active option `bg-ink text-cream`, inactive `bg-cream text-ink` |
-| Underline tabs | `text-[10px] font-bold uppercase tracking-label`. Active `text-ink border-b-2 border-accent`, inactive `text-ink-faint` |
-| Primary button | `rounded-card bg-accent text-cream border-1.5 border-ink shadow-riso font-display font-bold uppercase tracking-label hover:bg-accent-hover` |
-| Secondary button | `rounded-card border-1.5 border-ink text-[10px] font-bold uppercase tracking-label` |
-| Icon button | `p-2 rounded-card border-1.5 border-ink bg-cream shadow-riso` |
-| Floating pill | `rounded-full bg-ink text-cream text-[10px] font-bold uppercase tracking-label shadow-riso-lg` |
-| Callout | `rounded-card bg-accent/10 border-1.5 border-accent/30` |
-| Pull quote | `border-l-2 border-accent pl-3 font-display text-[15px] leading-snug` |
-| Headings | `font-display font-bold tracking-tight`: `text-xl` for card titles, `text-2xl` for page titles |
-| Big numbers | `font-display font-bold`. Rank numbers are `text-accent` |
-| Artist photo | Size set by the caller (`w-14 h-14` in lists, `w-[76px] h-[76px]` on feed cards). Frame: `rounded-card border-1.5 border-ink overflow-hidden`, with the image set to `object-cover`. With no photo, the frame is tinted (`bg-terra/25`, `bg-accent/15` or `bg-ink/10`, picked per artist) and holds a `.halftone` layer with a `MicVocal` icon in `text-ink/45`. Overlays such as the date sticker go outside the clipped frame so they can overhang |
-| Date sticker | Month and day on an artist photo's corner: `absolute -bottom-1.5 -right-1.5 -rotate-3 rounded bg-cream border-1.5 border-ink shadow-riso`. The month is 8px uppercase `ink-muted`; the day is 13px `font-display` bold |
-| Place line | `flex items-center gap-1 text-[12px] text-ink-muted`: a `MapPin` icon (`w-3 h-3 text-accent`), then "Venue, City" truncated to one line |
-| Your profile photo (header) | `w-9 h-9 rounded-full border-1.5 border-ink shadow-riso` inside a button that opens You. On You itself it's `w-16 h-16` |
-| Other people's photos | `rounded-full bg-paper border border-ink/15`, `w-8 h-8` in feed cards. Initial in `font-display font-bold text-ink-muted` when there's no photo |
-| Star rating | `<StarDisplay accent="currentColor" />` inside a `text-star` element |
-| Text input | `rounded-card border-1.5 border-ink bg-cream placeholder:text-ink-faint focus:ring-2 focus:ring-accent/40` |
-| Progress bar | Track `h-2 rounded-full bg-paper border border-ink/15`, fill `bg-accent` |
-| Divider | `border-ink/10` |
+Use the component rather than retyping its classes. The class lists are here so the look can be read without opening code.
+
+| Pattern | Component | Classes |
+|---|---|---|
+| Card | `Card` | `bg-cream border-1.5 border-ink rounded-card shadow-riso` |
+| Quiet tile (secondary) | `Card flat`, or these classes | `bg-cream border-1.5 border-ink/15 rounded-card` (no shadow) |
+| Inset tile | — | `bg-paper border border-ink/10 rounded-card` |
+| Label | `Label` (`tone`: muted, ink or accent) | `text-[10px] font-semibold uppercase tracking-label text-ink-muted` |
+| Chip | `Chip` | `px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-label border-1.5`, plus `border-ink/15 text-ink-muted` when inactive or `bg-accent/10 border-accent/30 text-accent` when active |
+| Segmented toggle | `Segmented` | Wrapper `flex border-2 border-ink rounded-card overflow-hidden`. Options `flex-1 py-1.5 text-[10px] font-bold uppercase tracking-label`, divided by `border-l-2 border-ink`. Active option `bg-ink text-cream`, inactive `bg-cream text-ink` |
+| Underline tabs | — | `text-[10px] font-bold uppercase tracking-label`. Active `text-ink border-b-2 border-accent`, inactive `text-ink-faint` |
+| Primary button | `btnPrimary` | `rounded-card bg-accent text-cream border-1.5 border-ink shadow-riso font-display font-bold uppercase tracking-label hover:bg-accent-hover` |
+| Secondary button | `btnSecondary` (also `btnQuiet`) | `rounded-card border-1.5 border-ink bg-cream font-bold uppercase tracking-label`. The caller sets the font size |
+| Icon button | `iconBtn` | `p-2 rounded-card border-1.5 border-ink bg-cream shadow-riso` |
+| Floating pill | — | `rounded-full bg-ink text-cream text-[10px] font-bold uppercase tracking-label shadow-riso-lg` |
+| Callout | — | `rounded-card bg-accent/10 border-1.5 border-accent/30` |
+| Pull quote | `PullQuote` | `border-l-2 border-accent pl-3 font-display text-[15px] leading-snug` |
+| Headings | — | `font-display font-bold tracking-tight`: `text-xl` for card titles, `text-2xl` for page titles |
+| Big numbers | `Stat` in stat rows | `font-display font-bold`. Rank numbers are `text-accent` |
+| Artist photo | `ArtistPhoto` | Size set by the caller (`w-14 h-14` in lists, `w-[76px] h-[76px]` on feed cards). Frame: `rounded-card border-1.5 border-ink overflow-hidden`, with the image set to `object-cover`. With no photo, the frame is tinted (`bg-terra/25`, `bg-accent/15` or `bg-ink/10`, picked per artist) and holds a `.halftone` layer with a `MicVocal` icon in `text-ink/45`. Overlays such as the date sticker go outside the clipped frame so they can overhang |
+| Date sticker | `DateTag` (takes an ISO date) | Month and day on an artist photo's corner: `absolute -bottom-1.5 -right-1.5 -rotate-3 rounded bg-cream border-1.5 border-ink shadow-riso`. The month is 8px uppercase `ink-muted`; the day is 13px `font-display` bold |
+| Place line | `Place` | `flex items-center gap-1 text-[12px] text-ink-muted`: a `MapPin` icon (`w-3 h-3 text-accent`), then "Venue, City" truncated to one line |
+| Your profile photo (header) | `AppHeader` | `w-9 h-9 rounded-full border-1.5 border-ink shadow-riso` inside a link to You. On You itself it's `w-16 h-16` |
+| Other people's photos | `PersonPhoto` | `rounded-full bg-paper border border-ink/15`, `w-8 h-8` in feed cards. Initial in `font-display font-bold text-ink-muted` when there's no photo |
+| Star rating | `Stars` | `<StarDisplay accent="currentColor" />` inside a `text-star` element |
+| Text input | `inputBox`; `Field` and `fieldInput` in forms | `rounded-card border-1.5 border-ink bg-cream placeholder:text-ink-faint focus:ring-2 focus:ring-accent/40` |
+| Progress bar | — | Track `h-2 rounded-full bg-paper border border-ink/15`, fill `bg-accent` |
+| Divider | — | `border-ink/10` |
+| Empty state | `EmptyState` | `rounded-card border-1.5 border-dashed border-ink/30 bg-cream text-[13px] text-ink-muted`, centred |
+| Loading | `LoadingLabel` | Centred 11px uppercase `ink-faint` text |
+| Form error | `ErrorNote` | Red-tinted box with `text-[#B03030]` |
+| Back header | `BackHeader` | Sticky header with a back chevron and a title |
 
 ---
 
 ## 5. Core screens
 
-The style guide renders each of these with sample data. Items marked *(mockup)* are features Gigl doesn't have yet, and items marked *(needs data)* need data Gigl doesn't store yet. Don't build either without asking.
+The real screens below all follow the patterns above. The style guide also shows items marked *(mockup)*: features Gigl doesn't have yet. Items marked *(needs data)* need data Gigl doesn't store yet. Don't build either without asking.
 
 - **Artist photos** *(needs data)*: Ticketmaster returns event and artist images, but the nightly sync doesn't save them. Showing them needs an image URL column on `shows` and the Ticketmaster image host added to `next.config.js`.
 - **Profile photos** *(needs data)*: `profiles` has no photo column and there's no upload flow.
 - Until then, both fall back to the placeholders in section 4.
 
 ### Feed (`/feed`)
-- Header with the logo, and your profile photo at the far right.
-- Segmented toggle: Activity / Following / Popular *(mockup)*.
-- Filter chips: this weekend, city, genre *(mockup)*.
+- `AppHeader` with the logo and your profile photo.
+- Segmented toggle: All activity / Following. The style guide also shows a Popular option and filter chips for weekend, city and genre *(mockup)*.
 - Review cards, each with:
-  - the reviewer's photo, handle and timestamp
-  - the star rating, top right
-  - the artist heading and place line, with the artist photo and date sticker beside them
-  - pull-quote field notes *(mockup)*
-  - highlight chips *(mockup)*
+  - any photos or videos the reviewer attached, full-bleed at the top
+  - the reviewer's photo, handle and timestamp, with the star rating on the right
+  - the artist heading and place line, with the artist photo and date sticker beside them (festival logs show the stage and day instead)
+  - the review as a pull quote, then its tags as chips
+  - the reaction bar (heart, fire, laugh, wow, comments)
+- The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
 
 ### Rankings (`/rankings`)
-- Header with a "My music index" label, the page title, a share icon button and your profile photo.
-- Underline tabs: Been / Want to see *(mockup)* / Festivals / Recs *(mockup)*.
-- Milestone callout *(mockup)*.
-- Ranked cards, each with:
-  - a sienna rank number and the artist photo
-  - the artist, with stars beside the title
-  - the place line
-  - a note chip
-- Floating "View gig map" pill *(mockup)*.
+- `AppHeader` with an "Everyone's ratings" label and the title.
+- Underline day tabs, only when the logged shows span more than one day.
+- Ranked cards: a sienna rank number, the artist photo with its date sticker, the artist with stars, the place line, a rating-count chip and any battle record.
+- The style guide also shows a milestone callout and a "View gig map" pill *(mockup)*.
 
 ### Log a show (`/log-show`)
-- Top bar with Cancel, a step label and a Draft chip. There is no header or profile photo in this flow.
-- Selected-show card: the artist photo, the date as a sienna label, the artist, the place line and an edit icon.
-- Rating card: the overall stars, plus Performance / Venue / Crowd stars in inset tiles.
-- Field notes input with a character count *(mockup)*.
-- Highlight chips that toggle on and off *(mockup)*.
-- Tiles for "Went with" (friend tagging) and "Photo / Setlist" (setlist is *(mockup)*).
-- Full-width primary button: "Save & publish".
+- Title bar ("Log a show" or "Update log") with a close button. There's no dock or profile photo in this flow.
+- Selected-show card: the artist photo, the date as a sienna label, the artist and the place line.
+- Rating card: the overall stars once all three are set, then tappable Performance / Venue / Crowd star rows.
+- Field notes (the review), highlight tags (presets plus custom ones), "Went with" (friend tagging) and "Photos & video" (up to 1 video and 2 photos).
+- Full-width primary button: "Save log".
+- `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
 
-### Search (currently `/select-festival`)
-- Header with the page title "Find a show" and your profile photo.
-- Search input for artist, venue or city: a card with a search icon.
-- A "Coming up" label that changes to a match count while typing.
-- One card of result rows, alternating `cream` / `cream-alt`. Each row has:
-  - the artist photo with a date sticker
-  - the artist and place line
-  - a "+ Log" secondary button that goes straight into logging
+### Search (`/select-festival`)
+- `AppHeader` titled "Find a show", or "What did you see?" when opened from Log.
+- Search input for artist, venue or city.
+- A "Coming up" label that changes to "Results for …" while typing.
+- One card of result rows, alternating `cream` / `cream-alt`. Each row has the artist photo with a date sticker, the artist, the place line, any support acts and a "+ Log" button. Tapping a row goes straight into logging.
+- A dashed "Can't find your show?" tile *(mockup: adding your own show)*.
 
 ### You (`/profile`)
-- Header with the logo and a share icon button. There's no profile photo here, since this page is your profile.
+- `AppHeader` with the logo and a share button, which shares or copies your public profile link. There's no profile photo in the header, since this page is your profile.
 - Profile card:
-  - your photo (`w-16 h-16`), name, handle, a place line for your city, and an Edit button
-  - a stats row in two pairs, split by a 1.5px ink rule: gigs and rank *(mockup)*, then followers and following. The four stat labels use 9px text with `tracking-wide` so they fit.
-- Live streak and soundprint cards *(mockup)*.
-- Yearly goal progress card *(mockup)*.
-- Directory tiles: attended, want to see *(mockup)*, festivals, buddies *(mockup)*.
-- Latest log card: the artist photo, the artist, the place line and the stars.
+  - your photo (`w-16 h-16`), name and handle
+  - a stats row in two pairs, split by a 1.5px ink rule: gigs and average rating (stars), then followers and following
+  - the style guide also shows a city place line *(mockup)*
+- "My rankings": ranked cards like the Rankings page, with any media, the review and tags. Each card's edit button opens an inline editor for the photo, review and tags, with options to update the ratings or remove the log.
+- Footer links: Sign out, Privacy Policy, Terms of Service.
+- The style guide also shows live streak, soundprint and yearly goal cards *(mockup)*.
+
+### Other screens
+- **Public profile** (`/u/[username]`): the You layout, read-only, with a Follow button and a "Join Gigl" call to action.
+- **Artist** (`/artist/[id]`):
+  - a large artist photo with the place line and average stars
+  - a strip of fan photos
+  - a stats card: number of ratings, plus average and top rating as stars
+  - a Performance / Venue / Crowd breakdown
+  - review cards
+- **Stage** (`/stage/[name]`), **Battle** (`/battle`), the follower lists, sign-in, username and legal pages all use the same pieces.
+- **Landing** (`/`, `components/IntroDemo.tsx`) is still the older animated demo of the festival flow and hasn't been redesigned.

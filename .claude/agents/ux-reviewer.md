@@ -14,7 +14,7 @@ section of CLAUDE.md before reviewing; app/design/DesignPreview.tsx renders
 the patterns.
 
 Evaluate whatever you're pointed at for: consistency with DESIGN.md and use
-of its Tailwind tokens and class recipes over raw hex or inline styles,
+of the shared components in components/ui.tsx over raw hex or inline styles,
 unnecessary friction in user flows, and mobile usability (festival-goers
 will use this one-handed, outdoors). Be specific - cite file/component
 names. End with a short prioritized list of the 3 things worth fixing first.

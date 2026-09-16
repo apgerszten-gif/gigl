@@ -26,18 +26,17 @@ A Letterboxd-style app for live music. People log shows they've been to (a festi
 
 How to apply it:
 
-- Style with the Tailwind tokens and the class recipes in `DESIGN.md`:
+- **Build UI from the shared pieces, not raw classes:**
+  - `components/ui.tsx`: `Card`, `Label`, `Chip`, `Stars`, `ArtistPhoto`, `PersonPhoto`, `Place`, `DateTag`, `Segmented`, `BackHeader`, the `btn*` recipes and more
+  - `components/AppHeader.tsx` for the main tabs' header, `components/BottomNav.tsx` for the dock, and `components/Logo.tsx`
+  - `DESIGN.md` section 4 maps each pattern to its component.
+- When you need raw classes, use the Tailwind tokens:
   - colours: `paper`, `cream`, `cream-alt`, `ink`, `ink-muted`, `ink-faint`, `accent`, `accent-hover`, `terra`, `star`
   - `font-display` / `font-sans`, `border-1.5`, `rounded-card`, `shadow-riso` / `shadow-riso-lg`, `tracking-label`
   - Use opacity modifiers for tints (`bg-accent/10`, `border-ink/15`) rather than new hex values.
-- The logo is `components/Logo.tsx`: "Gigl" with a capital G and a sienna slash.
+  - **Don't pass a conflicting class to a component that already sets it** (for example a text colour to `Label`, or a font size to `Logo`). Tailwind doesn't let the later class win reliably. Use the component's prop instead (`tone`, `size`), or add one.
 - Icons come from `lucide-react`.
-- **A rating is only ever shown as stars.** Use `components/StarDisplay.tsx`, which handles partial fills. Inside a `text-star` element, pass `accent="currentColor"`. Don't add numeric scores or tier descriptors (Elite, Epic, Top Tier…).
-- Gigl stores no artist or profile photos yet, so the photo patterns fall back to placeholders (see *(needs data)* in `DESIGN.md`). Ask before adding image columns, storage or uploads.
-- Several features in the design exist only as mockups and are marked *(mockup)* in `DESIGN.md`: Popular tab, filter chips, Want to see, Gig map, streaks, goals, buddies, city rank, field notes, highlight tags and setlists. Don't build them without asking. The following filter, friend tagging and photos do already exist.
-
-### Migration status
-
-- Most screens are still styled with inline `style={{}}` objects from `useTheme()` (`components/FestivalThemeProvider.tsx`, `lib/theme.ts`). The token values match `DEFAULT_THEME`, so moving a screen to Tailwind is mostly mechanical. When you rework a screen, move it to the tokens instead of adding more theme-object styling. Many of those screens also inline their own copy of the logo.
-- Festival theming is not carried forward. `useTheme()` swaps the accent per festival (Bonnaroo is amber), but migrated screens use the fixed tokens. Ignore festival-specific screens and themes (Bonnaroo, Outside Lands) when designing or migrating.
-- `components/BottomNav.tsx` isn't used anywhere, and it references a `brand` colour that doesn't exist.
+- **A rating is only ever shown as stars.** Use `Stars` (it wraps `components/StarDisplay.tsx`, which handles partial fills). Don't add numeric scores or tier descriptors (Elite, Epic, Top Tier…). The unlinked legacy `/rank` page still shows Elo numbers.
+- Gigl stores no artist or profile photos yet, so `ArtistPhoto` and `PersonPhoto` fall back to placeholders (see *(needs data)* in `DESIGN.md`). Ask before adding image columns, storage or uploads.
+- Features marked *(mockup)* in `DESIGN.md` exist only in the style guide: Popular tab, filter chips, gig map, streaks, goals, milestone callouts, city rank and adding your own show. Don't build them without asking. Reviews, highlight tags, friend tagging, photos and the following filter are real.
+- **Festival theming is not carried forward.** Ignore festival-specific screens and themes (Bonnaroo, Outside Lands) when designing. `useTheme()` / `lib/theme.ts` now only serve `components/IntroDemo.tsx`, the landing page's animated demo, which hasn't been redesigned yet.

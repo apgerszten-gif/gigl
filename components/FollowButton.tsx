@@ -1,15 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import { btnPrimary } from '@/components/ui'
 
 // Asymmetric follow graph (public.follows) - no confirmation needed on
 // either side, matching the model decided for this app. Renders nothing
 // while logged out or on the viewer's own profile.
 export function FollowButton({ targetUserId }: { targetUserId: string }) {
-  const T = useTheme()
   const supabase = createClient()
   const { user } = useAuth()
 
@@ -49,25 +48,20 @@ export function FollowButton({ targetUserId }: { targetUserId: string }) {
 
   return (
     <button
+      type="button"
       onClick={toggle}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       disabled={pending}
-      style={{
-        padding: '8px 16px', borderRadius: 20, flexShrink: 0,
-        background: isFollowing ? 'none' : T.accent,
-        border: isFollowing
-          ? (hovering ? '1.5px solid rgba(160,40,40,0.4)' : T.cardBorder)
-          : '1.5px solid #4A3528',
-        cursor: pending ? 'default' : 'pointer',
-        opacity: pending ? 0.7 : 1,
-      }}
+      className={`flex-shrink-0 px-3 py-1.5 text-[10px] ${
+        isFollowing
+          ? `inline-flex items-center rounded-card border-1.5 bg-cream font-bold uppercase tracking-label disabled:opacity-50 ${
+              hovering ? 'border-[#B03030]/40 text-[#B03030]' : 'border-ink text-ink'
+            }`
+          : btnPrimary
+      }`}
     >
-      <span style={{
-        fontSize: 11, fontWeight: 700, fontFamily: T.sans,
-        letterSpacing: '0.06em', textTransform: 'uppercase',
-        color: isFollowing ? (hovering ? '#B03030' : '#4A3528') : '#FAF3E2',
-      }}>{label}</span>
+      {label}
     </button>
   )
 }

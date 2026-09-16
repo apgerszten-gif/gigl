@@ -1,44 +1,32 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { Trophy } from 'lucide-react'
+import { Card, btnPrimary } from '@/components/ui'
 
 export function BattleModeUnlockedModal({ onDismiss }: { onDismiss: () => void }) {
   const router = useRouter()
-  const T = useTheme()
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(74,53,40,0.55)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-    }}>
-      <div style={{
-        background: T.card, borderRadius: 8, border: T.cardBorder, boxShadow: T.cardShadow,
-        padding: '28px 24px', maxWidth: 360, width: '100%', textAlign: 'center', fontFamily: T.sans,
-      }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>🏆</div>
-        <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#4A3528', marginBottom: 8, lineHeight: 1.2 }}>
-          Battle Mode unlocked<span style={{ color: T.accent }}>!</span>
-        </div>
-        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, marginBottom: 24 }}>
+    <div className="fixed inset-0 z-[100] bg-ink/55 flex items-center justify-center p-6">
+      <Card className="w-full max-w-[360px] px-6 py-7 text-center">
+        <span className="mx-auto mb-3 w-12 h-12 rounded-full bg-accent/10 border-1.5 border-accent/30 text-accent flex items-center justify-center">
+          <Trophy className="w-6 h-6" strokeWidth={1.75} />
+        </span>
+        <h2 className="font-display text-[22px] font-bold leading-tight mb-2">
+          Battle Mode unlocked<span className="text-accent">!</span>
+        </h2>
+        <p className="text-[13px] text-ink-muted leading-relaxed mb-6">
           You&apos;ve logged 10 shows. Battle your favorites head to head and crown a champion.
-        </div>
+        </p>
 
-        <button onClick={() => router.push('/battle')} style={{
-          width: '100%', background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-          borderRadius: 5, padding: 14, cursor: 'pointer', marginBottom: 10,
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#FAF3E2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            Start a battle
-          </span>
+        <button type="button" onClick={() => router.push('/battle')} className={`${btnPrimary} w-full py-3.5 text-xs mb-2.5`}>
+          Start a battle
         </button>
-
-        <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8 }}>
-          <span style={{ fontSize: 12, color: T.muted, fontFamily: T.sans, textDecoration: 'underline', textUnderlineOffset: 3 }}>
-            Maybe later
-          </span>
+        <button type="button" onClick={onDismiss} className="p-2 text-xs text-ink-muted underline underline-offset-[3px]">
+          Maybe later
         </button>
-      </div>
+      </Card>
     </div>
   )
 }

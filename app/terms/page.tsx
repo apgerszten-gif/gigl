@@ -1,17 +1,6 @@
 'use client'
 
-import { LegalPageShell } from '@/components/LegalPageShell'
-import { DEFAULT_THEME as T } from '@/lib/theme'
-
-function H2({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, marginTop: 22, marginBottom: 8, color: '#4A3528' }}>{children}</div>
-}
-function P({ children }: { children: React.ReactNode }) {
-  return <p style={{ marginBottom: 12 }}>{children}</p>
-}
-function Ul({ children }: { children: React.ReactNode }) {
-  return <ul style={{ marginBottom: 12, paddingLeft: 18 }}>{children}</ul>
-}
+import { LegalPageShell, LegalH2 as H2, LegalP as P, LegalUl as Ul } from '@/components/LegalPageShell'
 
 export default function TermsPage() {
   return (
@@ -67,7 +56,7 @@ export default function TermsPage() {
       <P>These Terms are governed by the laws of the State of California, USA, without regard to conflict of law principles.</P>
 
       <H2>12. Contact Us</H2>
-      <P>Questions about these Terms can be directed to: <a href="mailto:a.p.gerszten@gmail.com" style={{ color: T.accent }}>a.p.gerszten@gmail.com</a></P>
+      <P>Questions about these Terms can be directed to: <a href="mailto:a.p.gerszten@gmail.com" className="text-accent underline underline-offset-[3px]">a.p.gerszten@gmail.com</a></P>
     </LegalPageShell>
   )
 }

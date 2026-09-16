@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { PartyPopper } from 'lucide-react'
+import { Card, btnPrimary, btnSecondary } from '@/components/ui'
 
 export function FirstShowCelebration({ username }: { username: string | null }) {
   const router = useRouter()
-  const T = useTheme()
   const [copied, setCopied] = useState(false)
 
   async function handleShare() {
@@ -28,48 +28,28 @@ export function FirstShowCelebration({ username }: { username: string | null }) 
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 100,
-      background: 'rgba(74,53,40,0.55)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24,
-    }}>
-      <div style={{
-        background: T.card, borderRadius: 8, border: T.cardBorder, boxShadow: T.cardShadow,
-        padding: '28px 24px', maxWidth: 360, width: '100%', textAlign: 'center', fontFamily: T.sans,
-      }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
-        <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#4A3528', marginBottom: 8, lineHeight: 1.2 }}>
-          You logged your first show<span style={{ color: T.accent }}>!</span>
-        </div>
-        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, marginBottom: 24 }}>
-          Bring your friends in on it — see who&apos;s rating what, together.
-        </div>
+    <div className="fixed inset-0 z-[100] bg-ink/55 flex items-center justify-center p-6">
+      <Card className="w-full max-w-[360px] px-6 py-7 text-center">
+        <span className="mx-auto mb-3 w-12 h-12 rounded-full bg-accent/10 border-1.5 border-accent/30 text-accent flex items-center justify-center">
+          <PartyPopper className="w-6 h-6" strokeWidth={1.75} />
+        </span>
+        <h2 className="font-display text-[22px] font-bold leading-tight mb-2">
+          You logged your first show<span className="text-accent">!</span>
+        </h2>
+        <p className="text-[13px] text-ink-muted leading-relaxed mb-6">
+          Bring your friends in on it and see who&apos;s rating what, together.
+        </p>
 
-        <button onClick={handleShare} style={{
-          width: '100%', background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-          borderRadius: 5, padding: 14, cursor: 'pointer', marginBottom: 10,
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#FAF3E2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            {copied ? 'Link copied!' : 'Share with friends'}
-          </span>
+        <button type="button" onClick={handleShare} className={`${btnPrimary} w-full py-3.5 text-xs mb-2.5`}>
+          {copied ? 'Link copied!' : 'Share with friends'}
         </button>
-
-        <button onClick={() => router.push('/log')} style={{
-          width: '100%', background: 'none', border: T.cardBorder,
-          borderRadius: 5, padding: 14, cursor: 'pointer', marginBottom: 10,
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#4A3528', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>
-            Log another show
-          </span>
+        <button type="button" onClick={() => router.push('/select-festival?mode=log')} className={`${btnSecondary} w-full py-3.5 text-xs mb-2.5`}>
+          Log another show
         </button>
-
-        <button onClick={() => router.push('/feed')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8 }}>
-          <span style={{ fontSize: 12, color: T.muted, fontFamily: T.sans, textDecoration: 'underline', textUnderlineOffset: 3 }}>
-            Back to feed
-          </span>
+        <button type="button" onClick={() => router.push('/feed')} className="p-2 text-xs text-ink-muted underline underline-offset-[3px]">
+          Back to feed
         </button>
-      </div>
+      </Card>
     </div>
   )
 }

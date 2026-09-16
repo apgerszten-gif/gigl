@@ -1,11 +1,14 @@
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import { DEFAULT_THEME as T } from '@/lib/theme'
 import { computeShowScore } from '@/lib/rating'
 import { formatShowDate } from '@/lib/dates'
 import { resolveMediaUrls } from '@/lib/media'
-import { StarDisplay } from '@/components/StarDisplay'
+import { Logo } from '@/components/Logo'
+import {
+  ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat,
+} from '@/components/ui'
 import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
@@ -56,8 +59,8 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
     .map(l => ({ ...l, score: computeShowScore(l.performance_rating!, l.venue_rating!, l.crowd_rating!) }))
     .sort((a, b) => b.score - a.score)
 
-  const avgScore  = rated.length > 0 ? rated.reduce((a, l) => a + l.score, 0) / rated.length : 0
-  const highScore = rated.length > 0 ? Math.max(...rated.map(l => l.score)).toFixed(1) : '—'
+  const avgScore = rated.length > 0 ? rated.reduce((a, l) => a + l.score, 0) / rated.length : 0
+  const topScore = rated.length > 0 ? Math.max(...rated.map(l => l.score)) : 0
 
   const avgPerformance = rated.length > 0 ? rated.reduce((a, l) => a + l.performance_rating!, 0) / rated.length : 0
   const avgVenue       = rated.length > 0 ? rated.reduce((a, l) => a + l.venue_rating!,       0) / rated.length : 0
@@ -70,167 +73,94 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
     .filter((u, i, arr) => arr.indexOf(u) === i)
     .slice(0, 3)
 
+  const place = stage
+    ? [stage, day ? dayLabel(day) : null].filter(Boolean).join(' · ')
+    : [venueName, showDate ? formatShowDate(showDate) : null].filter(Boolean).join(' · ')
+
   timeMark(`artist:page total (${logs.length} logs)`, pageStart)
 
   return (
-    <div style={{
-      minHeight: '100vh', background: T.bg,
-      fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-    }}>
+    <div className="min-h-screen bg-paper text-ink">
+      <BackHeader title={<Logo />} href="/feed" />
 
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '18px 24px 14px',
-        position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <a href="/feed" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </a>
-        <div style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
-          Gigl<span style={{ color: T.accent }}>/</span>
-        </div>
-        <div style={{ width: 18 }} />
-      </div>
-
-      {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '24px 24px 0' }}>
-        <div style={{
-          fontSize: 10, color: T.muted, letterSpacing: '0.08em',
-          textTransform: 'uppercase', marginBottom: 4, fontWeight: 600,
-        }}>
-          {stage
-            ? <>{stage}{day ? ` · ${dayLabel(day)}` : ''}</>
-            : venueName
-            ? <>{venueName}{showDate ? ` · ${formatShowDate(showDate)}` : ''}</>
-            : null}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{
-            fontFamily: T.serif, fontSize: 30, fontWeight: 700,
-            lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',
-          }}>
-            {artistName}<br />
-            <span style={{ fontSize: 22 }}>by the numbers</span><span style={{ color: T.accent, fontSize: 22 }}>.</span>
+      <div className="px-5 pt-5 pb-24 space-y-5">
+        <div className="flex items-center gap-4">
+          <ArtistPhoto name={artistName} className="w-24 h-24" iconSize={34}>
+            <DateTag isoDate={showDate} />
+          </ArtistPhoto>
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <h1 className="font-display text-[28px] font-bold tracking-tight leading-none">{artistName}</h1>
+            {place && <Place>{place}</Place>}
+            {rated.length > 0 && <Stars score={avgScore} size={20} />}
           </div>
-          {rated.length > 0 && <StarDisplay score={avgScore} size={24} accent={T.accent} />}
         </div>
-      </div>
 
-      {/* ── Photo strip ─────────────────────────────────────────────────────── */}
-      {photos.length > 0 && (
-        <div style={{ display: 'flex', gap: 3, padding: '0 24px', marginBottom: 20, overflow: 'hidden' }}>
-          {photos.map((url, i) => (
-            <div key={i} style={{ position: 'relative', flex: 1, height: 110 }}>
-              <Image src={url} alt="" fill sizes="140px" style={{
-                objectFit: 'cover',
-                borderRadius: i === 0 ? '10px 4px 4px 10px' : i === photos.length - 1 ? '4px 10px 10px 4px' : 4,
-              }} />
-            </div>
-          ))}
-        </div>
-      )}
+        {photos.length > 0 && (
+          <div className="flex gap-1.5">
+            {photos.map((url, i) => (
+              <div key={i} className="relative flex-1 h-28 rounded-card border-1.5 border-ink overflow-hidden">
+                <Image src={url} alt="" fill sizes="140px" className="object-cover" />
+              </div>
+            ))}
+          </div>
+        )}
 
-      {/* ── Stats bar ────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-        borderTop: '1px solid rgba(74,53,40,0.1)',
-        borderBottom: '1px solid rgba(74,53,40,0.1)',
-        background: T.bg,
-      }}>
-        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)' }}>
-          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{rated.length}</div>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Ratings</div>
-        </div>
-        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '1px solid rgba(74,53,40,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {rated.length > 0
-            ? <StarDisplay score={avgScore} size={20} accent={T.accent} />
-            : <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: T.accent }}>—</div>}
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
-        </div>
-        <div style={{ padding: '14px 0', textAlign: 'center' }}>
-          <div style={{ fontFamily: T.serif, fontSize: 18, fontWeight: 700, color: '#4A3528' }}>{highScore}</div>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Top score</div>
-        </div>
-      </div>
+        <Card className="flex py-3">
+          <Stat value={rated.length} label="Ratings" />
+          <div className="flex-1 flex border-l border-ink/10">
+            <Stat value={rated.length > 0 ? <Stars score={avgScore} size={11} /> : <span className="text-accent">—</span>} label="Avg rating" />
+          </div>
+          <div className="flex-1 flex border-l border-ink/10">
+            <Stat value={rated.length > 0 ? <Stars score={topScore} size={11} /> : <span className="text-accent">—</span>} label="Top rating" />
+          </div>
+        </Card>
 
-      {/* ── Reaction breakdown ───────────────────────────────────────────────── */}
-      <div style={{ padding: '16px 24px 0' }}>
-        <div style={{
-          fontSize: 10, color: T.muted, letterSpacing: '0.12em',
-          textTransform: 'uppercase', marginBottom: 10, fontWeight: 600,
-        }}>Crowd reaction</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[
-            { label: 'Performance', value: avgPerformance },
-            { label: 'Venue',       value: avgVenue },
-            { label: 'Crowd',       value: avgCrowd },
-          ].map(row => (
-            <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 11, color: 'rgba(74,53,40,0.55)' }}>{row.label}</div>
-              <StarDisplay score={row.value} size={16} accent={T.accent} />
-            </div>
-          ))}
-        </div>
-      </div>
+        <section>
+          <Label className="mb-2">Breakdown</Label>
+          <Card flat className="px-4 py-3 space-y-2">
+            {[
+              { label: 'Performance', value: avgPerformance },
+              { label: 'Venue',       value: avgVenue },
+              { label: 'Crowd',       value: avgCrowd },
+            ].map(row => (
+              <div key={row.label} className="flex items-center justify-between">
+                <span className="text-[13px] text-ink-muted">{row.label}</span>
+                <Stars score={row.value} size={15} />
+              </div>
+            ))}
+          </Card>
+        </section>
 
-      {/* ── Reviews ─────────────────────────────────────────────────────────── */}
-      {reviews.length > 0 && (
-        <div style={{ padding: '20px 24px 100px' }}>
-          <div style={{
-            fontSize: 10, color: T.muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', marginBottom: 12, fontWeight: 600,
-          }}>What people are saying</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {reviews.map((log, i) => {
-              const username = usernameMap[log.user_id] ?? 'anonymous'
-              return (
-                <div key={i} style={{
-                  background: T.card, borderRadius: 5,
-                  border: T.cardBorder,
-                  boxShadow: i === 0 ? T.cardShadow : 'none',
-                  padding: '14px 16px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <StarDisplay score={log.score} size={20} accent={T.accent} />
-                    <a href={`/u/${username}`} style={{
-                      fontSize: 12, fontWeight: 600, color: '#4A3528',
-                      textDecoration: 'none', fontFamily: T.sans,
-                    }}>@{username}</a>
-                  </div>
-                  <div style={{ fontSize: 13, color: 'rgba(74,53,40,0.7)', fontStyle: 'italic', lineHeight: 1.55 }}>
-                    &ldquo;{log.review}&rdquo;
-                  </div>
-                  {log.tags && log.tags.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                      {log.tags.map((tag: string) => (
-                        <span key={tag} style={{
-                          fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                          background: T.accentDim, color: T.accent,
-                          border: `1.5px solid ${T.accentBorder}`,
-                          fontFamily: T.sans, fontWeight: 600,
-                        }}>{tag}</span>
-                      ))}
+        <section>
+          <Label className="mb-2.5">What people are saying</Label>
+          {reviews.length === 0 ? (
+            <EmptyState>No written reviews yet</EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {reviews.map((log, i) => {
+                const username = usernameMap[log.user_id] ?? 'anonymous'
+                return (
+                  <Card key={i} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Link href={`/u/${username}`} className="flex items-center gap-2.5 min-w-0">
+                        <PersonPhoto name={username} className="w-8 h-8 text-sm border border-ink/15" />
+                        <span className="text-sm font-semibold truncate">@{username}</span>
+                      </Link>
+                      <Stars score={log.score} size={15} />
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {reviews.length === 0 && (
-        <div style={{ padding: '24px 24px 100px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: T.faint }}>No written reviews yet</div>
-        </div>
-      )}
+                    <PullQuote>{log.review}</PullQuote>
+                    {log.tags && log.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {log.tags.map((tag: string) => <Chip key={tag}>{tag}</Chip>)}
+                      </div>
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

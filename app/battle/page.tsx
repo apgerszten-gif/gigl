@@ -2,9 +2,11 @@
 
 import { useEffect, useState, Suspense, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { recordBattleResult } from '@/lib/battleRecords'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { Logo } from '@/components/Logo'
+import { ArtistPhoto, BackHeader, Label, Place } from '@/components/ui'
 
 const MAX_SESSION = 10
 
@@ -21,7 +23,6 @@ function pairKey(a: string, b: string): string {
 function BattleInner() {
   const router   = useRouter()
   const supabase = createClient()
-  const T = useTheme()
 
   const [logs, setLogs]                 = useState<LoggedArtist[]>([])
   const [pair, setPair]                 = useState<[LoggedArtist, LoggedArtist] | null>(null)
@@ -125,119 +126,64 @@ function BattleInner() {
   if (loading) return null
 
   return (
-    <div style={{
-      minHeight: '100vh', background: T.bg,
-      fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-    }}>
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', padding: '18px 24px',
-        borderBottom: '1px solid rgba(74,53,40,0.1)',
-      }}>
-        <button onClick={() => router.push('/feed')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke={T.muted} strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
-        </button>
-        {T.logoUrl ? (
-          <img src={T.logoUrl} alt="Festival" style={{ height: 18, objectFit: 'contain', filter: T.logoFilter }} />
-        ) : (
-          <span style={{ fontFamily: T.serif, fontSize: 15, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.3px' }}>
-            Gigl<span style={{ color: T.accent }}>/</span>
-          </span>
-        )}
-        <div style={{ width: 18 }} />
-      </div>
+    <div className="min-h-screen bg-paper text-ink">
+      <BackHeader title={<Logo />} onBack={() => router.push('/feed')} />
 
-      <div style={{ padding: '24px 24px 40px' }}>
+      <div className="px-5 pt-6 pb-10">
         {/* Progress dots */}
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 32, flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap justify-center gap-1.5 mb-8">
           {Array.from({ length: sessionLimit }).map((_, i) => (
-            <div key={i} style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: i < battles ? T.accent : i === battles ? '#4A3528' : T.faint,
-              transition: 'background 0.3s',
-            }} />
+            <span
+              key={i}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                i < battles ? 'bg-accent' : i === battles ? 'bg-ink' : 'bg-ink-faint'
+              }`}
+            />
           ))}
         </div>
 
-        <div style={{
-          fontSize: 10, color: T.accent, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-        }}>Battle {battles + 1} of {sessionLimit}</div>
-
-        <div style={{
-          fontFamily: T.serif, fontSize: 34, fontWeight: 700,
-          lineHeight: 1.1, letterSpacing: '-1px', marginBottom: 28, color: '#4A3528',
-        }}>
-          Which set hit<br />
-          <span>harder</span><span style={{ color: T.accent }}>?</span>
-        </div>
+        <Label tone="accent" className="mb-1">Battle {battles + 1} of {sessionLimit}</Label>
+        <h1 className="font-display text-[34px] font-bold tracking-tight leading-[1.05] mb-7">
+          Which set hit<br />harder<span className="text-accent">?</span>
+        </h1>
 
         {pair && (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+            <div className="grid grid-cols-2 gap-2.5 mb-5">
               {pair.map(log => {
                 const isWinner = picked === log.artist_id
                 const isLoser  = picked !== null && picked !== log.artist_id
                 const isTied   = tossUp
+                const lit      = isWinner || isTied
 
                 return (
                   <button
                     key={log.artist_id}
+                    type="button"
                     onClick={() => handlePick(log.artist_id)}
                     disabled={!!picked || tossUp}
-                    style={{
-                      background: isWinner || isTied ? T.accentDim : T.card,
-                      border: isWinner || isTied ? `2px solid ${T.accent}` : T.cardBorder,
-                      boxShadow: isWinner || isTied ? T.cardShadow : 'none',
-                      borderRadius: 5, overflow: 'hidden',
-                      cursor: picked || tossUp ? 'default' : 'pointer',
-                      textAlign: 'left',
-                      opacity:   isLoser ? 0.4 : 1,
-                      transform: isWinner ? 'scale(1.02)' : 'scale(1)',
-                      transition: 'all 0.25s ease',
-                    }}
+                    className={`text-left rounded-card overflow-hidden transition-all duration-200 ${
+                      lit ? 'bg-accent/10 border-2 border-accent shadow-riso scale-[1.02]' : 'bg-cream border-1.5 border-ink'
+                    } ${isLoser ? 'opacity-40' : ''} ${picked || tossUp ? 'cursor-default' : ''}`}
                   >
-                    <div style={{
-                      background: isWinner || isTied ? T.accentDim : T.cardInner,
-                      height: 140, display: 'flex', alignItems: 'flex-end',
-                      padding: 12, position: 'relative',
-                      transition: 'background 0.25s ease',
-                    }}>
-                      {(isWinner || isTied) && (
-                        <div style={{
-                          position: 'absolute', top: 10, right: 10,
-                          fontSize: 20, lineHeight: 1,
-                        }}>{isTied ? '=' : '✓'}</div>
+                    <div className="relative p-2.5 pb-0">
+                      <ArtistPhoto name={log.artist_name} className="w-full h-28" iconSize={32} />
+                      {lit && (
+                        <span className="absolute top-4 right-4 w-7 h-7 rounded-full bg-accent text-cream border-1.5 border-ink flex items-center justify-center font-bold">
+                          {isTied ? '=' : <Check className="w-4 h-4" strokeWidth={3} />}
+                        </span>
                       )}
-                      <div>
-                        <div style={{
-                          fontFamily: T.serif, fontSize: 15, fontWeight: 700,
-                          color: '#4A3528', letterSpacing: '-0.3px',
-                        }}>{log.artist_name}</div>
-                        <div style={{
-                          fontSize: 9, color: T.muted, letterSpacing: '0.06em',
-                          textTransform: 'uppercase', fontFamily: T.sans,
-                          marginTop: 2, fontWeight: 600,
-                        }}>{log.stage}</div>
-                      </div>
                     </div>
-                    <div style={{ padding: 12 }}>
-                      <div style={{
-                        background: isWinner || isTied ? T.accent : T.cardInner,
-                        border: isWinner || isTied ? '1.5px solid #4A3528' : '1px solid rgba(74,53,40,0.15)',
-                        borderRadius: 4, padding: 8,
-                        textAlign: 'center', fontSize: 11, fontWeight: 700,
-                        color: isWinner || isTied ? '#FAF3E2' : T.muted,
-                        letterSpacing: '0.08em', textTransform: 'uppercase',
-                        fontFamily: T.sans,
-                        transition: 'all 0.25s ease',
-                      }}>
-                        {isWinner ? '✓ Picked' : isTied ? "It's a toss up" : 'Pick this'}
+                    <div className="p-2.5 space-y-2">
+                      <div className="min-w-0">
+                        <h3 className="font-display text-[15px] font-bold leading-tight truncate">{log.artist_name}</h3>
+                        {log.stage && <Place className="mt-0.5">{log.stage}</Place>}
                       </div>
+                      <span className={`block rounded py-2 text-center text-[11px] font-bold uppercase tracking-label transition-colors ${
+                        lit ? 'bg-accent text-cream border-1.5 border-ink' : 'bg-paper text-ink-muted border border-ink/15'
+                      }`}>
+                        {isWinner ? '✓ Picked' : isTied ? "It's a toss up" : 'Pick this'}
+                      </span>
                     </div>
                   </button>
                 )
@@ -245,23 +191,16 @@ function BattleInner() {
             </div>
 
             {!picked && !tossUp && (
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+              <div className="flex flex-col items-center gap-3.5 text-center">
                 <button
+                  type="button"
                   onClick={handleTossUp}
-                  style={{
-                    background: 'none', border: `1px solid ${T.faint}`, borderRadius: 20,
-                    cursor: 'pointer', padding: '8px 18px',
-                    fontSize: 11, color: T.muted, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700,
-                  }}
-                >It's a toss up</button>
+                  className="rounded-full border border-ink-faint px-4 py-2 text-[11px] font-bold uppercase tracking-label text-ink-muted"
+                >It&apos;s a toss up</button>
                 <button
+                  type="button"
                   onClick={() => pickPair(logs)}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 11, color: T.faint, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', fontFamily: T.sans,
-                  }}
+                  className="text-[11px] uppercase tracking-label text-ink-faint"
                 >Skip this match</button>
               </div>
             )}

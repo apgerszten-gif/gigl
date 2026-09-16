@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { ChevronRight, Lock, Plus, UserPlus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getFestival, hasDayOccurred, formatSetTime, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { formatShowDate } from '@/lib/dates'
@@ -11,8 +11,8 @@ import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
 import { TagFriendsModal, type TaggedFriend } from '@/components/TagFriendsModal'
-import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/components/AuthProvider'
+import { ArtistPhoto, Card, Chip, Label, PersonPhoto, Place, Stars, btnPrimary, headerClass, inputBox } from '@/components/ui'
 import { enqueuePendingLog, getPendingLogForArtist, flushPendingLogs } from '@/lib/pendingLogs'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
 
@@ -48,37 +48,35 @@ interface MediaItem {
   file?:    File   // present only for newly-added, not-yet-uploaded items
 }
 
-function Star({ filled, size, accent }: { filled: boolean; size: number; accent: string }) {
+function Star({ filled, size }: { filled: boolean; size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? accent : 'none'} stroke={accent} strokeWidth="1.5">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
       <polygon points={STAR_POINTS} />
     </svg>
   )
 }
 
+// One tappable 1-5 star sub-rating.
 function StarRow({
-  label, value, onChange, T,
+  label, value, onChange,
 }: {
-  label: string; value: number; onChange: (n: number) => void; T: ReturnType<typeof useTheme>
+  label: string; value: number; onChange: (n: number) => void
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-      <div style={{
-        fontFamily: T.serif, fontSize: 16, fontWeight: 700,
-        color: '#4A3528', letterSpacing: '-0.2px',
-      }}>
-        {label}<span style={{ color: T.accent }}>*</span>
-      </div>
-      <div style={{ display: 'flex', gap: 4 }}>
+    <div className="flex items-center justify-between gap-3">
+      <p className="font-display text-base font-bold">
+        {label}<span className="text-accent">*</span>
+      </p>
+      <div className="flex gap-0.5 text-star">
         {[1, 2, 3, 4, 5].map(n => (
           <button
             key={n}
             type="button"
             aria-label={`${label} ${n} star${n === 1 ? '' : 's'}`}
             onClick={() => onChange(n)}
-            style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer' }}
+            className="p-0.5"
           >
-            <Star filled={n <= value} size={30} accent={T.accent} />
+            <Star filled={n <= value} size={30} />
           </button>
         ))}
       </div>
@@ -87,9 +85,9 @@ function StarRow({
 }
 
 function AutoGrowTextarea({
-  value, onChange, placeholder, T,
+  value, onChange, placeholder,
 }: {
-  value: string; onChange: (v: string) => void; placeholder: string; T: ReturnType<typeof useTheme>
+  value: string; onChange: (v: string) => void; placeholder: string
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
 
@@ -107,12 +105,20 @@ function AutoGrowTextarea({
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={1}
-      style={{
-        width: '100%', background: 'none', border: 'none', outline: 'none',
-        resize: 'none', overflow: 'hidden', display: 'block',
-        fontFamily: T.sans, fontSize: 13, color: '#4A3528', lineHeight: 1.5,
-      }}
+      className="block w-full resize-none overflow-hidden bg-transparent text-sm leading-normal text-ink placeholder:text-ink-faint focus:outline-none"
     />
+  )
+}
+
+// Title bar for the log flow: no profile photo, just a way out.
+function FlowHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  return (
+    <header className={headerClass}>
+      <h1 className="flex-1 min-w-0 font-display text-[17px] font-bold tracking-tight truncate">{title}</h1>
+      <button type="button" onClick={onClose} aria-label="Close" className="p-1 text-ink-muted">
+        <X className="w-5 h-5" strokeWidth={2} />
+      </button>
+    </header>
   )
 }
 
@@ -120,7 +126,6 @@ function LogShowInner() {
   const router       = useRouter()
   const supabase     = createClient()
   const searchParams = useSearchParams()
-  const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
   const artistId       = searchParams.get('artistId') ?? ''
@@ -150,9 +155,11 @@ function LogShowInner() {
   // artistId instead, so it shows up on both the fresh-log and re-rate paths.
   const scheduledArtist = festival?.artists.find(a => a.id === artistId)
   const setTime = scheduledArtist ? formatSetTime(scheduledArtist) : null
-  const venueDate = stage
-    ? [stage, day, setTime].filter(Boolean).join(' · ') || 'Venue & date unavailable'
-    : [showVenue, showDate ? formatShowDate(showDate) : null].filter(Boolean).join(' · ') || 'Venue & date unavailable'
+  const dayName    = day ? day.charAt(0).toUpperCase() + day.slice(1) : null
+  const dateLabel  = stage
+    ? [dayName, setTime].filter(Boolean).join(' · ')
+    : (showDate ? formatShowDate(showDate) : '')
+  const placeLabel = stage || showVenue || 'Venue unavailable'
 
   const [loadingExisting, setLoadingExisting] = useState(true)
   const [existingId, setExistingId]           = useState<string | null>(null)
@@ -484,160 +491,76 @@ function LogShowInner() {
   if (dayLocked) {
     const unlockDate = festival?.dayDates[day]
     return (
-      <div style={{
-        minHeight: '100vh', background: T.bg,
-        fontFamily: T.sans, color: '#4A3528',
-        maxWidth: 430, margin: '0 auto',
-      }}>
-        <div style={{
-          padding: '18px 24px', position: 'sticky', top: 0, zIndex: 10,
-          background: T.bgRgba,
-          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(74,53,40,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.3px' }}>Log show</div>
-          <button onClick={() => router.back()} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
+      <div className="min-h-screen bg-paper text-ink">
+        <FlowHeader title="Log a show" onClose={() => router.back()} />
 
-        <div style={{
-          padding: '60px 32px', textAlign: 'center',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-        }}>
-          <div style={{ fontSize: 36, marginBottom: 16 }}>🔒</div>
-          <div style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 700, color: '#4A3528', marginBottom: 10, lineHeight: 1.3 }}>
-            Not showtime yet<span style={{ color: T.accent }}>.</span>
-          </div>
-          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.5, marginBottom: 28 }}>
-            You can log {artistName} once {day ? day.charAt(0).toUpperCase() + day.slice(1) : 'its day'}{unlockDate ? ` (${unlockDate})` : ''} arrives.
-          </div>
-          <button onClick={() => router.back()} style={{
-            background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-            borderRadius: 5, padding: '12px 28px', cursor: 'pointer',
-          }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#FAF3E2', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans }}>Back</span>
-          </button>
+        <div className="px-8 py-16 flex flex-col items-center text-center">
+          <span className="mb-4 w-12 h-12 rounded-full bg-accent/10 border-1.5 border-accent/30 text-accent flex items-center justify-center">
+            <Lock className="w-5 h-5" strokeWidth={2} />
+          </span>
+          <h2 className="font-display text-xl font-bold leading-snug mb-2.5">
+            Not showtime yet<span className="text-accent">.</span>
+          </h2>
+          <p className="text-[13px] text-ink-muted leading-normal mb-7">
+            You can log {artistName} once {dayName ?? 'its day'}{unlockDate ? ` (${unlockDate})` : ''} arrives.
+          </p>
+          <button type="button" onClick={() => router.back()} className={`${btnPrimary} px-7 py-3 text-xs`}>Back</button>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', background: T.bg,
-      fontFamily: T.sans, color: '#4A3528',
-      maxWidth: 430, margin: '0 auto',
-    }}>
+    <div className="min-h-screen bg-paper text-ink">
+      <FlowHeader title={existingId ? 'Update log' : 'Log a show'} onClose={() => router.back()} />
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '18px 24px', position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{
-          fontFamily: T.serif, fontSize: 17, fontWeight: 700,
-          color: '#4A3528', letterSpacing: '-0.3px',
-        }}>{existingId ? 'Update log' : 'Log show'}</div>
-        <button
-          onClick={() => router.back()}
-          aria-label="Close"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </div>
-
-      <div style={{ padding: '20px 24px 40px', display: 'flex', flexDirection: 'column', gap: 26 }}>
-
-        {/* ── Show context ────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 44, height: 44, flexShrink: 0, borderRadius: 5,
-            background: T.cardInner, border: '1px solid rgba(74,53,40,0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: T.faint }}>
-              {artistName.charAt(0).toUpperCase()}
-            </span>
+      <div className="px-5 pt-4 pb-10 space-y-5">
+        <Card className="p-3 flex items-center gap-3">
+          <ArtistPhoto name={artistName} className="w-14 h-14" />
+          <div className="flex-1 min-w-0">
+            {dateLabel && <Label tone="accent">{dateLabel}</Label>}
+            <h2 className="font-display text-base font-bold leading-tight truncate">{artistName}</h2>
+            <Place className="mt-0.5">{placeLabel}</Place>
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{
-              fontFamily: T.serif, fontSize: 15, fontWeight: 700,
-              color: '#4A3528', letterSpacing: '-0.2px',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>{artistName}</div>
-            <div style={{
-              fontSize: 10, color: T.muted, letterSpacing: '0.06em',
-              textTransform: 'uppercase', fontWeight: 600, marginTop: 2,
-            }}>{venueDate}</div>
-          </div>
-        </div>
+        </Card>
 
-        {/* ── Star ratings ────────────────────────────────────────────────────── */}
-        <div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <StarRow label="Performance" value={performance} onChange={setPerformance} T={T} />
-            <StarRow label="Venue"       value={venue}       onChange={setVenue}       T={T} />
-            <StarRow label="Crowd"       value={crowd}       onChange={setCrowd}       T={T} />
+        <Card className="p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <Label tone="ink">Your rating</Label>
+            {canSave
+              ? <Stars score={computeShowScore(performance, venue, crowd)} size={16} />
+              : <span className="text-[11px] italic text-ink-faint">All three required</span>}
           </div>
-          <div style={{ fontSize: 11, color: T.faint, marginTop: 12, fontStyle: 'italic' }}>
-            All three ratings are required
-          </div>
-        </div>
+          <StarRow label="Performance" value={performance} onChange={setPerformance} />
+          <StarRow label="Venue"       value={venue}       onChange={setVenue} />
+          <StarRow label="Crowd"       value={crowd}       onChange={setCrowd} />
+        </Card>
 
-        {/* ── Thoughts ────────────────────────────────────────────────────────── */}
-        <div>
-          <div style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-          }}>Your thoughts</div>
-          <div style={{
-            background: T.card, borderRadius: 5,
-            border: T.cardBorder, padding: '12px 14px',
-          }}>
+        <section className="space-y-1.5">
+          <Label tone="ink">Field notes</Label>
+          <div className={`${inputBox} px-3 py-2.5 focus-within:ring-2 focus-within:ring-accent/40`}>
             <AutoGrowTextarea
               value={thoughts}
               onChange={setThoughts}
               placeholder="What made this set stand out?"
-              T={T}
             />
           </div>
-        </div>
+        </section>
 
-        {/* ── Tags ────────────────────────────────────────────────────────────── */}
-        <div>
-          <div style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-          }}>Tags</div>
-          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 8, overflowX: 'auto' }}>
+        <section className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label tone="ink">Highlights</Label>
+            {selectedTags.length > 0 && (
+              <span className="text-[10px] font-semibold text-accent">{selectedTags.length} selected</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
             {tagOptions.map(tag => {
               const active = selectedTags.includes(tag)
               return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  style={{
-                    flexShrink: 0,
-                    fontSize: 11, padding: '6px 12px', borderRadius: 20,
-                    background: active ? T.accent : 'none',
-                    color: active ? '#FAF3E2' : T.muted,
-                    border: active ? `1.5px solid #4A3528` : `1.5px solid rgba(74,53,40,0.25)`,
-                    fontFamily: T.sans, fontWeight: 600, cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >{tag}</button>
+                <button key={tag} type="button" onClick={() => toggleTag(tag)}>
+                  <Chip active={active}>{active ? `${tag} ✓` : `+ ${tag}`}</Chip>
+                </button>
               )
             })}
 
@@ -652,148 +575,99 @@ function LogShowInner() {
                 }}
                 onBlur={commitCustomTag}
                 placeholder="Tag name"
-                style={{
-                  flexShrink: 0,
-                  fontSize: 11, padding: '6px 12px', borderRadius: 20,
-                  border: `1.5px solid ${T.accent}`, outline: 'none',
-                  background: 'none', color: '#4A3528',
-                  fontFamily: T.sans, fontWeight: 600, width: 100,
-                }}
+                className="w-28 rounded border-1.5 border-accent bg-transparent px-2 py-0.5 text-base text-ink focus:outline-none"
               />
             ) : (
               <button
                 type="button"
                 onClick={() => setAddingTag(true)}
-                style={{
-                  flexShrink: 0,
-                  fontSize: 11, padding: '6px 12px', borderRadius: 20,
-                  background: 'none', color: T.muted,
-                  border: '1.5px dashed rgba(74,53,40,0.3)',
-                  fontFamily: T.sans, fontWeight: 600, cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >+ custom</button>
+                className="rounded border-1.5 border-dashed border-ink/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-label text-ink-muted"
+              >
+                + Custom
+              </button>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* ── Tag friends ─────────────────────────────────────────────────────── */}
-        <div>
-          <div style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-          }}>Tag friends</div>
-          <button
-            type="button"
-            onClick={() => setTagModalOpen(true)}
-            style={{
-              width: '100%', background: T.card, border: T.cardBorder, borderRadius: 5,
-              padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10,
-              cursor: 'pointer', textAlign: 'left',
-            }}
-          >
-            {taggedFriends.length > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                {taggedFriends.slice(0, 3).map((f, i) => (
-                  <div key={f.userId ?? f.inviteContact ?? i} style={{
-                    marginLeft: i === 0 ? 0 : -10, borderRadius: '50%',
-                    border: `2px solid ${T.card}`, lineHeight: 0,
-                  }}>
-                    <Avatar name={f.displayName} size={26} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-                <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
-              </svg>
-            )}
-            <span style={{ flex: 1, fontSize: 13, color: '#4A3528', fontFamily: T.sans, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {taggedFriends.length === 0
-                ? 'Tag friends who were there'
-                : taggedFriends.length <= 3
-                ? taggedFriends.map(f => f.displayName).join(', ')
-                : `${taggedFriends.slice(0, 2).map(f => f.displayName).join(', ')} +${taggedFriends.length - 2} more`}
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+        <section className="space-y-1.5">
+          <Label tone="ink">Went with</Label>
+          <button type="button" onClick={() => setTagModalOpen(true)} className="block w-full text-left">
+            <Card flat className="flex items-center gap-2.5 px-3 py-2.5">
+              {taggedFriends.length > 0 ? (
+                <div className="flex items-center flex-shrink-0">
+                  {taggedFriends.slice(0, 3).map((f, i) => (
+                    <PersonPhoto
+                      key={f.userId ?? f.inviteContact ?? i}
+                      name={f.displayName}
+                      className={`w-7 h-7 text-[11px] border-2 border-cream ${i > 0 ? '-ml-2.5' : ''}`}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <UserPlus className="w-4 h-4 flex-shrink-0 text-accent" strokeWidth={2} />
+              )}
+              <span className="flex-1 min-w-0 truncate text-[13px] font-semibold">
+                {taggedFriends.length === 0
+                  ? 'Tag friends who were there'
+                  : taggedFriends.length <= 3
+                  ? taggedFriends.map(f => f.displayName).join(', ')
+                  : `${taggedFriends.slice(0, 2).map(f => f.displayName).join(', ')} +${taggedFriends.length - 2} more`}
+              </span>
+              <ChevronRight className="w-4 h-4 flex-shrink-0 text-ink-faint" />
+            </Card>
           </button>
-        </div>
+        </section>
 
-        {/* ── Media ───────────────────────────────────────────────────────────── */}
-        <div>
-          <div style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 8,
-          }}>Media <span style={{ color: T.faint, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>· up to 1 video + 2 photos</span></div>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+        <section className="space-y-1.5">
+          <Label tone="ink">
+            Photos &amp; video{' '}
+            <span className="normal-case tracking-normal font-medium text-ink-faint">· up to 1 video + 2 photos</span>
+          </Label>
+          <div className="flex gap-2.5 overflow-x-auto pt-1.5 pr-1.5">
             {media.map((item, i) => (
-              <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
+              <div key={i} className="relative flex-shrink-0">
                 {item.isVideo ? (
-                  <video
-                    src={item.url} muted playsInline
-                    style={{ width: 64, height: 64, borderRadius: 5, objectFit: 'cover', display: 'block' }}
-                  />
+                  <video src={item.url} muted playsInline className="block w-16 h-16 rounded-card border-1.5 border-ink object-cover" />
                 ) : (
-                  <img
-                    src={item.url} alt=""
-                    style={{ width: 64, height: 64, borderRadius: 5, objectFit: 'cover', display: 'block' }}
-                  />
+                  <img src={item.url} alt="" className="block w-16 h-16 rounded-card border-1.5 border-ink object-cover" />
                 )}
                 <button
                   type="button"
                   onClick={() => removeMedia(i)}
                   aria-label="Remove"
-                  style={{
-                    position: 'absolute', top: -6, right: -6,
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: 'rgba(74,53,40,0.85)', border: 'none',
-                    color: '#FAF3E2', fontSize: 11, lineHeight: 1,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >×</button>
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ink text-cream flex items-center justify-center"
+                >
+                  <X className="w-3 h-3" strokeWidth={3} />
+                </button>
               </div>
             ))}
 
             <input
               ref={fileInputRef}
               type="file" accept="image/*,video/*" multiple
-              style={{ display: 'none' }}
+              className="hidden"
               onChange={handleMediaSelect}
             />
             {!mediaFull && (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                style={{
-                  width: 64, height: 64, flexShrink: 0, borderRadius: 5,
-                  background: 'none', border: '1.5px dashed rgba(74,53,40,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', color: T.faint, fontSize: 20,
-                }}
-              >+</button>
+                aria-label="Add a photo or video"
+                className="w-16 h-16 flex-shrink-0 rounded-card border-1.5 border-dashed border-ink/30 flex items-center justify-center text-ink-faint"
+              >
+                <Plus className="w-5 h-5" strokeWidth={2} />
+              </button>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* ── Save ────────────────────────────────────────────────────────────── */}
         <button
+          type="button"
           onClick={handleSave}
           disabled={!canSave || saving}
-          style={{
-            width: '100%', background: T.accent,
-            border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-            borderRadius: 5, padding: 16,
-            cursor: canSave && !saving ? 'pointer' : 'not-allowed',
-            opacity: canSave ? (saving ? 0.7 : 1) : 0.45,
-          }}
+          className={`${btnPrimary} w-full py-4 text-xs ${saving ? 'opacity-70' : ''}`}
         >
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: '#FAF3E2',
-            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: T.sans,
-          }}>{saving ? 'Saving...' : 'Save log'}</span>
+          {saving ? 'Saving...' : 'Save log'}
         </button>
       </div>
 

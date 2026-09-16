@@ -1,18 +1,21 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
-import { formatShowDate } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
-import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { ReactionBar } from '@/components/ReactionBar'
 import { CommentsModal } from '@/components/CommentsModal'
-import { useTheme } from '@/components/FestivalThemeProvider'
+import { AppHeader } from '@/components/AppHeader'
+import BottomNav from '@/components/BottomNav'
+import { Logo } from '@/components/Logo'
+import {
+  ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Segmented, Stars,
+} from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
@@ -58,7 +61,6 @@ interface GlobalLog {
 function FeedInner() {
   const router     = useRouter()
   const supabase   = createClient()
-  const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
   const [globalFeed, setGlobalFeed]       = useState<GlobalLog[]>([])
@@ -253,370 +255,111 @@ function FeedInner() {
     : globalFeed
 
   return (
-    <div style={{
-      height: '100dvh',
-      display: 'flex', flexDirection: 'column',
-      background: T.bg,
-      fontFamily: T.sans,
-      color: '#4A3528',
-      maxWidth: 430,
-      margin: '0 auto',
-      overflow: 'hidden',
-    }}>
+    <div className="min-h-screen bg-paper text-ink pb-28">
+      <AppHeader>
+        <Logo />
+      </AppHeader>
 
-      {/* ── Top: combined identity row + tab toggle ─────────────────────────── */}
-      <div style={{ flex: '0 0 auto' }}>
-
-        {/* Logo · search shows/sign-out — one row */}
-        <div style={{
-          padding: '11px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
-          borderBottom: '1px solid rgba(74,53,40,0.12)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-            {T.logoUrl ? (
-              <img
-                src={T.logoUrl}
-                alt="Gigl"
-                style={{ height: 22, objectFit: 'contain', filter: T.logoFilter, flexShrink: 0 }}
-              />
-            ) : (
-              <div style={{
-                fontFamily: T.serif, fontSize: 21, fontWeight: 700,
-                color: '#4A3528', letterSpacing: '-0.5px', flexShrink: 0,
-              }}>
-                Gigl<span style={{ color: T.accent }}>/</span>
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-            <button
-              onClick={() => router.push('/select-festival')}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
-              }}
-            >search shows</button>
-            <span style={{ fontSize: 10, color: T.faint }}>·</span>
-            <button
-              onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem(LOCAL_STORAGE_KEY); router.push('/') }}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                color: T.muted, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em',
-              }}
-            >sign out</button>
-          </div>
-        </div>
-
-        {/* Activity / Rankings tab toggle — slim pill */}
-        <div style={{ padding: '9px 20px' }}>
-          <div style={{
-            display: 'flex',
-            border: '2px solid #4A3528',
-            borderRadius: 5,
-            overflow: 'hidden',
-            marginBottom: 8,
-          }}>
-            <button style={{
-              flex: 1, padding: '6px 0',
-              background: '#4A3528', border: 'none',
-              color: '#FAF3E2', fontSize: 10, cursor: 'default',
-              fontFamily: T.sans, fontWeight: 700,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}>Activity</button>
-            <button
-              onClick={() => router.push('/rankings')}
-              style={{
-                flex: 1, padding: '6px 0',
-                background: T.card,
-                border: 'none', borderLeft: '2px solid #4A3528',
-                color: '#4A3528', fontSize: 10, cursor: 'pointer',
-                fontFamily: T.sans, fontWeight: 600,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-              }}
-            >Rankings</button>
-          </div>
-
-          {/* All / Following filter — same pill treatment as Rankings' day filter */}
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['all', 'following'] as const).map(mode => (
-              <button key={mode} onClick={() => setFilterMode(mode)} style={{
-                flex: 1, padding: '6px 0', borderRadius: 4,
-                background: filterMode === mode ? T.accentDim : 'transparent',
-                border: filterMode === mode ? `1.5px solid ${T.accentBorder}` : '1.5px solid rgba(74,53,40,0.15)',
-                color: filterMode === mode ? T.accent : T.muted,
-                fontSize: 9, cursor: 'pointer',
-                fontFamily: T.sans, fontWeight: filterMode === mode ? 700 : 500,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-              }}>{mode === 'all' ? 'All' : 'Following'}</button>
-            ))}
-          </div>
-        </div>
+      <div className="px-5 pt-3">
+        <Segmented
+          options={[{ value: 'all', label: 'All activity' }, { value: 'following', label: 'Following' }]}
+          value={filterMode}
+          onChange={setFilterMode}
+        />
       </div>
 
-      {/* ── Feed list — fills all remaining space, scrolls independently ────── */}
-      <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '0 20px 12px' }}>
-        {loading && (
-          <div style={{
-            textAlign: 'center', padding: 40,
-            fontSize: 11, color: T.faint,
-            letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600,
-          }}>Loading...</div>
-        )}
+      <main className="px-5 pt-4 space-y-4">
+        {loading && <LoadingLabel />}
 
         {battleModeUnlocked && !battleCardDismissed && (
           <BattleModeCard onDismiss={dismissBattleCard} onEnter={() => router.push('/battle')} />
         )}
 
         {!loading && visibleFeed.length === 0 && (
-          <div style={{
-            background: T.card, borderRadius: 5,
-            border: T.cardBorder, boxShadow: T.cardShadow,
-            padding: 32, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
-              {filterMode === 'following'
-                ? "No activity yet from people you follow at this festival"
-                : 'No ratings yet — be the first to log a show'}
-            </div>
-          </div>
+          <EmptyState>
+            {filterMode === 'following'
+              ? 'No activity yet from people you follow.'
+              : 'No ratings yet. Be the first to log a show.'}
+          </EmptyState>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {visibleFeed.map((item, i) => {
-            const name      = item.artist_name ?? 'Unknown'
-            const stageName = item.stage       ?? ''
-            const day       = item.day         ?? ''
-            const venueName = item.venue       ?? ''
-            const showDate  = item.show_date   ?? null
-            const isMe      = item.user_id === user?.id
-            const username  = item.username ?? 'anonymous'
-            const isTop     = i === 0
-            const hasScore  = item.performance_rating != null && item.venue_rating != null && item.crowd_rating != null
-            const score     = hasScore
-              ? computeShowScore(item.performance_rating!, item.venue_rating!, item.crowd_rating!)
-              : null
-            const hasTags    = !!item.tags && item.tags.length > 0
-            const isFeatured = hasScore || hasTags || !!item.review
-            const infoPadding = isFeatured ? '12px 14px' : '8px 14px'
+        {visibleFeed.map((item, i) => {
+          const name      = item.artist_name ?? 'Unknown'
+          const isMe      = item.user_id === user?.id
+          const username  = item.username ?? 'anonymous'
+          const hasScore  = item.performance_rating != null && item.venue_rating != null && item.crowd_rating != null
+          const score     = hasScore
+            ? computeShowScore(item.performance_rating!, item.venue_rating!, item.crowd_rating!)
+            : null
+          const hasTags   = !!item.tags && item.tags.length > 0
+          const mediaUrls = resolveMediaUrls(item).map(resolvePhotoUrl)
+          const place     = item.stage
+            ? [item.stage, item.day ? dayLabel(item.day) : null].filter(Boolean).join(' · ')
+            : item.venue
 
-            const itemInteractions = interactions[item.id] ?? EMPTY_INTERACTIONS
+          const itemInteractions = interactions[item.id] ?? EMPTY_INTERACTIONS
 
-            return (
-              <div
-                key={item.id || `${item.user_id}-${item.artist_id}-${i}`}
-                style={{
-                  background: T.card,
-                  borderRadius: 5,
-                  overflow: 'hidden',
-                  border: T.cardBorder,
-                  boxShadow: isFeatured && isTop ? T.cardShadow : 'none',
-                }}
-              >
-                {/* Photo / Video */}
-                <MediaGrid urls={resolveMediaUrls(item).map(resolvePhotoUrl)} maxHeight={200} />
+          return (
+            <Card key={item.id || `${item.user_id}-${item.artist_id}-${i}`} className="overflow-hidden">
+              {mediaUrls.length > 0 && (
+                <div className="border-b-1.5 border-ink">
+                  <MediaGrid urls={mediaUrls} maxHeight={200} />
+                </div>
+              )}
 
-                {/* Info row */}
-                <div style={{ padding: infoPadding, display: 'flex', gap: 12, alignItems: 'center' }}>
-
-                  {/* Text info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      onClick={() => router.push(`/artist/${item.artist_id}`)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        marginBottom: 2, cursor: 'pointer',
-                      }}
-                    >
-                      <span style={{
-                        fontFamily: T.serif, fontSize: 14, fontWeight: 700,
-                        color: '#4A3528', letterSpacing: '-0.3px',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        minWidth: 0,
-                      }}>{name}</span>
-                      {score !== null && <StarDisplay score={score} size={16} accent={T.accent} />}
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Link href={isMe ? '/profile' : `/u/${username}`} className="flex items-center gap-2.5 min-w-0">
+                    <PersonPhoto name={username} className="w-8 h-8 text-sm border border-ink/15" />
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold truncate ${isMe ? 'text-accent' : 'text-ink'}`}>@{username}</p>
+                      <p className="text-[11px] text-ink-muted">{timeAgo(item.created_at)}</p>
                     </div>
-                    <div
-                      onClick={() => stageName && router.push(`/stage/${encodeURIComponent(stageName)}`)}
-                      style={{
-                        fontSize: 9, color: T.muted,
-                        letterSpacing: '0.08em', textTransform: 'uppercase',
-                        fontFamily: T.sans, fontWeight: 600, marginBottom: 2,
-                        cursor: stageName ? 'pointer' : 'default',
-                      }}
-                    >
-                      {stageName
-                        ? <>{stageName}{day ? ` · ${dayLabel(day)}` : ''}</>
-                        : venueName
-                        ? <>{venueName}{showDate ? ` · ${formatShowDate(showDate)}` : ''}</>
-                        : null}
-                    </div>
-                    <div
-                      onClick={() => router.push(isMe ? '/profile' : `/u/${username}`)}
-                      style={{
-                        fontSize: 10, fontFamily: T.sans,
-                        color: isMe ? T.accent : T.muted,
-                        fontWeight: isMe ? 600 : 400,
-                        cursor: 'pointer',
-                      }}
-                    >@{username}</div>
-                  </div>
-
-                  {/* Timestamp */}
-                  <div style={{
-                    fontSize: 9, color: T.faint, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', fontFamily: T.sans, flexShrink: 0,
-                  }}>
-                    {timeAgo(item.created_at)}
-                  </div>
+                  </Link>
+                  {score !== null && <Stars score={score} size={15} />}
                 </div>
 
-                {/* Review quote */}
-                {item.review && (
-                  <div style={{
-                    padding: '0 14px 8px',
-                    fontSize: 11, color: 'rgba(74,53,40,0.65)',
-                    fontStyle: 'italic', lineHeight: 1.5, fontFamily: T.sans,
-                  }}>
-                    &ldquo;{item.review}&rdquo;
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <Link href={`/artist/${item.artist_id}`} className="block font-display text-xl font-bold tracking-tight leading-tight">
+                      {name}
+                    </Link>
+                    {place && (item.stage
+                      ? <Link href={`/stage/${encodeURIComponent(item.stage)}`} className="block"><Place>{place}</Place></Link>
+                      : <Place>{place}</Place>)}
                   </div>
-                )}
+                  <Link href={`/artist/${item.artist_id}`} aria-label={name} className="flex-shrink-0">
+                    <ArtistPhoto name={name} className="w-[76px] h-[76px]" iconSize={26}>
+                      <DateTag isoDate={item.show_date} />
+                    </ArtistPhoto>
+                  </Link>
+                </div>
 
-                {/* Vibe tags */}
+                {item.review && <PullQuote>{item.review}</PullQuote>}
+
                 {hasTags && (
-                  <div style={{ padding: '0 14px 10px', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {item.tags!.map(tag => (
-                      <span key={tag} style={{
-                        fontSize: 9, padding: '2px 9px', borderRadius: 20,
-                        background: T.accentDim, color: T.accent,
-                        border: `1.5px solid ${T.accentBorder}`,
-                        fontFamily: T.sans, fontWeight: 600, letterSpacing: '0.04em',
-                      }}>{tag}</span>
-                    ))}
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.tags!.map(tag => <Chip key={tag}>{tag}</Chip>)}
                   </div>
                 )}
-
-                <ReactionBar
-                  likeCount={itemInteractions.likeCount}
-                  likedByMe={itemInteractions.likedByMe}
-                  reactionCounts={itemInteractions.reactionCounts}
-                  myReactions={itemInteractions.myReactions}
-                  commentCount={itemInteractions.commentCount}
-                  onToggleLike={() => toggleLike(item.id)}
-                  onToggleReaction={emoji => toggleReaction(item.id, emoji)}
-                  onOpenComments={() => setActiveComments(item.id)}
-                />
               </div>
-            )
-          })}
-        </div>
-      </div>
 
-      {/* ── Bottom nav ───────────────────────────────────────────────────────── */}
-      <div style={{
-        flex: '0 0 auto',
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '16px 32px calc(4px + env(safe-area-inset-bottom))',
-        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-      }}>
-        {/* Home */}
-        <button style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={T.accent} stroke="none">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
-          <span style={{
-            fontSize: 9, color: T.accent, letterSpacing: '0.08em',
-            textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700,
-          }}>Home</span>
-        </button>
+              <ReactionBar
+                likeCount={itemInteractions.likeCount}
+                likedByMe={itemInteractions.likedByMe}
+                reactionCounts={itemInteractions.reactionCounts}
+                myReactions={itemInteractions.myReactions}
+                commentCount={itemInteractions.commentCount}
+                onToggleLike={() => toggleLike(item.id)}
+                onToggleReaction={emoji => toggleReaction(item.id, emoji)}
+                onOpenComments={() => setActiveComments(item.id)}
+              />
+            </Card>
+          )
+        })}
+      </main>
 
-        {/* Log FAB */}
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          {showLogTip && (
-            <div style={{
-              position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-              marginBottom: 18, width: 'min(340px, calc(100vw - 24px))', zIndex: 30,
-            }}>
-              <div style={{
-                position: 'relative', background: T.card, border: T.cardBorder,
-                boxShadow: T.cardShadow, borderRadius: 10, padding: '20px 34px 20px 22px',
-              }}>
-                <button
-                  onClick={() => setShowLogTip(false)}
-                  aria-label="Dismiss"
-                  style={{
-                    position: 'absolute', top: 6, right: 8, background: 'none', border: 'none',
-                    cursor: 'pointer', color: T.faint, fontSize: 26, lineHeight: 1, padding: 6,
-                  }}
-                >×</button>
-                <div style={{ fontSize: 24, color: '#4A3528', lineHeight: 1.4, fontFamily: T.sans }}>
-                  <strong>Hey!</strong> Welcome to Gigl. Log and rate your first show here.
-                </div>
-                <div style={{
-                  position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
-                  width: 0, height: 0,
-                  borderLeft: '18px solid transparent', borderRight: '18px solid transparent',
-                  borderTop: '18px solid #4A3528',
-                }} />
-                <div style={{
-                  position: 'absolute', bottom: -12.5, left: '50%', transform: 'translateX(-50%)',
-                  width: 0, height: 0,
-                  borderLeft: '15px solid transparent', borderRight: '15px solid transparent',
-                  borderTop: `15px solid ${T.card}`,
-                }} />
-              </div>
-            </div>
-          )}
-          <div
-            onClick={() => router.push('/select-festival')}
-            style={{
-              width: 42, height: 42,
-              background: T.accent, borderRadius: '50%',
-              border: '1.5px solid #4A3528',
-              boxShadow: '2px 2px 0 #4A3528',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: -18, cursor: 'pointer',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="#FAF3E2" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </div>
-          <span style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
-            textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
-          }}>Log</span>
-        </div>
-
-        {/* You */}
-        <button
-          onClick={() => router.push('/profile')}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke={T.muted} strokeWidth="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-          <span style={{
-            fontSize: 9, color: T.muted, letterSpacing: '0.08em',
-            textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600,
-          }}>You</span>
-        </button>
-      </div>
+      <BottomNav showLogTip={showLogTip} onDismissLogTip={() => setShowLogTip(false)} />
 
       {activeComments && (
         <CommentsModal

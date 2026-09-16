@@ -6,15 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useAuth } from '@/components/AuthProvider'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
-
-const ink    = '#4A3528'
-const cream  = '#FAF3E2'
-const paper  = '#EDE3D0'
-const sienna = '#B85827'
-const muted  = '#8B7560'
-const faint  = '#B8A898'
-const serif  = 'var(--font-space-grotesk), sans-serif'
-const sans   = 'var(--font-inter), sans-serif'
+import { Logo } from '@/components/Logo'
+import { ErrorNote, Field, Label, btnPrimary, fieldInput } from '@/components/ui'
 
 export default function ChooseUsernamePage() {
   const router   = useRouter()
@@ -58,106 +51,45 @@ export default function ChooseUsernamePage() {
   if (checking) return null
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: paper,
-      fontFamily: sans,
-      color: ink,
-      maxWidth: 430,
-      margin: '0 auto',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '0 24px',
-    }}>
-
-      {/* Wordmark */}
-      <div style={{ paddingTop: 60, marginBottom: 48 }}>
-        <div style={{
-          fontFamily: serif, fontSize: 32, fontWeight: 700,
-          color: ink, letterSpacing: '-0.5px', marginBottom: 8,
-        }}>
-          Gigl<span style={{ color: sienna }}>/</span>
-        </div>
-        <div style={{
-          fontSize: 10, color: muted, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 600,
-        }}>One last step</div>
+    <div className="min-h-screen bg-paper text-ink px-6 flex flex-col">
+      <div className="pt-14 mb-12">
+        <Logo size="text-[32px]" />
+        <Label className="mt-2">One last step</Label>
       </div>
 
-      {/* Headline */}
-      <div style={{ marginBottom: 40 }}>
-        <div style={{
-          fontSize: 10, color: sienna, letterSpacing: '0.14em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: 10,
-        }}>Pick a username</div>
-        <div style={{
-          fontFamily: serif, fontSize: 34, fontWeight: 700,
-          lineHeight: 1.1, letterSpacing: '-1px', color: ink,
-        }}>
-          What&apos;s your<br />stage name<span style={{ color: sienna }}>?</span>
-        </div>
+      <div className="mb-10">
+        <Label tone="accent" className="mb-2.5">Pick a username</Label>
+        <h1 className="font-display text-[34px] font-bold tracking-tight leading-[1.05]">
+          What&apos;s your<br />stage name<span className="text-accent">?</span>
+        </h1>
       </div>
 
-      {/* Form */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-        <div style={{
-          background: cream, borderRadius: 5,
-          border: `1.5px solid ${ink}`,
-          padding: '14px 16px',
-        }}>
-          <div style={{
-            fontSize: 9, color: muted, letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
-          }}>Username</div>
+      <div className="flex flex-col gap-2.5 mb-5">
+        <Field label="Username">
           <input
             value={username}
             onChange={e => setUsername(e.target.value)}
             placeholder="how you'll appear in the feed"
-            style={{
-              width: '100%', background: 'none', border: 'none', outline: 'none',
-              color: ink, fontSize: 16, fontFamily: sans,
-            }}
+            className={fieldInput}
           />
-        </div>
+        </Field>
 
-        {error && (
-          <div style={{
-            fontSize: 12, color: '#B03030', fontFamily: sans,
-            padding: '10px 14px', background: 'rgba(160,40,40,0.08)',
-            border: '1px solid rgba(160,40,40,0.2)',
-            borderRadius: 5, lineHeight: 1.5,
-          }}>{error}</div>
-        )}
+        {error && <ErrorNote>{error}</ErrorNote>}
 
         <button
+          type="button"
           onClick={handleSubmit}
           disabled={loading}
-          style={{
-            width: '100%', background: sienna,
-            border: `1.5px solid ${ink}`,
-            boxShadow: '2px 2px 0 #4A3528',
-            borderRadius: 5, padding: 16,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-            marginTop: 4,
-          }}
+          className={`${btnPrimary} w-full mt-1 py-4 text-xs ${loading ? 'opacity-70' : ''}`}
         >
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: cream,
-            letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: sans,
-          }}>
-            {loading ? 'Please wait...' : 'Continue'}
-          </span>
+          {loading ? 'Please wait...' : 'Continue'}
         </button>
       </div>
 
-      <div style={{ flex: 1 }} />
-      <div style={{
-        paddingBottom: 48, textAlign: 'center',
-        fontSize: 10, color: faint, letterSpacing: '0.1em', textTransform: 'uppercase',
-      }}>
-        Rate every set<span style={{ color: sienna }}>.</span> Rank every moment<span style={{ color: sienna }}>.</span>
-      </div>
+      <div className="flex-1" />
+      <p className="pb-12 text-center text-[10px] uppercase tracking-[0.1em] text-ink-faint">
+        Rate every set<span className="text-accent">.</span> Rank every moment<span className="text-accent">.</span>
+      </p>
     </div>
   )
 }

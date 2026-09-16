@@ -1,18 +1,24 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Check, ImagePlus, Pencil, Share2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
-import { StarDisplay } from '@/components/StarDisplay'
 import { MediaGrid } from '@/components/MediaGrid'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
-import { formatShowDate } from '@/lib/dates'
-import { useTheme } from '@/components/FestivalThemeProvider'
 import { useAuth } from '@/components/AuthProvider'
+import { AppHeader } from '@/components/AppHeader'
+import BottomNav from '@/components/BottomNav'
+import { Logo } from '@/components/Logo'
+import {
+  ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf,
+  btnPrimary, btnQuiet, iconBtn, inputBox,
+} from '@/components/ui'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
@@ -65,7 +71,6 @@ interface Profile {
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
-  const T = useTheme()
   const { user, loading: authLoading } = useAuth()
 
   const [profile, setProfile]               = useState<Profile | null>(null)
@@ -213,415 +218,245 @@ export default function ProfilePage() {
     : 0
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${T.accent}`, borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+    <div className="min-h-screen bg-paper flex items-center justify-center">
+      <div className="w-7 h-7 rounded-full border-2 border-accent border-t-transparent animate-spin" />
     </div>
   )
 
+  const name = profile?.display_name || profile?.username || ''
+
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, fontFamily: T.sans, color: '#4A3528', maxWidth: 430, margin: '0 auto' }}>
-
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '11px 20px',
-        position: 'sticky', top: 0, zIndex: 10,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(74,53,40,0.12)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 11,
-      }}>
-        {T.logoUrl ? (
-          <img src={T.logoUrl} alt="Gigl" style={{ height: 22, objectFit: 'contain', filter: T.logoFilter }} />
-        ) : (
-          <div style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 700, color: '#4A3528', letterSpacing: '-0.5px' }}>
-            Gigl<span style={{ color: T.accent }}>/</span>
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, marginRight: 4 }}>
-          <button onClick={() => router.push('/select-festival')} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-            color: T.accent, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em', fontWeight: 600,
-          }}>search shows</button>
-          <span style={{ fontSize: 10, color: T.faint }}>·</span>
-          <button onClick={signOut} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-            color: T.muted, fontSize: 10, fontFamily: T.sans, letterSpacing: '0.06em',
-          }}>sign out</button>
-        </div>
-      </div>
-
-      {/* ── Profile header ───────────────────────────────────────────────────── */}
-      <div style={{ padding: '20px 24px 0' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 4, marginBottom: 10 }}>
-          <div style={{
-            fontFamily: T.serif, fontSize: 28, fontWeight: 700,
-            lineHeight: 1.1, letterSpacing: '-1px', color: '#4A3528',
-          }}>
-            {profile?.display_name}&apos;s<br />
-            <span>rankings</span><span style={{ color: T.accent }}>.</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', paddingTop: 4, flexShrink: 0 }}>
-            <button onClick={copyLink} aria-label={copied ? 'Link copied' : 'Share my rankings with friends'} style={{
-              display: 'flex', alignItems: 'center', gap: 9,
-              padding: '12px 18px', borderRadius: 30,
-              background: copied ? T.accentDim : T.card,
-              border: T.cardBorder,
-              cursor: 'pointer', flexShrink: 0,
-            }}>
-              {copied ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              ) : (
-                <svg width="19" height="19" viewBox="0 0 14 14" fill="none">
-                  <path d="M8 1h5v5M13 1L6 8M5.5 3H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8.5"
-                    stroke={T.accent} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-              <span style={{
-                fontSize: 16, fontWeight: 700, color: T.accent, fontFamily: T.sans,
-                letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.35, textAlign: 'left',
-              }}>{copied ? 'Copied!' : <>Invite friends<br />to Gigl</>}</span>
-            </button>
-          </div>
-        </div>
-        <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>@{profile?.username}</div>
-      </div>
-
-      {/* ── Stats bar ────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr',
-        borderTop: '2px solid rgba(74,53,40,0.22)',
-        borderBottom: '2px solid rgba(74,53,40,0.22)',
-        background: T.bg,
-      }}>
-        <div style={{ padding: '14px 0', textAlign: 'center' }}>
-          <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: '#4A3528' }}>{shows.length}</div>
-          <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Sets logged</div>
-        </div>
-        <div style={{ padding: '14px 0', textAlign: 'center', borderRight: '2px solid rgba(74,53,40,0.22)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {ratedShows.length > 0
-            ? <StarDisplay score={avgScore} size={18} accent={T.accent} />
-            : <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: T.accent }}>—</div>}
-          <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 5, fontWeight: 600 }}>Avg score</div>
-        </div>
-        <button onClick={() => profile && router.push(`/u/${profile.username}/followers`)} style={{
-          background: 'none', border: 'none',
-          padding: '14px 0', textAlign: 'center', cursor: 'pointer',
-        }}>
-          <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: '#4A3528' }}>{followerCount}</div>
-          <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Followers</div>
+    <div className="min-h-screen bg-paper text-ink pb-28">
+      {/* Your own profile, so the header carries a share button rather than your photo. */}
+      <AppHeader showProfile={false}>
+        <Logo />
+        <button
+          type="button"
+          onClick={copyLink}
+          aria-label={copied ? 'Link copied' : 'Share my rankings with friends'}
+          className={`${iconBtn} ${copied ? 'text-accent' : ''}`}
+        >
+          {copied ? <Check className="w-4 h-4" strokeWidth={2.5} /> : <Share2 className="w-4 h-4" strokeWidth={1.75} />}
         </button>
-        <button onClick={() => profile && router.push(`/u/${profile.username}/following`)} style={{
-          background: 'none', border: 'none',
-          padding: '14px 0', textAlign: 'center', cursor: 'pointer',
-        }}>
-          <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 700, color: '#4A3528' }}>{followingCount}</div>
-          <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.muted, marginTop: 3, fontWeight: 600 }}>Following</div>
-        </button>
-      </div>
+      </AppHeader>
 
-      {/* ── Rankings list ────────────────────────────────────────────────────── */}
-      <div style={{ padding: '8px 24px 24px' }}>
-        <div style={{
-          fontSize: 10, color: T.muted, letterSpacing: '0.12em',
-          textTransform: 'uppercase', marginBottom: 12, fontWeight: 600,
-        }}>My rankings</div>
-
-        {shows.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: 13, color: T.faint, marginBottom: 16 }}>No sets logged yet</div>
-            <button onClick={() => router.push('/log')} style={{
-              background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-              borderRadius: 5, padding: '12px 24px',
-              color: '#FAF3E2', fontSize: 12, fontWeight: 700,
-              cursor: 'pointer', fontFamily: T.sans,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}>Log your first set →</button>
+      <div className="px-5 pt-4 space-y-4">
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <PersonPhoto name={name} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">{profile?.display_name}</h1>
+              <p className="text-xs text-ink-muted">@{profile?.username}</p>
+            </div>
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {shows.map((show, i) => {
-              const score     = showScore(show)
-              const hasScore  = show.performance_rating != null && show.venue_rating != null && show.crowd_rating != null
-              const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
-              const isEditing = editingId === show.id
-              const isTop     = i === 0
-              return (
-                <div key={show.id} style={{
-                  background: T.card, borderRadius: 5,
-                  border: T.cardBorder,
-                  boxShadow: isTop ? T.cardShadow : 'none',
-                  overflow: 'hidden',
-                }}>
-                  <MediaGrid urls={resolveMediaUrls(show).map(u => resolvePhotoUrl(u)!)} maxHeight={220} />
 
-                  {/* Info row */}
-                  <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                        <span style={{
-                          fontFamily: T.serif, fontSize: 15, fontWeight: 700,
-                          color: '#4A3528', letterSpacing: '-0.3px',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          minWidth: 0,
-                        }}>{show.artist_name}</span>
-                        {hasScore && <StarDisplay score={score} size={18} accent={T.accent} />}
+          {/* Two pairs - your own numbers, then your social graph - split by a heavier rule. */}
+          <div className="flex border-t border-ink/10 pt-3">
+            <div className="flex-1 flex">
+              <Stat value={shows.length} label="Gigs" />
+              <div className="flex-1 flex border-l border-ink/10">
+                <Stat
+                  value={ratedShows.length > 0 ? <Stars score={avgScore} size={11} /> : <span className="text-accent">—</span>}
+                  label="Avg rating"
+                />
+              </div>
+            </div>
+            <div className="flex-1 flex border-l-1.5 border-ink">
+              <Link href={profile ? `/u/${profile.username}/followers` : '#'} className="flex-1 flex">
+                <Stat value={followerCount} label="Followers" />
+              </Link>
+              <Link href={profile ? `/u/${profile.username}/following` : '#'} className="flex-1 flex border-l border-ink/10">
+                <Stat value={followingCount} label="Following" />
+              </Link>
+            </div>
+          </div>
+        </Card>
+
+        <section>
+          <Label className="mb-2.5">My rankings</Label>
+
+          {shows.length === 0 ? (
+            <EmptyState>
+              <p className="mb-4">No shows logged yet</p>
+              <Link href="/select-festival?mode=log" className={`${btnPrimary} px-6 py-3 text-xs`}>Log your first show →</Link>
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {shows.map((show, i) => {
+                const score     = showScore(show)
+                const hasScore  = show.performance_rating != null && show.venue_rating != null && show.crowd_rating != null
+                const isEditing = editingId === show.id
+                const mediaUrls = resolveMediaUrls(show).map(u => resolvePhotoUrl(u)!)
+                const place     = placeOf(show)
+                return (
+                  <Card key={show.id} className="overflow-hidden">
+                    {mediaUrls.length > 0 && !isEditing && (
+                      <div className="border-b-1.5 border-ink">
+                        <MediaGrid urls={mediaUrls} maxHeight={220} />
+                      </div>
+                    )}
+
+                    <div className="p-3 flex items-center gap-3">
+                      <span className="font-display text-2xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
+                      <ArtistPhoto name={show.artist_name} className="w-12 h-12" iconSize={16}>
+                        <DateTag isoDate={show.show_date} />
+                      </ArtistPhoto>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="font-display text-[15px] font-bold leading-tight truncate">{show.artist_name}</h3>
+                          {hasScore && <Stars score={score} size={12} />}
+                        </div>
+                        {place && <Place className="mt-0.5">{place}</Place>}
                         {battleMap[show.artist_id] && (
-                          <BattleRecordBadge
-                            wins={battleMap[show.artist_id].wins}
-                            losses={battleMap[show.artist_id].losses}
-                            unlocked={!!profile?.battle_mode_unlocked}
-                            context="personal"
-                            artistName={show.artist_name}
-                          />
-                        )}
-                      </div>
-                      <div style={{
-                        fontSize: 10, color: T.muted, letterSpacing: '0.06em',
-                        textTransform: 'uppercase', marginTop: 2, fontWeight: 600,
-                      }}>
-                        {show.stage
-                          ? <>{show.stage} · {show.day}</>
-                          : show.venue
-                          ? <>{show.venue}{show.show_date ? ` · ${formatShowDate(show.show_date)}` : ''}</>
-                          : null}
-                      </div>
-                      <div style={{ fontSize: 10, color: T.accent, marginTop: 2, fontWeight: 600 }}>{rankLabel}</div>
-                    </div>
-                    <button onClick={() => isEditing ? setEditingId(null) : startEdit(show)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0, opacity: isEditing ? 1 : 0.35 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                        stroke={isEditing ? T.accent : '#4A3528'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Edit form */}
-                  {isEditing ? (
-                    <div style={{ padding: '0 16px 16px' }}>
-                      <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
-                        onChange={async e => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          if (file.type.startsWith('video/')) {
-                            const dur = await getVideoDuration(file)
-                            if (dur > 20) { alert('Video must be 20 seconds or less.'); e.target.value = ''; return }
-                          }
-                          setEditPhotoFile(file)
-                          setEditPhotoPreview(URL.createObjectURL(file))
-                        }}
-                      />
-                      {editPhotoPreview ? (
-                        <div style={{ position: 'relative', marginBottom: 12 }}>
-                          {(editPhotoFile?.type.startsWith('video/') || isVideoUrl(editPhotoPreview)) ? (
-                            <VideoPlayer src={editPhotoPreview} style={{ borderRadius: 5, maxHeight: 180, objectFit: 'cover' }} />
-                          ) : (
-                            <img src={editPhotoPreview} alt=""
-                              style={{ width: '100%', borderRadius: 5, maxHeight: 180, objectFit: 'cover', display: 'block' }} />
-                          )}
-                          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
-                            <button onClick={() => fileInputRef.current?.click()} style={{
-                              background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: 20,
-                              padding: '4px 10px', color: '#FAF3E2', fontSize: 10, cursor: 'pointer',
-                              fontFamily: T.sans, letterSpacing: '0.04em',
-                            }}>Replace</button>
-                            <button onClick={() => { setEditPhotoPreview(null); setEditPhotoFile(null) }} style={{
-                              background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%',
-                              width: 26, height: 26, color: '#FAF3E2', fontSize: 15, cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>×</button>
+                          <div className="mt-1">
+                            <BattleRecordBadge
+                              wins={battleMap[show.artist_id].wins}
+                              losses={battleMap[show.artist_id].losses}
+                              unlocked={!!profile?.battle_mode_unlocked}
+                              context="personal"
+                              artistName={show.artist_name}
+                            />
                           </div>
-                        </div>
-                      ) : (
-                        <button onClick={() => fileInputRef.current?.click()} style={{
-                          width: '100%', background: T.cardInner,
-                          border: '1.5px dashed rgba(74,53,40,0.25)',
-                          borderRadius: 5, padding: '14px 16px',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          gap: 8, cursor: 'pointer', marginBottom: 12,
-                        }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="1.5">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                          </svg>
-                          <span style={{ fontSize: 11, color: T.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>Add a photo / video</span>
-                        </button>
-                      )}
-                      <textarea
-                        value={editReview}
-                        onChange={e => setEditReview(e.target.value)}
-                        maxLength={280}
-                        placeholder="Add a review..."
-                        rows={3}
-                        style={{
-                          width: '100%', background: T.cardInner,
-                          border: T.cardBorder,
-                          borderRadius: 5, padding: '10px 12px',
-                          color: '#4A3528', fontSize: 13,
-                          fontFamily: T.sans, resize: 'none', outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '10px 0' }}>
-                        {TAGS.map(tag => {
-                          const active = editTags.includes(tag)
-                          return (
-                            <button key={tag} onClick={() => setEditTags(prev =>
-                              active ? prev.filter(t => t !== tag) : [...prev, tag]
-                            )} style={{
-                              fontSize: 10, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
-                              background: active ? T.accentDim : 'rgba(74,53,40,0.05)',
-                              color: active ? T.accent : T.muted,
-                              border: active ? `1.5px solid ${T.accentBorder}` : '1px solid rgba(74,53,40,0.15)',
-                              fontFamily: T.sans, fontWeight: active ? 600 : 400,
-                            }}>{tag}</button>
-                          )
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setEditingId(null)} style={{
-                          flex: 1, padding: '10px 0', borderRadius: 5,
-                          background: 'rgba(74,53,40,0.05)', border: '1px solid rgba(74,53,40,0.15)',
-                          color: T.muted, fontSize: 11, cursor: 'pointer', fontFamily: T.sans,
-                        }}>Cancel</button>
-                        <button onClick={() => saveEdit(show.id, show.artist_id)} disabled={editSaving} style={{
-                          flex: 2, padding: '10px 0', borderRadius: 5,
-                          background: T.accent, border: '1.5px solid #4A3528', boxShadow: T.cardShadow,
-                          color: '#FAF3E2', fontSize: 11, fontWeight: 700,
-                          cursor: editSaving ? 'default' : 'pointer', opacity: editSaving ? 0.7 : 1,
-                          fontFamily: T.sans, letterSpacing: '0.08em', textTransform: 'uppercase',
-                        }}>{editSaving ? 'Saving...' : 'Save'}</button>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <button onClick={() => {
-                          const params = new URLSearchParams({
-                            artistId:   show.artist_id,
-                            artistName: show.artist_name,
-                            ...(show.stage ? { stage: show.stage } : {}),
-                            ...(show.day ? { day: show.day } : {}),
-                            ...(show.venue ? { venue: show.venue } : {}),
-                            ...(show.show_date ? { showDate: show.show_date } : {}),
-                          })
-                          router.push(`/log-show?${params.toString()}`)
-                        }} style={{
-                          flex: 1, padding: '10px 0', borderRadius: 5,
-                          background: 'rgba(74,53,40,0.05)', border: '1px solid rgba(74,53,40,0.15)',
-                          color: T.muted, fontSize: 11, cursor: 'pointer', fontFamily: T.sans,
-                        }}>↺ Update ratings</button>
-                        {confirmDeleteId === show.id ? (
-                          <>
-                            <button onClick={() => setConfirmDeleteId(null)} style={{
-                              flex: 1, padding: '10px 0', borderRadius: 5,
-                              background: 'rgba(74,53,40,0.05)', border: '1px solid rgba(74,53,40,0.15)',
-                              color: T.muted, fontSize: 11, cursor: 'pointer', fontFamily: T.sans,
-                            }}>Keep it</button>
-                            <button onClick={() => deleteShow(show.id)} style={{
-                              flex: 1, padding: '10px 0', borderRadius: 5,
-                              background: 'rgba(160,40,40,0.1)', border: '1px solid rgba(160,40,40,0.3)',
-                              color: '#B03030', fontSize: 11, fontWeight: 700,
-                              cursor: 'pointer', fontFamily: T.sans,
-                            }}>Delete</button>
-                          </>
-                        ) : (
-                          <button onClick={() => setConfirmDeleteId(show.id)} style={{
-                            flex: 1, padding: '10px 0', borderRadius: 5,
-                            background: 'rgba(74,53,40,0.05)', border: '1px solid rgba(74,53,40,0.15)',
-                            color: 'rgba(160,40,40,0.55)', fontSize: 11, cursor: 'pointer', fontFamily: T.sans,
-                          }}>Remove rating</button>
                         )}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => isEditing ? setEditingId(null) : startEdit(show)}
+                        aria-label={isEditing ? 'Close editor' : 'Edit this log'}
+                        className={`p-1.5 flex-shrink-0 ${isEditing ? 'text-accent' : 'text-ink-faint'}`}
+                      >
+                        <Pencil className="w-4 h-4" strokeWidth={2} />
+                      </button>
                     </div>
-                  ) : (
-                    <>
-                      {show.review && (
-                        <div style={{ padding: '0 16px 10px', fontSize: 12, color: 'rgba(74,53,40,0.65)', fontStyle: 'italic', lineHeight: 1.55 }}>
-                          &ldquo;{show.review}&rdquo;
+
+                    {isEditing ? (
+                      <div className="px-3 pb-3 space-y-2.5">
+                        <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden"
+                          onChange={async e => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.type.startsWith('video/')) {
+                              const dur = await getVideoDuration(file)
+                              if (dur > 20) { alert('Video must be 20 seconds or less.'); e.target.value = ''; return }
+                            }
+                            setEditPhotoFile(file)
+                            setEditPhotoPreview(URL.createObjectURL(file))
+                          }}
+                        />
+                        {editPhotoPreview ? (
+                          <div className="relative rounded-card border-1.5 border-ink overflow-hidden">
+                            {(editPhotoFile?.type.startsWith('video/') || isVideoUrl(editPhotoPreview)) ? (
+                              <VideoPlayer src={editPhotoPreview} style={{ maxHeight: 180, objectFit: 'cover' }} />
+                            ) : (
+                              <img src={editPhotoPreview} alt="" className="block w-full max-h-[180px] object-cover" />
+                            )}
+                            <div className="absolute top-2 right-2 flex gap-1.5">
+                              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full bg-ink/80 px-2.5 py-1 text-[10px] font-semibold text-cream">
+                                Replace
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setEditPhotoPreview(null); setEditPhotoFile(null) }}
+                                aria-label="Remove photo"
+                                className="w-6 h-6 rounded-full bg-ink/80 text-cream text-sm leading-none"
+                              >×</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full flex items-center justify-center gap-2 rounded-card border-1.5 border-dashed border-ink/25 bg-paper px-4 py-3.5 text-[11px] font-semibold uppercase tracking-label text-ink-faint"
+                          >
+                            <ImagePlus className="w-4 h-4" strokeWidth={1.75} /> Add a photo / video
+                          </button>
+                        )}
+                        <textarea
+                          value={editReview}
+                          onChange={e => setEditReview(e.target.value)}
+                          maxLength={280}
+                          placeholder="Add a review..."
+                          rows={3}
+                          className={`${inputBox} block w-full resize-none px-3 py-2.5 text-base text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40`}
+                        />
+                        <div className="flex flex-wrap gap-1.5">
+                          {TAGS.map(tag => {
+                            const active = editTags.includes(tag)
+                            return (
+                              <button key={tag} type="button" onClick={() => setEditTags(prev =>
+                                active ? prev.filter(t => t !== tag) : [...prev, tag]
+                              )}>
+                                <Chip active={active}>{tag}</Chip>
+                              </button>
+                            )
+                          })}
                         </div>
-                      )}
-                      {show.tags && show.tags.length > 0 && (
-                        <div style={{ padding: '0 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {show.tags.map(tag => (
-                            <span key={tag} style={{
-                              fontSize: 10, padding: '3px 10px', borderRadius: 20,
-                              background: T.accentDim, color: T.accent,
-                              border: `1.5px solid ${T.accentBorder}`, fontFamily: T.sans, fontWeight: 600,
-                            }}>{tag}</span>
-                          ))}
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setEditingId(null)} className={`${btnQuiet} flex-1 py-2.5 text-[11px]`}>Cancel</button>
+                          <button
+                            type="button"
+                            onClick={() => saveEdit(show.id, show.artist_id)}
+                            disabled={editSaving}
+                            className={`${btnPrimary} flex-[2] py-2.5 text-[11px]`}
+                          >{editSaving ? 'Saving...' : 'Save'}</button>
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => {
+                            const params = new URLSearchParams({
+                              artistId:   show.artist_id,
+                              artistName: show.artist_name,
+                              ...(show.stage ? { stage: show.stage } : {}),
+                              ...(show.day ? { day: show.day } : {}),
+                              ...(show.venue ? { venue: show.venue } : {}),
+                              ...(show.show_date ? { showDate: show.show_date } : {}),
+                            })
+                            router.push(`/log-show?${params.toString()}`)
+                          }} className={`${btnQuiet} flex-1 py-2.5 text-[11px]`}>↺ Update ratings</button>
+                          {confirmDeleteId === show.id ? (
+                            <>
+                              <button type="button" onClick={() => setConfirmDeleteId(null)} className={`${btnQuiet} flex-1 py-2.5 text-[11px]`}>Keep it</button>
+                              <button
+                                type="button"
+                                onClick={() => deleteShow(show.id)}
+                                className="flex-1 rounded-card border-1.5 border-[#B03030]/30 bg-[#B03030]/10 py-2.5 text-[11px] font-bold text-[#B03030]"
+                              >Delete</button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(show.id)}
+                              className="flex-1 rounded-card border-1.5 border-ink/15 bg-cream py-2.5 text-[11px] font-semibold text-[#B03030]/60"
+                            >Remove rating</button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      (show.review || (show.tags && show.tags.length > 0)) && (
+                        <div className="px-3 pb-3 space-y-2.5">
+                          {show.review && <PullQuote>{show.review}</PullQuote>}
+                          {show.tags && show.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {show.tags.map(tag => <Chip key={tag}>{tag}</Chip>)}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        <footer className="pt-2 pb-4 flex justify-center gap-4 text-[11px] text-ink-faint">
+          <button type="button" onClick={signOut} className="underline underline-offset-[3px]">Sign out</button>
+          <Link href="/privacy" className="underline underline-offset-[3px]">Privacy Policy</Link>
+          <Link href="/terms" className="underline underline-offset-[3px]">Terms of Service</Link>
+        </footer>
       </div>
 
-      {/* ── Legal footer ─────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '16px 24px 120px', textAlign: 'center',
-        display: 'flex', justifyContent: 'center', gap: 14,
-      }}>
-        <button onClick={() => router.push('/privacy')} style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          fontSize: 11, color: T.faint, fontFamily: T.sans, textDecoration: 'underline', textUnderlineOffset: 3,
-        }}>Privacy Policy</button>
-        <button onClick={() => router.push('/terms')} style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          fontSize: 11, color: T.faint, fontFamily: T.sans, textDecoration: 'underline', textUnderlineOffset: 3,
-        }}>Terms of Service</button>
-      </div>
-
-      {/* ── Bottom nav ───────────────────────────────────────────────────────── */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 430,
-        background: T.bgRgba,
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderTop: '1.5px solid rgba(74,53,40,0.15)',
-        padding: '12px 32px calc(4px + env(safe-area-inset-bottom))',
-        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-      }}>
-        <button onClick={() => router.push('/feed')} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
-          <span style={{ fontSize: 9, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>Home</span>
-        </button>
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <div onClick={() => router.push('/log')} style={{
-            width: 42, height: 42, background: T.accent, borderRadius: '50%',
-            border: '1.5px solid #4A3528', boxShadow: '2px 2px 0 #4A3528',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginTop: -18, cursor: 'pointer',
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FAF3E2" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </div>
-          <span style={{ fontSize: 9, color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 600 }}>Log</span>
-        </div>
-
-        <button onClick={() => router.push('/profile')} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={T.accent} stroke="none">
-            <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-          </svg>
-          <span style={{ fontSize: 9, color: T.accent, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: T.sans, fontWeight: 700 }}>You</span>
-        </button>
-      </div>
+      <BottomNav />
     </div>
   )
 }
