@@ -32,6 +32,9 @@ interface TMVenue {
   name?: string
   city?: { name?: string }
   state?: { stateCode?: string; name?: string }
+  // Present on most but not all venues, and stringly-typed when it is -
+  // the nightly sync falls back to the metro centroid when it's missing.
+  location?: { latitude?: string; longitude?: string }
 }
 
 interface TMEvent {
@@ -47,6 +50,7 @@ interface TMEvent {
 
 interface TMEventSearchResponse {
   _embedded?: { events?: TMEvent[] }
+  page?: { totalPages?: number; number?: number }
 }
 
 // Coarse genre -> emoji mapping. Ticketmaster's data has no emoji/icon field
@@ -136,4 +140,87 @@ export async function searchShows(keyword: string): Promise<Show[]> {
 
   const data: TMEventSearchResponse = await res.json()
   return (data._embedded?.events ?? []).map(toShow)
+}
+
+// ─── Nightly sync path ──────────────────────────────────────────────────────
+// searchShows() above is the live per-request path, kept as the cold-start
+// fallback for when the shows table hasn't been populated yet. Everything
+// below feeds app/api/cron/sync-shows, which walks SYNC_CITIES and upserts
+// into Postgres so that normal traffic never touches Ticketmaster at all.
+
+import type { SyncCity } from './shows/cities'
+
+export interface SyncShow extends Show {
+  lat: number | null
+  lng: number | null
+  // The SYNC_CITIES entry this row was pulled under, which is not always the
+  // venue's own city - a metro query legitimately returns shows in
+  // surrounding towns. Stored so a city's rows can be re-synced or purged as
+  // a unit without guessing at venue city spellings.
+  metro: string
+}
+
+// Ticketmaster caps `size` at 200 and refuses to page beyond 1000 results
+// for a single query, so 5 pages is the real ceiling per city, not a
+// self-imposed one.
+export const TM_MAX_PAGE_SIZE = 200
+
+function toSyncShow(event: TMEvent, city: SyncCity): SyncShow {
+  const base  = toShow(event)
+  const venue = event._embedded?.venues?.[0]
+  const rawLat = venue?.location?.latitude
+  const rawLng = venue?.location?.longitude
+
+  // Ticketmaster sends coordinates as strings and occasionally as empty
+  // strings, which Number() would happily turn into 0 - a valid-looking
+  // coordinate off the coast of Africa. Parse explicitly and fall back to
+  // the metro centroid rather than letting that through.
+  const lat = rawLat !== undefined && rawLat !== '' ? Number(rawLat) : NaN
+  const lng = rawLng !== undefined && rawLng !== '' ? Number(rawLng) : NaN
+
+  return {
+    ...base,
+    lat: Number.isFinite(lat) ? lat : city.lat,
+    lng: Number.isFinite(lng) ? lng : city.lng,
+    metro: `${city.city}, ${city.stateCode}`,
+  }
+}
+
+export interface CityPageResult {
+  shows:      SyncShow[]
+  totalPages: number
+}
+
+// One page of one city's upcoming music listings. Deliberately a single
+// page rather than a loop: the caller owns pacing, because Ticketmaster's
+// free tier allows 5 requests/sec and a loop in here would have no view of
+// the requests the other cities are making.
+export async function fetchCityShowsPage(city: SyncCity, page: number): Promise<CityPageResult> {
+  const params = new URLSearchParams({
+    apikey:             TICKETMASTER_API_KEY,
+    countryCode:        'US',
+    classificationName: 'music',
+    city:               city.city,
+    stateCode:          city.stateCode,
+    size:               String(TM_MAX_PAGE_SIZE),
+    page:               String(page),
+    sort:               'date,asc',
+  })
+
+  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params}`, {
+    // Explicitly uncached: this runs once a night and exists precisely to
+    // observe what changed. A cache hit here would defeat the whole job.
+    cache: 'no-store',
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Ticketmaster city sync failed for ${city.city} p${page} (${res.status}): ${text}`)
+  }
+
+  const data: TMEventSearchResponse = await res.json()
+  return {
+    shows:      (data._embedded?.events ?? []).map(e => toSyncShow(e, city)),
+    totalPages: data.page?.totalPages ?? 1,
+  }
 }
