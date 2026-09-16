@@ -245,6 +245,23 @@ export function ErrorNote({ children }: { children: React.ReactNode }) {
 export const headerClass =
   'sticky top-0 z-30 bg-paper/90 backdrop-blur-md border-b border-ink/10 px-5 py-3 flex items-center gap-3'
 
+// The main tabs' header bar: content on the left, an optional slot (the
+// profile photo) pinned right. AppHeader wires it to auth; the style guide
+// and intro demo render it with sample content.
+export function TopBar({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <header className={headerClass}>
+      <div className="flex-1 min-w-0 flex items-center justify-between gap-3">{children}</div>
+      {right}
+    </header>
+  )
+}
+
+// The header's profile photo.
+export function HeaderPhoto({ name }: { name: string }) {
+  return <PersonPhoto name={name} className="w-9 h-9 text-sm border-1.5 border-ink shadow-riso" />
+}
+
 // Header for pages you arrive at from somewhere (artist, profile, lists,
 // modals). Pass `href` from server components, `onBack` from client ones.
 export function BackHeader({ title, href, onBack, right }: {

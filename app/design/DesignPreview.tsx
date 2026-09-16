@@ -1,18 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BarChart2, CircleUser, Newspaper, Pencil, Plus, Search, Share2 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Pencil, Search, Share2 } from 'lucide-react'
+import { DockBar } from '@/components/BottomNav'
 import { Logo } from '@/components/Logo'
 import {
-  ArtistPhoto, Card, Chip, DateTag, Label, PersonPhoto, Place, PullQuote, Segmented, Stars, Stat,
+  ArtistPhoto, Card, Chip, DateTag, HeaderPhoto, Label, PersonPhoto, Place, PullQuote, Segmented, Stars, Stat, TopBar,
   btnPrimary, btnSecondary, headerClass, iconBtn, inputBox,
 } from '@/components/ui'
 
 // Sample-data renderings of the core screens in DESIGN.md, built from the same
-// components the real screens use (components/ui.tsx). Only the header and
-// dock are local, because here they switch between sample screens instead of
-// routing. Items marked (mockup) in DESIGN.md appear here with sample data.
+// components the real screens use (components/ui.tsx, TopBar, DockBar). Here
+// the header photo and dock switch between sample screens instead of routing.
+// Items marked (mockup) in DESIGN.md appear here with sample data.
 // Ratings are stars only; a show's rating is the average of three whole-star
 // sub-ratings, so it lands on thirds (5, 4.67, 4.33...).
 
@@ -40,62 +40,25 @@ export function DesignPreview() {
       {screen === 'search'   && <SearchScreen onProfile={openProfile} onPick={() => setScreen('log')} />}
       {screen === 'profile'  && <ProfileScreen />}
 
-      <DemoDock active={screen} onSelect={setScreen} />
+      <DockBar active={screen} mode="buttons" onSelect={setScreen} />
     </div>
   )
 }
 
 // ── Style-guide chrome ───────────────────────────────────────────────────────
 
-// Mirrors components/AppHeader.tsx, with a button instead of a link.
+// The real TopBar, with a button (not a link) to the sample profile.
 function DemoHeader({ children, onProfile }: { children: React.ReactNode; onProfile?: () => void }) {
   return (
-    <header className={headerClass}>
-      <div className="flex-1 min-w-0 flex items-center justify-between gap-3">{children}</div>
-      {onProfile && (
+    <TopBar
+      right={onProfile && (
         <button type="button" onClick={onProfile} aria-label="Your profile" className="flex-shrink-0">
-          <PersonPhoto name={ME.name} className="w-9 h-9 text-sm border-1.5 border-ink shadow-riso" />
+          <HeaderPhoto name={ME.name} />
         </button>
       )}
-    </header>
-  )
-}
-
-const DOCK_TABS: { id: Screen; label: string; Icon: LucideIcon }[] = [
-  { id: 'feed',     label: 'Feed',     Icon: Newspaper },
-  { id: 'rankings', label: 'Rankings', Icon: BarChart2 },
-  { id: 'log',      label: 'Log',      Icon: Plus },
-  { id: 'search',   label: 'Search',   Icon: Search },
-  { id: 'profile',  label: 'You',      Icon: CircleUser },
-]
-
-// Mirrors components/BottomNav.tsx, switching sample screens instead of routing.
-function DemoDock({ active, onSelect }: { active: Screen; onSelect: (s: Screen) => void }) {
-  return (
-    <nav className="fixed bottom-0 inset-x-0 z-40">
-      <div className="max-w-md mx-auto bg-cream border-t-1.5 border-ink flex safe-bottom">
-        {DOCK_TABS.map(({ id, label, Icon }) => {
-          const isActive = active === id
-          const labelClass = `text-[9px] font-bold uppercase tracking-label ${isActive ? 'text-accent' : 'text-ink-faint'}`
-          if (id === 'log') {
-            return (
-              <button key={id} type="button" onClick={() => onSelect(id)} className="flex-1 flex flex-col items-center gap-1 pb-1">
-                <span className="-mt-[18px] w-12 h-12 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center">
-                  <Icon className="w-6 h-6" strokeWidth={2.5} />
-                </span>
-                <span className={labelClass}>{label}</span>
-              </button>
-            )
-          }
-          return (
-            <button key={id} type="button" onClick={() => onSelect(id)} className="flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1">
-              <Icon className={`w-5 h-5 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
-              <span className={labelClass}>{label}</span>
-            </button>
-          )
-        })}
-      </div>
-    </nav>
+    >
+      {children}
+    </TopBar>
   )
 }
 
