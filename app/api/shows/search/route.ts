@@ -10,6 +10,15 @@ import { searchStoredShows, storedShowCount } from '@/lib/shows/repository'
 // cost an upstream call against a 5000/day cap. Reading Postgres makes that a
 // fixed nightly cost instead, and lets search be fuzzy across artist *and*
 // venue rather than whatever Ticketmaster's relevance sort returns.
+
+// Next 14 puts any fetch without explicit cache options into the Data Cache
+// with no expiry, and that includes supabase-js's requests. Without this the
+// catalogue reads froze on whatever they first returned - an empty table
+// before the first sync - so search kept falling back to Ticketmaster after
+// the table had filled. The Ticketmaster fallback sets its own revalidate,
+// so it stays cached.
+export const fetchCache = 'default-no-store'
+
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? ''
 
