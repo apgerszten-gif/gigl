@@ -3,7 +3,7 @@ import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 import { AuthProvider } from '@/components/AuthProvider'
 import { PendingLogsSync } from '@/components/PendingLogsSync'
-import { spaceGrotesk, inter } from '@/lib/fonts'
+import { epilogue, spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
   title: 'Gigl — be the critic.',
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="en" className={`${epilogue.variable} ${spaceGrotesk.variable} ${inter.variable}`}>
       <head>
         <meta name="theme-color" content="#EDE3D0" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />

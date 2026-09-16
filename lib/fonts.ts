@@ -1,9 +1,19 @@
-import { Space_Grotesk, Inter } from 'next/font/google'
+import { Epilogue, Space_Grotesk, Inter } from 'next/font/google'
 
 // Self-hosted via next/font (no external Google Fonts request, no
 // flash-of-invisible-text). Exposed as CSS custom properties so any style
 // object across the app can reference them with a plain var(...) string,
 // the same way the old hardcoded 'Space Grotesk'/'Inter' names were used.
+// The design system typeface (DESIGN.md). A variable font, so every weight
+// the templates use (400-900) comes from the one file.
+export const epilogue = Epilogue({
+  subsets: ['latin'],
+  variable: '--font-epilogue',
+  display: 'swap',
+})
+
+// Space Grotesk and Inter are the legacy Warm Riso Zine faces, still used by
+// screens that haven't moved to the design system yet.
 export const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   weight: ['500', '700'],
