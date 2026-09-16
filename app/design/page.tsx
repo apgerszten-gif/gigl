@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { DesignPreview } from './DesignPreview'
 
-// Living style guide: the four core screens from DESIGN.md, built from the
+// Living style guide: the core screens from DESIGN.md, built from the
 // Tailwind tokens with sample data. It's the rendered reference for the
 // design system, so it stays in the repo, but it only exists in local dev
 // and preview deployments - production builds render a 404.

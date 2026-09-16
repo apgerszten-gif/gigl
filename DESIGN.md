@@ -43,14 +43,15 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 ## 3. Logo & app chrome
 
 - **Logo** (`components/Logo.tsx`): `Gigl` with a capital G, followed by a sienna slash, nothing else. It is set in Space Grotesk bold, 21px, with `-0.5px` tracking, in ink.
-- **Header**: Sticky, `bg-paper/90` with a backdrop blur and a `border-ink/10` bottom rule. The logo or page title sits on the left and actions on the right (search icon, avatar or share button).
-- **Bottom dock**: Four tabs, using `lucide-react` icons at stroke 1.75:
+- **Header**: Sticky, `bg-paper/90` with a backdrop blur and a `border-ink/10` bottom rule. The logo or page title sits on the left. Any page actions (such as a share icon button) go on the right. Search and your profile live in the dock, not the header.
+- **Bottom dock**: Five tabs with Log in the centre, using `lucide-react` icons at stroke 1.75:
   1. **Feed** (`Newspaper`)
   2. **Rankings** (`BarChart2`)
   3. **Log** (`Plus`), shown as a raised sienna circle with an ink border and a riso shadow
-  4. **Diary / profile** (`BookMarked`)
+  4. **Search** (`Search`)
+  5. **You** (`CircleUser`), the profile
 
-  The dock is cream with a 1.5px ink top border. Labels are 9px uppercase; the active tab is sienna and inactive tabs are `ink-faint`.
+  The dock is cream with a 1.5px ink top border. Labels are 9px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. Search is the fourth tab so that Log can sit in the middle with two tabs either side.
 
 ---
 
@@ -86,11 +87,11 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 The style guide renders each of these with sample data. Items marked *(mockup)* are features Gigl doesn't have yet. Don't build them without asking.
 
 ### Feed (`/feed`)
-- Header with the logo, a search icon and the avatar.
+- Header with the logo only.
 - Segmented toggle: Activity / Following / Popular *(mockup)*.
 - Filter chips: this weekend, city, genre *(mockup)*.
 - Review card:
-  - reviewer initials, handle and timestamp · venue
+  - reviewer initials, handle and timestamp
   - star rating, top right
   - artist heading with an event label
   - pull-quote field notes *(mockup)*
@@ -112,9 +113,20 @@ The style guide renders each of these with sample data. Items marked *(mockup)* 
 - Tiles for "Went with" (friend tagging) and "Photo / Setlist" (setlist is *(mockup)*).
 - Full-width primary button: "Save & publish".
 
-### Diary / profile (`/profile`)
+### Search (currently `/select-festival`)
+- Header with the page title "Find a show".
+- Search input for artist or venue: a card with a search icon.
+- A "Coming up" label that changes to a match count while typing.
+- One card of result rows, alternating `cream` / `cream-alt`. Each row has:
+  - a date block (sienna day, month label)
+  - the artist and venue · city
+  - a "+ Log" secondary button that goes straight into logging
+
+### You (`/profile`)
 - Header with the logo and a share icon button.
-- Profile card: initials, name, handle, an Edit button, and a stats row (gigs, followers, rank *(mockup)*).
+- Profile card:
+  - initials, name, handle and an Edit button
+  - a stats row in two pairs, split by a 1.5px ink rule: gigs and rank *(mockup)*, then followers and following. The four stat labels use 9px text with `tracking-wide` so they fit.
 - Live streak and soundprint cards *(mockup)*.
 - Yearly goal progress card *(mockup)*.
 - Directory tiles: attended, want to see *(mockup)*, festivals, buddies *(mockup)*.

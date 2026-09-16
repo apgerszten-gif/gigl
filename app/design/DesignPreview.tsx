@@ -1,18 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BarChart2, BookMarked, Newspaper, Pencil, Plus, Search, Share2 } from 'lucide-react'
+import { BarChart2, CircleUser, Newspaper, Pencil, Plus, Search, Share2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { StarDisplay } from '@/components/StarDisplay'
 
-// Sample-data renderings of the four core screens in DESIGN.md, in the Warm
+// Sample-data renderings of the core screens in DESIGN.md, in the Warm
 // Riso Zine look. The small building blocks at the top (Card, Label, Chip,
 // Segmented, Stars, BottomDock) are the patterns DESIGN.md describes.
 // Ratings are stars only; a show's rating is the average of three whole-star
 // sub-ratings, so it lands on thirds (5, 4.67, 4.33...).
 
-type Screen = 'feed' | 'rankings' | 'log' | 'profile'
+type Screen = 'feed' | 'rankings' | 'log' | 'search' | 'profile'
 
 export function DesignPreview() {
   const [screen, setScreen] = useState<Screen>('feed')
@@ -30,6 +30,7 @@ export function DesignPreview() {
       {screen === 'feed'     && <FeedScreen />}
       {screen === 'rankings' && <RankingsScreen />}
       {screen === 'log'      && <LogShowScreen />}
+      {screen === 'search'   && <SearchScreen onPick={() => setScreen('log')} />}
       {screen === 'profile'  && <ProfileScreen />}
 
       <BottomDock active={screen} onSelect={setScreen} />
@@ -109,14 +110,17 @@ function Header({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Log sits in the centre with two tabs either side; Search is the fourth tab
+// that makes that symmetry possible.
 const DOCK_TABS: { id: Screen; label: string; Icon: LucideIcon }[] = [
   { id: 'feed',     label: 'Feed',     Icon: Newspaper },
   { id: 'rankings', label: 'Rankings', Icon: BarChart2 },
   { id: 'log',      label: 'Log',      Icon: Plus },
-  { id: 'profile',  label: 'Diary',    Icon: BookMarked },
+  { id: 'search',   label: 'Search',   Icon: Search },
+  { id: 'profile',  label: 'You',      Icon: CircleUser },
 ]
 
-// Persistent 4-tab dock. Here it switches between the style guide screens
+// Persistent 5-tab dock. Here it switches between the style guide screens
 // instead of routing.
 function BottomDock({ active, onSelect }: { active: Screen; onSelect: (s: Screen) => void }) {
   return (
@@ -153,14 +157,9 @@ function BottomDock({ active, onSelect }: { active: Screen; onSelect: (s: Screen
 function FeedScreen() {
   return (
     <div className="pb-28">
+      {/* Search and your profile live in the dock, so the header is just the logo. */}
       <Header>
         <Logo />
-        <div className="flex items-center gap-2">
-          <button className="p-1.5 text-ink" aria-label="Search shows">
-            <Search className="w-5 h-5" strokeWidth={1.75} />
-          </button>
-          <Initials name="Alex" className="w-8 h-8 text-sm" />
-        </div>
       </Header>
 
       <div className="px-5 pt-3 space-y-2.5">
@@ -181,7 +180,7 @@ function FeedScreen() {
                 <p className="text-sm font-semibold text-ink truncate">
                   @malabracadabra <span className="text-accent">✓</span>
                 </p>
-                <p className="text-[11px] text-ink-muted">2 days ago · The Greek Theatre</p>
+                <p className="text-[11px] text-ink-muted">2 days ago</p>
               </div>
             </div>
             <Stars score={14 / 3} size={15} />
@@ -385,12 +384,75 @@ function LogShowScreen() {
   )
 }
 
-// ── Screen 4: Diary / profile ────────────────────────────────────────────────
+// ── Screen 4: Search ─────────────────────────────────────────────────────────
 
-const STATS = [
-  { value: '42',    label: 'Gigs' },
-  { value: '128',   label: 'Followers' },
-  { value: '#4.8k', label: 'Rank' },
+const RESULTS = [
+  { artist: 'Phoebe Bridgers',   venue: 'The Greek Theatre · Berkeley, CA',       date: 'Sep 19' },
+  { artist: 'Turnstile',         venue: 'Hollywood Palladium · Los Angeles, CA',  date: 'Sep 24' },
+  { artist: 'Japanese Breakfast', venue: 'The Fillmore · San Francisco, CA',      date: 'Oct 2' },
+  { artist: 'Mitski',            venue: 'Shrine Auditorium · Los Angeles, CA',    date: 'Oct 9' },
+]
+
+// Show search, which exists today at /select-festival. Picking a result goes
+// straight into logging it.
+function SearchScreen({ onPick }: { onPick: () => void }) {
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const results = RESULTS.filter(r => !q || r.artist.toLowerCase().includes(q) || r.venue.toLowerCase().includes(q))
+
+  return (
+    <div className="pb-28">
+      <Header>
+        <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Find a show</h1>
+      </Header>
+
+      <div className="px-5 pt-3">
+        <label className="flex items-center gap-2 px-3 py-2.5 rounded-card border-1.5 border-ink bg-cream shadow-riso">
+          <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Artist or venue"
+            className="flex-1 min-w-0 bg-transparent text-[14px] text-ink placeholder:text-ink-faint focus:outline-none"
+          />
+        </label>
+      </div>
+
+      <Label className="px-5 pt-4 pb-2">{q ? `${results.length} matches` : 'Coming up'}</Label>
+
+      <main className="mx-5 rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
+        {results.map((r, i) => (
+          <div key={r.artist} className={`flex items-center gap-3 px-3.5 py-3 ${i % 2 ? 'bg-cream-alt' : ''} ${i > 0 ? 'border-t border-ink/10' : ''}`}>
+            <div className="w-11 flex-shrink-0 text-center">
+              <p className="font-display text-sm font-bold leading-none text-accent">{r.date.split(' ')[1]}</p>
+              <Label className="mt-0.5">{r.date.split(' ')[0]}</Label>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-display text-[15px] font-bold leading-tight truncate">{r.artist}</h3>
+              <p className="text-[11px] text-ink-muted truncate">{r.venue}</p>
+            </div>
+            <button
+              onClick={onPick}
+              className="px-2.5 py-1 rounded-card border-1.5 border-ink text-[10px] font-bold uppercase tracking-label flex-shrink-0 hover:bg-accent hover:text-cream"
+            >
+              + Log
+            </button>
+          </div>
+        ))}
+        {results.length === 0 && (
+          <p className="px-3.5 py-6 text-center text-xs text-ink-muted">No shows match “{query}”</p>
+        )}
+      </main>
+    </div>
+  )
+}
+
+// ── Screen 5: You ────────────────────────────────────────────────────────────
+
+// Two pairs - your own numbers, then your social graph - split by a heavier rule.
+const STAT_PAIRS = [
+  [{ value: '42',  label: 'Gigs' },      { value: '#4.8k', label: 'Rank' }],
+  [{ value: '128', label: 'Followers' }, { value: '97',    label: 'Following' }],
 ]
 
 const DIRECTORY = [
@@ -421,10 +483,15 @@ function ProfileScreen() {
             <button className="px-2.5 py-1 rounded-card border-1.5 border-ink text-[10px] font-bold uppercase tracking-label">Edit</button>
           </div>
           <div className="flex border-t border-ink/10 pt-3">
-            {STATS.map((stat, i) => (
-              <div key={stat.label} className={`flex-1 text-center ${i > 0 ? 'border-l border-ink/10' : ''}`}>
-                <p className="font-display text-lg font-bold leading-none">{stat.value}</p>
-                <Label className="mt-1">{stat.label}</Label>
+            {STAT_PAIRS.map((pair, p) => (
+              <div key={p} className={`flex-1 flex ${p > 0 ? 'border-l-1.5 border-ink' : ''}`}>
+                {pair.map((stat, i) => (
+                  <div key={stat.label} className={`flex-1 text-center ${i > 0 ? 'border-l border-ink/10' : ''}`}>
+                    <p className="font-display text-lg font-bold leading-none">{stat.value}</p>
+                    {/* Four columns share the card, so these labels run tighter than Label. */}
+                    <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">{stat.label}</p>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
