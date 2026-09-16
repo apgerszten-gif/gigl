@@ -15,6 +15,8 @@ This document is the source of truth. The rendered reference is the style guide 
 - **Ratings**: Always stars out of 5, in sienna, with partial fills for averages. No numeric scores and no tier descriptors (Elite, Epic, Top Tier…).
 - **Type**: Space Grotesk for display (logo, headings, big numbers, pull quotes) and Inter for body and UI text. Labels are small, uppercase and letter-spaced.
 - **Print details**: 1.5px ink borders, hard offset shadows with no blur, and 5px corners.
+- **Photos**: Artists and people are shown with photos. Artist photos sit in square ink-bordered frames, and profile photos are round. When there's no photo, artists get a halftone tile with a mic icon and people get their initial. Show dates are stuck onto an artist photo's corner like a slightly tilted sticker.
+- **Places**: A venue and city sit on one quiet line behind a small sienna map pin, in sentence case, not in uppercase labels.
 
 ---
 
@@ -35,6 +37,7 @@ This document is the source of truth. The rendered reference is the style guide 
 | `rounded-card` | `5px` | Cards, buttons, toggles |
 | `shadow-riso` / `shadow-riso-lg` | `2px 2px 0` / `3px 3px 0` ink | Raised cards and buttons / floating elements |
 | `tracking-label` | `0.08em` | Uppercase labels |
+| `.halftone` (in `app/globals.css`) | 5px ink dot grid | Texture for photo placeholders |
 
 Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink/15`, `border-ink/10`.
 
@@ -43,7 +46,9 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 ## 3. Logo & app chrome
 
 - **Logo** (`components/Logo.tsx`): `Gigl` with a capital G, followed by a sienna slash, nothing else. It is set in Space Grotesk bold, 21px, with `-0.5px` tracking, in ink.
-- **Header**: Sticky, `bg-paper/90` with a backdrop blur and a `border-ink/10` bottom rule. The logo or page title sits on the left. Any page actions (such as a share icon button) go on the right. Search and your profile live in the dock, not the header.
+- **Header**: Sticky, `bg-paper/90` with a backdrop blur and a `border-ink/10` bottom rule. The logo or page title sits on the left, and any page actions (such as a share icon button) sit to its right.
+  - On Feed, Rankings and Search, **your profile photo sits at the far right**. The header is sticky, so the photo stays in view while scrolling. Tapping it opens You.
+  - Leave the photo off on You itself, which has a share button instead, and in the Log flow.
 - **Bottom dock**: Five tabs with Log in the centre, using `lucide-react` icons at stroke 1.75:
   1. **Feed** (`Newspaper`)
   2. **Rankings** (`BarChart2`)
@@ -74,7 +79,11 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 | Pull quote | `border-l-2 border-accent pl-3 font-display text-[15px] leading-snug` |
 | Headings | `font-display font-bold tracking-tight`: `text-xl` for card titles, `text-2xl` for page titles |
 | Big numbers | `font-display font-bold`. Rank numbers are `text-accent` |
-| Avatar | Initials circle: `rounded-full bg-paper border border-ink/15 text-ink-faint font-display font-bold` (there are no photos yet) |
+| Artist photo | Size set by the caller (`w-14 h-14` in lists, `w-[76px] h-[76px]` on feed cards). Frame: `rounded-card border-1.5 border-ink overflow-hidden`, with the image set to `object-cover`. With no photo, the frame is tinted (`bg-terra/25`, `bg-accent/15` or `bg-ink/10`, picked per artist) and holds a `.halftone` layer with a `MicVocal` icon in `text-ink/45`. Overlays such as the date sticker go outside the clipped frame so they can overhang |
+| Date sticker | Month and day on an artist photo's corner: `absolute -bottom-1.5 -right-1.5 -rotate-3 rounded bg-cream border-1.5 border-ink shadow-riso`. The month is 8px uppercase `ink-muted`; the day is 13px `font-display` bold |
+| Place line | `flex items-center gap-1 text-[12px] text-ink-muted`: a `MapPin` icon (`w-3 h-3 text-accent`), then "Venue, City" truncated to one line |
+| Your profile photo (header) | `w-9 h-9 rounded-full border-1.5 border-ink shadow-riso` inside a button that opens You. On You itself it's `w-16 h-16` |
+| Other people's photos | `rounded-full bg-paper border border-ink/15`, `w-8 h-8` in feed cards. Initial in `font-display font-bold text-ink-muted` when there's no photo |
 | Star rating | `<StarDisplay accent="currentColor" />` inside a `text-star` element |
 | Text input | `rounded-card border-1.5 border-ink bg-cream placeholder:text-ink-faint focus:ring-2 focus:ring-accent/40` |
 | Progress bar | Track `h-2 rounded-full bg-paper border border-ink/15`, fill `bg-accent` |
@@ -84,29 +93,37 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 
 ## 5. Core screens
 
-The style guide renders each of these with sample data. Items marked *(mockup)* are features Gigl doesn't have yet. Don't build them without asking.
+The style guide renders each of these with sample data. Items marked *(mockup)* are features Gigl doesn't have yet, and items marked *(needs data)* need data Gigl doesn't store yet. Don't build either without asking.
+
+- **Artist photos** *(needs data)*: Ticketmaster returns event and artist images, but the nightly sync doesn't save them. Showing them needs an image URL column on `shows` and the Ticketmaster image host added to `next.config.js`.
+- **Profile photos** *(needs data)*: `profiles` has no photo column and there's no upload flow.
+- Until then, both fall back to the placeholders in section 4.
 
 ### Feed (`/feed`)
-- Header with the logo only.
+- Header with the logo, and your profile photo at the far right.
 - Segmented toggle: Activity / Following / Popular *(mockup)*.
 - Filter chips: this weekend, city, genre *(mockup)*.
-- Review card:
-  - reviewer initials, handle and timestamp
-  - star rating, top right
-  - artist heading with an event label
+- Review cards, each with:
+  - the reviewer's photo, handle and timestamp
+  - the star rating, top right
+  - the artist heading and place line, with the artist photo and date sticker beside them
   - pull-quote field notes *(mockup)*
   - highlight chips *(mockup)*
 
 ### Rankings (`/rankings`)
-- Header with a "My music index" label, the page title and a share icon button.
+- Header with a "My music index" label, the page title, a share icon button and your profile photo.
 - Underline tabs: Been / Want to see *(mockup)* / Festivals / Recs *(mockup)*.
 - Milestone callout *(mockup)*.
-- Ranked cards: a sienna rank number, the artist and venue, stars beside the title, and a note chip.
+- Ranked cards, each with:
+  - a sienna rank number and the artist photo
+  - the artist, with stars beside the title
+  - the place line
+  - a note chip
 - Floating "View gig map" pill *(mockup)*.
 
 ### Log a show (`/log-show`)
-- Top bar with Cancel, a step label and a Draft chip.
-- Selected-show card with an initial tile and an edit icon.
+- Top bar with Cancel, a step label and a Draft chip. There is no header or profile photo in this flow.
+- Selected-show card: the artist photo, the date as a sienna label, the artist, the place line and an edit icon.
 - Rating card: the overall stars, plus Performance / Venue / Crowd stars in inset tiles.
 - Field notes input with a character count *(mockup)*.
 - Highlight chips that toggle on and off *(mockup)*.
@@ -114,20 +131,20 @@ The style guide renders each of these with sample data. Items marked *(mockup)* 
 - Full-width primary button: "Save & publish".
 
 ### Search (currently `/select-festival`)
-- Header with the page title "Find a show".
-- Search input for artist or venue: a card with a search icon.
+- Header with the page title "Find a show" and your profile photo.
+- Search input for artist, venue or city: a card with a search icon.
 - A "Coming up" label that changes to a match count while typing.
 - One card of result rows, alternating `cream` / `cream-alt`. Each row has:
-  - a date block (sienna day, month label)
-  - the artist and venue · city
+  - the artist photo with a date sticker
+  - the artist and place line
   - a "+ Log" secondary button that goes straight into logging
 
 ### You (`/profile`)
-- Header with the logo and a share icon button.
+- Header with the logo and a share icon button. There's no profile photo here, since this page is your profile.
 - Profile card:
-  - initials, name, handle and an Edit button
+  - your photo (`w-16 h-16`), name, handle, a place line for your city, and an Edit button
   - a stats row in two pairs, split by a 1.5px ink rule: gigs and rank *(mockup)*, then followers and following. The four stat labels use 9px text with `tracking-wide` so they fit.
 - Live streak and soundprint cards *(mockup)*.
 - Yearly goal progress card *(mockup)*.
 - Directory tiles: attended, want to see *(mockup)*, festivals, buddies *(mockup)*.
-- Latest log card with its stars.
+- Latest log card: the artist photo, the artist, the place line and the stars.

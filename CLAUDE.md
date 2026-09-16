@@ -33,6 +33,7 @@ How to apply it:
 - The logo is `components/Logo.tsx`: "Gigl" with a capital G and a sienna slash.
 - Icons come from `lucide-react`.
 - **A rating is only ever shown as stars.** Use `components/StarDisplay.tsx`, which handles partial fills. Inside a `text-star` element, pass `accent="currentColor"`. Don't add numeric scores or tier descriptors (Elite, Epic, Top Tier…).
+- Gigl stores no artist or profile photos yet, so the photo patterns fall back to placeholders (see *(needs data)* in `DESIGN.md`). Ask before adding image columns, storage or uploads.
 - Several features in the design exist only as mockups and are marked *(mockup)* in `DESIGN.md`: Popular tab, filter chips, Want to see, Gig map, streaks, goals, buddies, city rank, field notes, highlight tags and setlists. Don't build them without asking. The following filter, friend tagging and photos do already exist.
 
 ### Migration status

@@ -1,21 +1,27 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BarChart2, CircleUser, Newspaper, Pencil, Plus, Search, Share2 } from 'lucide-react'
+import { BarChart2, CircleUser, MapPin, MicVocal, Newspaper, Pencil, Plus, Search, Share2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { StarDisplay } from '@/components/StarDisplay'
 
 // Sample-data renderings of the core screens in DESIGN.md, in the Warm
 // Riso Zine look. The small building blocks at the top (Card, Label, Chip,
-// Segmented, Stars, BottomDock) are the patterns DESIGN.md describes.
+// ArtistPhoto, PersonPhoto, Place, DateTag, Segmented, Stars, BottomDock) are
+// the patterns DESIGN.md describes.
 // Ratings are stars only; a show's rating is the average of three whole-star
 // sub-ratings, so it lands on thirds (5, 4.67, 4.33...).
+// Gigl stores no artist or profile photos yet, so every photo here is the
+// placeholder the components fall back to.
 
 type Screen = 'feed' | 'rankings' | 'log' | 'search' | 'profile'
 
+const ME = { name: 'Alex Gerszten', handle: 'gers_tunes', photo: undefined as string | undefined }
+
 export function DesignPreview() {
   const [screen, setScreen] = useState<Screen>('feed')
+  const openProfile = () => setScreen('profile')
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -27,10 +33,10 @@ export function DesignPreview() {
         Style guide · sample data
       </div>
 
-      {screen === 'feed'     && <FeedScreen />}
-      {screen === 'rankings' && <RankingsScreen />}
+      {screen === 'feed'     && <FeedScreen onProfile={openProfile} />}
+      {screen === 'rankings' && <RankingsScreen onProfile={openProfile} />}
       {screen === 'log'      && <LogShowScreen />}
-      {screen === 'search'   && <SearchScreen onPick={() => setScreen('log')} />}
+      {screen === 'search'   && <SearchScreen onProfile={openProfile} onPick={() => setScreen('log')} />}
       {screen === 'profile'  && <ProfileScreen />}
 
       <BottomDock active={screen} onSelect={setScreen} />
@@ -74,11 +80,67 @@ function Stars({ score, size }: { score: number; size: number }) {
   )
 }
 
-function Initials({ name, className }: { name: string; className: string }) {
+// Placeholder tints, picked per artist so a list of placeholders doesn't read
+// as one repeated block.
+const PHOTO_TINTS = ['bg-terra/25', 'bg-accent/15', 'bg-ink/10']
+
+function tintFor(name: string) {
+  const sum = Array.from(name).reduce((total, ch) => total + ch.charCodeAt(0), 0)
+  return PHOTO_TINTS[sum % PHOTO_TINTS.length]
+}
+
+// Square artist photo with a riso border. Without a photo it falls back to a
+// halftone tile with a mic. `children` (e.g. a DateTag) sits outside the
+// clipped frame so it can overhang the corner.
+function ArtistPhoto({ name, src, className, iconSize = 20, children }: {
+  name: string; src?: string; className: string; iconSize?: number; children?: React.ReactNode
+}) {
   return (
-    <div className={`rounded-full flex items-center justify-center font-display font-bold bg-paper text-ink-faint border border-ink/15 ${className}`}>
-      {name.charAt(0).toUpperCase()}
+    <div className={`relative flex-shrink-0 ${className}`}>
+      <div className={`w-full h-full rounded-card border-1.5 border-ink overflow-hidden ${src ? 'bg-paper' : tintFor(name)}`}>
+        {src ? (
+          <img src={src} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="halftone w-full h-full flex items-center justify-center text-ink/45" aria-label={`${name} (no photo)`}>
+            <MicVocal size={iconSize} strokeWidth={1.75} />
+          </div>
+        )}
+      </div>
+      {children}
     </div>
+  )
+}
+
+// Round profile photo; initials when there's no photo.
+function PersonPhoto({ name, src, className }: { name: string; src?: string; className: string }) {
+  return (
+    <div className={`flex-shrink-0 rounded-full overflow-hidden bg-paper flex items-center justify-center font-display font-bold text-ink-muted ${className}`}>
+      {src ? (
+        <img src={src} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        name.charAt(0).toUpperCase()
+      )}
+    </div>
+  )
+}
+
+// A place (venue and city, or just a city) behind a small sienna pin.
+function Place({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p className={`flex items-center gap-1 text-[12px] text-ink-muted min-w-0 ${className}`}>
+      <MapPin className="w-3 h-3 flex-shrink-0 text-accent" strokeWidth={2.25} />
+      <span className="truncate">{children}</span>
+    </p>
+  )
+}
+
+// Show date stuck onto the corner of an ArtistPhoto like a sticker.
+function DateTag({ month, day }: { month: string; day: string }) {
+  return (
+    <span className="absolute -bottom-1.5 -right-1.5 -rotate-3 min-w-[28px] rounded bg-cream border-1.5 border-ink shadow-riso px-1 py-0.5 text-center leading-none">
+      <span className="block text-[8px] font-bold uppercase tracking-label text-ink-muted">{month}</span>
+      <span className="block font-display text-[13px] font-bold text-ink">{day}</span>
+    </span>
   )
 }
 
@@ -102,10 +164,17 @@ function Segmented({ options }: { options: string[] }) {
   )
 }
 
-function Header({ children }: { children: React.ReactNode }) {
+// Sticky header. Passing onProfile adds your profile photo at the far right,
+// so it stays in view while the page scrolls.
+function Header({ children, onProfile }: { children: React.ReactNode; onProfile?: () => void }) {
   return (
-    <header className="sticky top-0 z-30 bg-paper/90 backdrop-blur-md border-b border-ink/10 px-5 py-3 flex items-center justify-between gap-3">
-      {children}
+    <header className="sticky top-0 z-30 bg-paper/90 backdrop-blur-md border-b border-ink/10 px-5 py-3 flex items-center gap-3">
+      <div className="flex-1 min-w-0 flex items-center justify-between gap-3">{children}</div>
+      {onProfile && (
+        <button onClick={onProfile} aria-label="Your profile" className="flex-shrink-0">
+          <PersonPhoto name={ME.name} src={ME.photo} className="w-9 h-9 text-sm border-1.5 border-ink shadow-riso" />
+        </button>
+      )}
     </header>
   )
 }
@@ -154,11 +223,31 @@ function BottomDock({ active, onSelect }: { active: Screen; onSelect: (s: Screen
 
 // ── Screen 1: Feed ───────────────────────────────────────────────────────────
 
-function FeedScreen() {
+const REVIEWS = [
+  {
+    handle: 'malabracadabra', verified: true, when: '2 days ago', score: 14 / 3,
+    artist: 'Death Cab for Cutie', venue: 'The Greek Theatre', city: 'Berkeley, CA', month: 'Sep', day: '12',
+    quote: 'Hard to beat being front row and hearing Plans in full. The crowd during Brothers on a Hotel Bed felt suspended in time.',
+    tags: ['Emotional', 'Acoustic moment', 'Sing-along'],
+  },
+  {
+    handle: 'jonny.b', verified: false, when: '4 days ago', score: 4,
+    artist: 'Japanese Breakfast', venue: 'The Fillmore', city: 'San Francisco, CA', month: 'Sep', day: '10',
+    quote: 'Her voice cut through the whole room, and the horn section turned the encore into a party.',
+    tags: ['Great sound', 'Dance-along'],
+  },
+  {
+    handle: 'sam_hears', verified: false, when: '1 week ago', score: 13 / 3,
+    artist: 'Turnstile', venue: 'Hollywood Palladium', city: 'Los Angeles, CA', month: 'Sep', day: '6',
+    quote: 'Pure chaos in the best way. The pit never stopped moving.',
+    tags: ['Mosh pit', 'Crowd surf'],
+  },
+]
+
+function FeedScreen({ onProfile }: { onProfile: () => void }) {
   return (
     <div className="pb-28">
-      {/* Search and your profile live in the dock, so the header is just the logo. */}
-      <Header>
+      <Header onProfile={onProfile}>
         <Logo />
       </Header>
 
@@ -172,35 +261,40 @@ function FeedScreen() {
       </div>
 
       <main className="px-5 pt-4 space-y-4">
-        <Card className="p-4 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Initials name="malabracadabra" className="w-9 h-9 text-sm" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-ink truncate">
-                  @malabracadabra <span className="text-accent">✓</span>
-                </p>
-                <p className="text-[11px] text-ink-muted">2 days ago</p>
+        {REVIEWS.map(review => (
+          <Card key={review.handle} className="p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <PersonPhoto name={review.handle} className="w-8 h-8 text-sm border border-ink/15" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink truncate">
+                    @{review.handle}{review.verified && <span className="text-accent"> ✓</span>}
+                  </p>
+                  <p className="text-[11px] text-ink-muted">{review.when}</p>
+                </div>
               </div>
+              <Stars score={review.score} size={15} />
             </div>
-            <Stars score={14 / 3} size={15} />
-          </div>
 
-          <div>
-            <h3 className="font-display text-xl font-bold tracking-tight leading-tight">Death Cab for Cutie</h3>
-            <Label className="mt-1">The Greek Theatre · Berkeley, CA</Label>
-          </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0 space-y-1">
+                <h3 className="font-display text-xl font-bold tracking-tight leading-tight">{review.artist}</h3>
+                <Place>{review.venue}, {review.city}</Place>
+              </div>
+              <ArtistPhoto name={review.artist} className="w-[76px] h-[76px]" iconSize={26}>
+                <DateTag month={review.month} day={review.day} />
+              </ArtistPhoto>
+            </div>
 
-          <blockquote className="border-l-2 border-accent pl-3 font-display text-[15px] leading-snug">
-            “Hard to beat being front row and hearing Plans in full. The crowd during Brothers on a Hotel Bed felt suspended in time.”
-          </blockquote>
+            <blockquote className="border-l-2 border-accent pl-3 font-display text-[15px] leading-snug">
+              “{review.quote}”
+            </blockquote>
 
-          <div className="flex flex-wrap gap-1.5">
-            <Chip>Emotional</Chip>
-            <Chip>Acoustic moment</Chip>
-            <Chip>Sing-along</Chip>
-          </div>
-        </Card>
+            <div className="flex flex-wrap gap-1.5">
+              {review.tags.map(tag => <Chip key={tag}>{tag}</Chip>)}
+            </div>
+          </Card>
+        ))}
       </main>
     </div>
   )
@@ -209,18 +303,19 @@ function FeedScreen() {
 // ── Screen 2: Rankings ───────────────────────────────────────────────────────
 
 const RANKED = [
-  { artist: 'Tame Impala',  venue: 'Kia Forum · Inglewood, CA',     note: 'Peak setlist · 3x encore', score: 5 },
-  { artist: 'Fred again..', venue: 'LA Coliseum · Los Angeles, CA', note: 'Insane stage production',  score: 14 / 3 },
+  { artist: 'Tame Impala',  venue: 'Kia Forum',   city: 'Inglewood, CA',   note: 'Peak setlist · 3x encore', score: 5 },
+  { artist: 'Fred again..', venue: 'LA Coliseum', city: 'Los Angeles, CA', note: 'Insane stage production',  score: 14 / 3 },
+  { artist: 'Mitski',       venue: 'The Wiltern', city: 'Los Angeles, CA', note: 'Pin-drop quiet crowd',     score: 14 / 3 },
 ]
 
-function RankingsScreen() {
+function RankingsScreen({ onProfile }: { onProfile: () => void }) {
   const tabs = ['Been 42', 'Want to see 18', 'Festivals 4', 'Recs']
   const [activeTab, setActiveTab] = useState(tabs[0])
 
   return (
     <div className="pb-28">
-      <Header>
-        <div>
+      <Header onProfile={onProfile}>
+        <div className="min-w-0">
           <Label>My music index</Label>
           <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">2026 Gigs</h1>
         </div>
@@ -253,18 +348,16 @@ function RankingsScreen() {
 
       <main className="px-5 pt-4 space-y-3">
         {RANKED.map((row, i) => (
-          <Card key={row.artist} className="p-3.5 flex items-start gap-3">
-            <span className="font-display text-3xl font-bold leading-none w-7 flex-shrink-0 text-accent">{i + 1}</span>
+          <Card key={row.artist} className="p-3 flex items-center gap-3">
+            <span className="font-display text-3xl font-bold leading-none w-6 flex-shrink-0 text-accent text-center">{i + 1}</span>
+            <ArtistPhoto name={row.artist} className="w-14 h-14" />
             <div className="flex-1 min-w-0">
-              {/* Stars sit beside the title rather than the whole column, so the chip below gets the full card width. */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="font-display text-base font-bold leading-tight">{row.artist}</h3>
-                  <p className="text-[11px] text-ink-muted">{row.venue}</p>
-                </div>
-                <span className="mt-0.5"><Stars score={row.score} size={13} /></span>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-display text-base font-bold leading-tight truncate">{row.artist}</h3>
+                <Stars score={row.score} size={12} />
               </div>
-              <div className="mt-2"><Chip>{row.note}</Chip></div>
+              <Place className="mt-0.5">{row.venue}, {row.city}</Place>
+              <div className="mt-1.5"><Chip>{row.note}</Chip></div>
             </div>
           </Card>
         ))}
@@ -307,13 +400,11 @@ function LogShowScreen() {
         </div>
 
         <Card className="p-3 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-card bg-accent text-cream border-1.5 border-ink flex items-center justify-center font-display text-lg font-bold flex-shrink-0">
-            D
-          </div>
+          <ArtistPhoto name="Death Cab for Cutie" className="w-14 h-14" />
           <div className="flex-1 min-w-0">
-            <Label className="text-accent">The Greek Theatre</Label>
+            <Label className="text-accent">Sat, Sep 12</Label>
             <h2 className="font-display text-base font-bold leading-tight truncate">Death Cab for Cutie</h2>
-            <p className="text-[11px] text-ink-muted truncate">Berkeley, CA · Sat, Sep 12</p>
+            <Place className="mt-0.5">The Greek Theatre, Berkeley, CA</Place>
           </div>
           <button className="text-ink-faint" aria-label="Change show">
             <Pencil className="w-4 h-4" />
@@ -387,22 +478,24 @@ function LogShowScreen() {
 // ── Screen 4: Search ─────────────────────────────────────────────────────────
 
 const RESULTS = [
-  { artist: 'Phoebe Bridgers',   venue: 'The Greek Theatre · Berkeley, CA',       date: 'Sep 19' },
-  { artist: 'Turnstile',         venue: 'Hollywood Palladium · Los Angeles, CA',  date: 'Sep 24' },
-  { artist: 'Japanese Breakfast', venue: 'The Fillmore · San Francisco, CA',      date: 'Oct 2' },
-  { artist: 'Mitski',            venue: 'Shrine Auditorium · Los Angeles, CA',    date: 'Oct 9' },
+  { artist: 'Phoebe Bridgers',    venue: 'The Greek Theatre',   city: 'Berkeley, CA',      month: 'Sep', day: '19' },
+  { artist: 'Turnstile',          venue: 'Hollywood Palladium', city: 'Los Angeles, CA',   month: 'Sep', day: '24' },
+  { artist: 'Japanese Breakfast', venue: 'The Fillmore',        city: 'San Francisco, CA', month: 'Oct', day: '2' },
+  { artist: 'Mitski',             venue: 'Shrine Auditorium',   city: 'Los Angeles, CA',   month: 'Oct', day: '9' },
 ]
 
 // Show search, which exists today at /select-festival. Picking a result goes
 // straight into logging it.
-function SearchScreen({ onPick }: { onPick: () => void }) {
+function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: () => void }) {
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
-  const results = RESULTS.filter(r => !q || r.artist.toLowerCase().includes(q) || r.venue.toLowerCase().includes(q))
+  const results = RESULTS.filter(r =>
+    !q || r.artist.toLowerCase().includes(q) || r.venue.toLowerCase().includes(q) || r.city.toLowerCase().includes(q),
+  )
 
   return (
     <div className="pb-28">
-      <Header>
+      <Header onProfile={onProfile}>
         <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Find a show</h1>
       </Header>
 
@@ -412,7 +505,7 @@ function SearchScreen({ onPick }: { onPick: () => void }) {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Artist or venue"
+            placeholder="Artist, venue or city"
             className="flex-1 min-w-0 bg-transparent text-[14px] text-ink placeholder:text-ink-faint focus:outline-none"
           />
         </label>
@@ -422,14 +515,13 @@ function SearchScreen({ onPick }: { onPick: () => void }) {
 
       <main className="mx-5 rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
         {results.map((r, i) => (
-          <div key={r.artist} className={`flex items-center gap-3 px-3.5 py-3 ${i % 2 ? 'bg-cream-alt' : ''} ${i > 0 ? 'border-t border-ink/10' : ''}`}>
-            <div className="w-11 flex-shrink-0 text-center">
-              <p className="font-display text-sm font-bold leading-none text-accent">{r.date.split(' ')[1]}</p>
-              <Label className="mt-0.5">{r.date.split(' ')[0]}</Label>
-            </div>
+          <div key={r.artist} className={`flex items-center gap-3 px-3 py-2.5 ${i % 2 ? 'bg-cream-alt' : ''} ${i > 0 ? 'border-t border-ink/10' : ''}`}>
+            <ArtistPhoto name={r.artist} className="w-14 h-14" iconSize={18}>
+              <DateTag month={r.month} day={r.day} />
+            </ArtistPhoto>
             <div className="flex-1 min-w-0">
               <h3 className="font-display text-[15px] font-bold leading-tight truncate">{r.artist}</h3>
-              <p className="text-[11px] text-ink-muted truncate">{r.venue}</p>
+              <Place className="mt-0.5">{r.venue}, {r.city}</Place>
             </div>
             <button
               onClick={onPick}
@@ -462,6 +554,7 @@ const DIRECTORY = [
   { label: 'Buddies',     count: 34 },
 ]
 
+// Your own profile, so the header carries a share button rather than your photo.
 function ProfileScreen() {
   return (
     <div className="pb-24">
@@ -475,10 +568,11 @@ function ProfileScreen() {
       <div className="px-5 pt-4 space-y-3">
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <Initials name="Alex" className="w-14 h-14 text-2xl" />
+            <PersonPhoto name={ME.name} src={ME.photo} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
             <div className="flex-1 min-w-0">
-              <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">Alex Gerszten</h1>
-              <p className="text-xs text-ink-muted">@gers_tunes · Los Angeles</p>
+              <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">{ME.name}</h1>
+              <p className="text-xs text-ink-muted">@{ME.handle}</p>
+              <Place className="mt-0.5">Los Angeles, CA</Place>
             </div>
             <button className="px-2.5 py-1 rounded-card border-1.5 border-ink text-[10px] font-bold uppercase tracking-label">Edit</button>
           </div>
@@ -536,12 +630,13 @@ function ProfileScreen() {
             <Label>Latest log</Label>
             <span className="text-[10px] font-semibold uppercase tracking-label text-accent">View all 42</span>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h4 className="font-display text-sm font-bold">Jamie xx</h4>
-              <p className="text-[11px] text-ink-muted">Shrine Expo Hall · Jan 24</p>
+          <div className="flex items-center gap-3">
+            <ArtistPhoto name="Jamie xx" className="w-12 h-12" iconSize={16} />
+            <div className="flex-1 min-w-0">
+              <h4 className="font-display text-sm font-bold truncate">Jamie xx</h4>
+              <Place>Shrine Expo Hall, Los Angeles, CA</Place>
             </div>
-            <Stars score={5} size={13} />
+            <Stars score={5} size={12} />
           </div>
         </Card>
       </div>
