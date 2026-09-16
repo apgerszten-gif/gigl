@@ -90,7 +90,7 @@ The style guide renders each of these with sample data. Items marked *(mockup)* 
 - Segmented toggle: Activity / Following / Popular *(mockup)*.
 - Filter chips: this weekend, city, genre *(mockup)*.
 - Review card:
-  - reviewer initials, handle and timestamp · stage
+  - reviewer initials, handle and timestamp · venue
   - star rating, top right
   - artist heading with an event label
   - pull-quote field notes *(mockup)*

@@ -38,5 +38,5 @@ How to apply it:
 ### Migration status
 
 - Most screens are still styled with inline `style={{}}` objects from `useTheme()` (`components/FestivalThemeProvider.tsx`, `lib/theme.ts`). The token values match `DEFAULT_THEME`, so moving a screen to Tailwind is mostly mechanical. When you rework a screen, move it to the tokens instead of adding more theme-object styling. Many of those screens also inline their own copy of the logo.
-- `useTheme()` swaps the accent per festival (Bonnaroo is amber), but the Tailwind tokens are fixed. Ask before migrating a screen whether festival accents should survive. If so, back `accent` with a CSS variable.
+- Festival theming is not carried forward. `useTheme()` swaps the accent per festival (Bonnaroo is amber), but migrated screens use the fixed tokens. Ignore festival-specific screens and themes (Bonnaroo, Outside Lands) when designing or migrating.
 - `components/BottomNav.tsx` isn't used anywhere, and it references a `brand` colour that doesn't exist.

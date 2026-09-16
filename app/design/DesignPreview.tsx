@@ -181,7 +181,7 @@ function FeedScreen() {
                 <p className="text-sm font-semibold text-ink truncate">
                   @malabracadabra <span className="text-accent">✓</span>
                 </p>
-                <p className="text-[11px] text-ink-muted">2 days ago · Sutro Stage</p>
+                <p className="text-[11px] text-ink-muted">2 days ago · The Greek Theatre</p>
               </div>
             </div>
             <Stars score={14 / 3} size={15} />
@@ -189,7 +189,7 @@ function FeedScreen() {
 
           <div>
             <h3 className="font-display text-xl font-bold tracking-tight leading-tight">Death Cab for Cutie</h3>
-            <Label className="mt-1">Outside Lands 2026 · Golden Gate Park</Label>
+            <Label className="mt-1">The Greek Theatre · Berkeley, CA</Label>
           </div>
 
           <blockquote className="border-l-2 border-accent pl-3 font-display text-[15px] leading-snug">
@@ -291,7 +291,7 @@ const SUB_RATINGS = [
 const VIBES = ['Surprise guest', 'Acoustic moment', 'Crowd surf', 'Sing-along', 'Laser show']
 
 function LogShowScreen() {
-  const [notes, setNotes] = useState('Plans played front to back. Sound at Sutro was pristine and the fog made it magic.')
+  const [notes, setNotes] = useState('Plans played front to back. Sound at the Greek was pristine and the fog rolled in on cue.')
   const [vibes, setVibes] = useState<string[]>(['Surprise guest', 'Acoustic moment'])
   const rating = SUB_RATINGS.reduce((sum, r) => sum + r.stars, 0) / SUB_RATINGS.length
 
@@ -312,9 +312,9 @@ function LogShowScreen() {
             D
           </div>
           <div className="flex-1 min-w-0">
-            <Label className="text-accent">Outside Lands 2026</Label>
+            <Label className="text-accent">The Greek Theatre</Label>
             <h2 className="font-display text-base font-bold leading-tight truncate">Death Cab for Cutie</h2>
-            <p className="text-[11px] text-ink-muted truncate">Sutro Stage · Sun, Aug 11</p>
+            <p className="text-[11px] text-ink-muted truncate">Berkeley, CA · Sat, Sep 12</p>
           </div>
           <button className="text-ink-faint" aria-label="Change show">
             <Pencil className="w-4 h-4" />
