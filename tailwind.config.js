@@ -36,12 +36,8 @@ module.exports = {
           muted:   '#78716C',
           faint:   '#A8A29E',
         },
-        score: {
-          elite:  '#15803D',
-          epic:   '#16A34A',
-          superb: '#EA580C',
-          good:   '#CA8A04',
-        },
+        // Ratings are stars only - no numeric badges or tier colours.
+        star: '#F59E0B',
 
         // Legacy Warm Riso Zine palette - remove once every screen is on the
         // tokens above (see "Migration status" in CLAUDE.md).

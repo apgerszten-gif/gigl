@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import { BarChart2, BookMarked, Newspaper, Pencil, Plus, Search, Share2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { StarDisplay } from '@/components/StarDisplay'
 
-// Sample-data renderings of the DESIGN.md templates. Translated to the
-// design tokens per CLAUDE.md: raw hex and emerald score colours become
-// surface/ink/score tokens, and every score is out of 5 - the average of
-// three whole-star sub-ratings, so only thirds (5.0, 4.7, 4.3...) occur.
+// Sample-data renderings of the DESIGN.md templates, translated to the design
+// tokens per CLAUDE.md. Ratings are stars only; a show's rating is the average
+// of three whole-star sub-ratings, so it lands on thirds (5, 4.67, 4.33...).
 
 type Screen = 'feed' | 'rankings' | 'log' | 'profile'
 
@@ -24,7 +24,7 @@ export function DesignPreview() {
       <div className="fixed inset-0 -z-10 bg-surface" />
 
       <div className="bg-ink-title text-white text-[11px] font-semibold text-center px-4 py-1.5">
-        Design preview · sample data · scores out of 5
+        Design preview · sample data
       </div>
 
       {screen === 'feed'     && <FeedScreen />}
@@ -47,13 +47,11 @@ function Initials({ name, className }: { name: string; className: string }) {
   )
 }
 
-function ScoreBadge({ score, tier, tone }: { score: string; tier: string; tone: 'elite' | 'epic' }) {
-  const ring = tone === 'elite' ? 'border-score-elite bg-score-elite/10' : 'border-score-epic bg-score-epic/10'
+function Stars({ score, size }: { score: number; size: number }) {
   return (
-    <div className={`w-12 h-12 flex-shrink-0 rounded-full border-2 flex flex-col items-center justify-center ${ring}`}>
-      <span className="text-sm font-extrabold text-score-elite leading-none">{score}</span>
-      <span className="text-[8px] font-black text-score-epic uppercase mt-0.5">{tier}</span>
-    </div>
+    <span className="text-star inline-flex flex-shrink-0" aria-label={`${score.toFixed(1)} out of 5 stars`}>
+      <StarDisplay score={score} size={size} accent="currentColor" />
+    </span>
   )
 }
 
@@ -154,12 +152,12 @@ function FeedScreen() {
               <div>
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-bold text-ink-title">@malabracadabra</span>
-                  <span className="text-xs text-score-epic">✓</span>
+                  <span className="text-xs text-emerald-600">✓</span>
                 </div>
                 <span className="text-xs text-ink-muted">2 days ago · Sutro Stage</span>
               </div>
             </div>
-            <ScoreBadge score="4.7" tier="Top Tier" tone="epic" />
+            <Stars score={14 / 3} size={16} />
           </div>
 
           <div>
@@ -185,8 +183,8 @@ function FeedScreen() {
 // ── Screen 2: Rankings Scorecard ─────────────────────────────────────────────
 
 const RANKED = [
-  { artist: 'Tame Impala',  venue: 'Kia Forum · Inglewood, CA',     note: '★ Peak Setlist · 3x Encore',       highlight: true,  score: '5.0', tier: 'Elite', tone: 'elite' as const },
-  { artist: 'Fred again..', venue: 'LA Coliseum · Los Angeles, CA', note: '📊 78,000 cap · Insane Stage Prod', highlight: false, score: '4.7', tier: 'Epic',  tone: 'epic' as const },
+  { artist: 'Tame Impala',  venue: 'Kia Forum · Inglewood, CA',     note: '★ Peak Setlist · 3x Encore',       highlight: true,  score: 5 },
+  { artist: 'Fred again..', venue: 'LA Coliseum · Los Angeles, CA', note: '📊 78,000 cap · Insane Stage Prod', highlight: false, score: 14 / 3 },
 ]
 
 function RankingsScreen() {
@@ -220,31 +218,34 @@ function RankingsScreen() {
         ))}
       </div>
 
-      <div className="m-5 p-3 rounded-2xl bg-score-epic/10 border border-score-epic/30 flex items-center justify-between">
+      <div className="m-5 p-3 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-score-epic/20 flex items-center justify-center font-bold">🏅</div>
+          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold">🏅</div>
           <div>
             <p className="text-xs font-bold text-ink-title">Top 5% Gig-Goer</p>
             <p className="text-[11px] text-ink-muted">42 ranked shows across 11 venues</p>
           </div>
         </div>
-        <span className="text-xs font-black text-score-elite bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-score-epic/30 shadow-warm-sm">L.A. #84</span>
+        <span className="text-xs font-black text-emerald-800 bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-emerald-200 shadow-warm-sm">L.A. #84</span>
       </div>
 
       <main className="px-5 space-y-3">
         {RANKED.map((row, i) => (
-          <div key={row.artist} className="p-4 rounded-2xl bg-surface-container-lowest border border-stone-200/80 shadow-warm-sm flex items-center justify-between gap-3">
-            <div className="flex items-start gap-3.5 min-w-0">
-              <span className="text-2xl font-black text-ink-title w-6">{i + 1}</span>
-              <div className="min-w-0">
-                <h3 className="text-base font-extrabold text-ink-title">{row.artist}</h3>
-                <p className="text-xs text-ink-muted">{row.venue}</p>
-                <span className={`inline-block mt-2 text-[11px] font-semibold px-2 py-0.5 rounded ${row.highlight ? 'text-amber-900 bg-amber-50 border border-amber-200' : 'text-ink-body bg-stone-100'}`}>
-                  {row.note}
-                </span>
+          <div key={row.artist} className="p-4 rounded-2xl bg-surface-container-lowest border border-stone-200/80 shadow-warm-sm flex items-start gap-3.5">
+            <span className="text-2xl font-black text-ink-title w-6 flex-shrink-0">{i + 1}</span>
+            <div className="flex-1 min-w-0">
+              {/* Stars sit beside the title rather than the whole column, so the note chip below gets the full card width. */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-base font-extrabold text-ink-title">{row.artist}</h3>
+                  <p className="text-xs text-ink-muted">{row.venue}</p>
+                </div>
+                <span className="mt-1"><Stars score={row.score} size={14} /></span>
               </div>
+              <span className={`inline-block mt-2 text-[11px] font-semibold px-2 py-0.5 rounded ${row.highlight ? 'text-amber-900 bg-amber-50 border border-amber-200' : 'text-ink-body bg-stone-100'}`}>
+                {row.note}
+              </span>
             </div>
-            <ScoreBadge score={row.score} tier={row.tier} tone={row.tone} />
           </div>
         ))}
       </main>
@@ -261,7 +262,7 @@ function RankingsScreen() {
 // ── Screen 3: Log Show Flow ──────────────────────────────────────────────────
 
 const SUB_RATINGS = [
-  { label: 'Perf.',  stars: 5 },
+  { label: 'Performance', stars: 5 },
   { label: 'Venue',  stars: 4 },
   { label: 'Crowd',  stars: 5 },
 ]
@@ -302,13 +303,13 @@ function LogShowScreen() {
         <div className="p-3 bg-surface-container-lowest rounded-xl border border-stone-200 shadow-warm-sm space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-stone-800">The Gigl Scorecard</span>
-            <span className="text-xs font-black text-score-elite bg-score-epic/15 px-2 py-0.5 rounded-md">Score {score.toFixed(1)}</span>
+            <Stars score={score} size={16} />
           </div>
           <div className="grid grid-cols-3 gap-2 text-center pt-1">
             {SUB_RATINGS.map(r => (
-              <div key={r.label} className="p-1.5 bg-stone-50 rounded-lg border border-stone-100">
-                <p className="text-[10px] font-bold text-ink-muted">{r.label} {r.stars}</p>
-                <p className="text-amber-500 text-xs">{'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}</p>
+              <div key={r.label} className="p-1.5 bg-stone-50 rounded-lg border border-stone-100 flex flex-col items-center gap-1">
+                <p className="text-[10px] font-bold text-ink-muted">{r.label}</p>
+                <Stars score={r.stars} size={12} />
               </div>
             ))}
           </div>
@@ -350,7 +351,7 @@ function LogShowScreen() {
         <div className="grid grid-cols-2 gap-2 pt-1">
           <div className="p-2 bg-surface-container-lowest rounded-xl border border-stone-200 flex items-center justify-between">
             <span className="text-xs font-bold text-ink-body">Companions</span>
-            <span className="text-[10px] font-black bg-score-epic/15 text-score-elite px-1.5 py-0.5 rounded-full">OL +1</span>
+            <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full">OL +1</span>
           </div>
           <div className="p-2 bg-surface-container-lowest rounded-xl border border-stone-200 flex items-center justify-center gap-1.5 text-[11px] font-bold text-ink-body whitespace-nowrap">
             <span>📷 Photo (1)</span>
@@ -425,7 +426,7 @@ function ProfileScreen() {
           </div>
         </div>
         <div className="p-2.5 bg-surface-container-lowest rounded-xl border border-stone-200 flex items-center gap-2 shadow-warm-sm">
-          <span className="text-xs font-black text-score-elite bg-score-epic/15 px-1 rounded">96%</span>
+          <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-1 rounded">96%</span>
           <div className="min-w-0">
             <p className="text-[9px] font-bold text-ink-faint uppercase">Soundprints</p>
             <p className="text-xs font-extrabold text-ink-title truncate">Indie / Club</p>
@@ -442,7 +443,7 @@ function ProfileScreen() {
           <div className="h-full w-[84%] bg-primary rounded-full" />
         </div>
         <div className="flex justify-between text-[10px] text-ink-muted font-medium">
-          <span>42 attended <span className="text-score-epic font-bold">(8 to go)</span></span>
+          <span>42 attended <span className="text-emerald-600 font-bold">(8 to go)</span></span>
           <span>Target: 50</span>
         </div>
       </div>
@@ -466,9 +467,7 @@ function ProfileScreen() {
             <h4 className="text-xs font-extrabold text-ink-title">Jamie xx <span className="font-normal text-ink-faint text-[10px]">In Waves</span></h4>
             <p className="text-[10px] text-ink-muted">Shrine Expo Hall · Jan 24</p>
           </div>
-          <div className="w-8 h-8 rounded-full bg-score-epic text-white font-extrabold text-xs flex items-center justify-center">
-            5.0
-          </div>
+          <Stars score={5} size={14} />
         </div>
       </div>
     </div>

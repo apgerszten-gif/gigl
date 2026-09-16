@@ -6,16 +6,16 @@ This document contains the single source of truth for Gigl's visual design syste
 
 > How to apply this in code is covered under "Design system" in `CLAUDE.md`. In short: the templates in section 4 are visual references. Where they use raw hex values or Tailwind's default palette for something a token in section 2 covers, use the token.
 >
-> **Scores are out of 5 stars.** The 10-point numbers in this document (`9.7`, `Perf. 10.0`, …) are mockup placeholders. Score badges keep this visual treatment but show Gigl's real score: the average of three 1–5 star sub-ratings.
+> **Ratings are stars out of 5, with no descriptors.** A rating is always shown as five stars in the `star` colour, partly filled for averages. There are no numeric score badges and no tier labels (Elite, Epic, Top Tier…).
 
 ---
 
 ## 1. Design System & Brand Identity
 
-- **Brand Personality**: Warm, tactile, editorial indie live-music passport. Combines the high-utility ranked indexing and circular score badges of Beli with the sleek underground energy of modern ticketing platforms (DICE).
+- **Brand Personality**: Warm, tactile, editorial indie live-music passport. Combines the high-utility ranked indexing of Beli with the sleek underground energy of modern ticketing platforms (DICE).
 - **Primary Surface**: Warm oat / parchment background (`#FBF7EE` / `#FFF8F5`) paired with soft cream cards (`#FCF2EB` / `#FFFFFF`).
 - **Signature Accent**: Terracotta burnt orange (`#D95D39` / `#C2410C`) for active badges, primary CTAs, and milestone indicators.
-- **Score & Rating Accent**: Forest moss green (`#16A34A` / `#15803D`) for elite tiers and numerical rating circles (e.g. `9.9`, `9.7`).
+- **Ratings**: Five stars out of 5 in warm amber (`#F59E0B`), partly filled for averages. No numeric score circles and no tier descriptors.
 - **Typography**:
   - Primary Font: `Epilogue`, sans-serif (Google Fonts).
   - Headings: Bold / ExtraBold with tight letter spacing (`tracking-tight`).
@@ -62,12 +62,7 @@ module.exports = {
           muted: '#78716C',
           faint: '#A8A29E',
         },
-        score: {
-          elite: '#15803D',
-          epic: '#16A34A',
-          superb: '#EA580C',
-          good: '#CA8A04',
-        }
+        star: '#F59E0B',
       },
       fontFamily: {
         epilogue: ['var(--font-epilogue)', 'Epilogue', 'sans-serif'],
@@ -114,7 +109,7 @@ module.exports = {
   - Segmented sub-tabs (`Activity`, `Following`, `Popular Gigs`).
   - Quick filter chips: `⚡ This Weekend`, `📍 Los Angeles, CA ⌄`, `🎸 Indie & Rock`.
   - Curated festival circuit callout banner (Outside Lands / Coachella season).
-  - Social event review card with user header, verified badge, circular score badge (`9.6`, `9.8`), multi-attribute breakdown (Performance, Venue Sound, Crowd Energy), long-form field quote, and interactive reaction chips (`#Emotional`, `#SingAlong`, `#AcousticMoment`).
+  - Social event review card with user header, verified badge, star rating, multi-attribute breakdown (Performance, Venue Sound, Crowd Energy), long-form field quote, and interactive reaction chips (`#Emotional`, `#SingAlong`, `#AcousticMoment`).
   - Next-up gig event card with friend RSVPs ("Maya, Leo & 2 others going") and `+ I'm Going` button.
 
 ```html
@@ -177,11 +172,8 @@ module.exports = {
             <span class="text-xs text-stone-500">2 days ago · Sutro Stage</span>
           </div>
         </div>
-        <!-- Circular Score Badge -->
-        <div class="w-12 h-12 rounded-full bg-emerald-50 border-2 border-emerald-500 flex flex-col items-center justify-center">
-          <span class="text-sm font-extrabold text-emerald-700 leading-none">9.6</span>
-          <span class="text-[9px] font-bold text-emerald-600 uppercase">Top Tier</span>
-        </div>
+        <!-- Star Rating -->
+        <span class="text-star text-base leading-none" aria-label="5 out of 5 stars">★★★★★</span>
       </div>
 
       <div>
@@ -214,7 +206,7 @@ module.exports = {
   - Segmented index header: `Been (42)`, `Want to See (18)`, `Festivals (4)`, `Recs`.
   - Top 5% Gig-Goer badge with rank context (`L.A. #84`).
   - Active filters: `[Los Angeles, CA ✕]`, `Highest Rated ▾`.
-  - Numbered list of ranked concerts with Beli-style circular rating badges (`9.9`, `9.7`, `9.6`, `9.5`, `9.4`) and tier tags (`ELITE`, `EPIC`, `SWEATY`, `SUPERB`).
+  - Numbered list of ranked concerts, each with its star rating.
   - Floating pill button: **`🗺️ View Gig Map • 42`**.
 
 ```html
@@ -272,10 +264,7 @@ module.exports = {
           </span>
         </div>
       </div>
-      <div class="w-12 h-12 rounded-full border-2 border-emerald-500 bg-emerald-50 flex flex-col items-center justify-center">
-        <span class="text-sm font-extrabold text-emerald-700">9.9</span>
-        <span class="text-[8px] font-black text-emerald-600">ELITE</span>
-      </div>
+      <span class="text-star text-sm leading-none flex-shrink-0" aria-label="5 out of 5 stars">★★★★★</span>
     </div>
 
     <!-- Rank Item 2 -->
@@ -290,10 +279,7 @@ module.exports = {
           </span>
         </div>
       </div>
-      <div class="w-12 h-12 rounded-full border-2 border-emerald-500 bg-emerald-50 flex flex-col items-center justify-center">
-        <span class="text-sm font-extrabold text-emerald-700">9.7</span>
-        <span class="text-[8px] font-black text-emerald-600">EPIC</span>
-      </div>
+      <span class="text-star text-sm leading-none flex-shrink-0" aria-label="4 out of 5 stars">★★★★☆</span>
     </div>
 
   </main>
@@ -313,7 +299,7 @@ module.exports = {
 
 - **Key Components**:
   - Compact header with gig card (`Death Cab for Cutie · Outside Lands 2026`).
-  - Inline 3-metric Gigl Scorecard (`Performance 10.0`, `Venue 9.2`, `Crowd 9.8` with aggregate `9.7 Score` pill).
+  - Inline 3-metric Gigl Scorecard: star ratings for Performance, Venue and Crowd, with the overall star average.
   - Compact field notes input (`78/500`) with quick tag suggestions.
   - Tactile Gig Highlights & Vibes selector pills.
   - Inline companion tagger (`Tag friends +1`) & photo/setlist attachment buttons.
@@ -348,20 +334,21 @@ module.exports = {
     <div class="p-3 bg-white rounded-xl border border-stone-200 shadow-warm-sm space-y-2">
       <div class="flex items-center justify-between">
         <span class="text-xs font-black uppercase tracking-wider text-stone-800">The Gigl Scorecard</span>
-        <span class="text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">Score 9.7</span>
+        <!-- Overall = average of the three below (4.7); the app renders the partly filled fifth star -->
+        <span class="text-star text-sm leading-none" aria-label="4.7 out of 5 stars">★★★★☆</span>
       </div>
       <div class="grid grid-cols-3 gap-2 text-center pt-1">
         <div class="p-1.5 bg-stone-50 rounded-lg border border-stone-100">
-          <p class="text-[10px] font-bold text-stone-500">Perf. 10.0</p>
-          <p class="text-amber-500 text-xs">★★★★★</p>
+          <p class="text-[10px] font-bold text-stone-500">Performance</p>
+          <p class="text-star text-xs">★★★★★</p>
         </div>
         <div class="p-1.5 bg-stone-50 rounded-lg border border-stone-100">
-          <p class="text-[10px] font-bold text-stone-500">Venue 9.2</p>
-          <p class="text-amber-500 text-xs">★★★★☆</p>
+          <p class="text-[10px] font-bold text-stone-500">Venue</p>
+          <p class="text-star text-xs">★★★★☆</p>
         </div>
         <div class="p-1.5 bg-stone-50 rounded-lg border border-stone-100">
-          <p class="text-[10px] font-bold text-stone-500">Crowd 9.8</p>
-          <p class="text-amber-500 text-xs">★★★★★</p>
+          <p class="text-[10px] font-bold text-stone-500">Crowd</p>
+          <p class="text-star text-xs">★★★★★</p>
         </div>
       </div>
     </div>
@@ -422,7 +409,7 @@ module.exports = {
   - Dual pill widgets: `🔥 Live Streak: 4 Weekends` and `Soundprints: Indie / Club`.
   - 2026 Concert Goal progress bar (`50 Shows Planned • 84%`).
   - 2×2 Directory Grid: `Attended Shows (42)`, `Want to See (18)`, `Festivals (6)`, `Buddies (34)`.
-  - Latest Log Card (Jamie xx at Shrine Expo Hall, `9.9` score) and top venues list (`#1 The Bellwether Top 1%`).
+  - Latest Log Card (Jamie xx at Shrine Expo Hall, with its star rating) and top venues list (`#1 The Bellwether Top 1%`).
 
 ```html
 <!-- Profile & Diary (Single Viewport Container) -->
@@ -529,9 +516,7 @@ module.exports = {
         <h4 class="text-xs font-extrabold text-stone-900">Jamie xx <span class="font-normal text-stone-400 text-[10px]">In Waves</span></h4>
         <p class="text-[10px] text-stone-500">Shrine Expo Hall · Jan 24</p>
       </div>
-      <div class="w-8 h-8 rounded-full bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center">
-        9.9
-      </div>
+      <span class="text-star text-xs leading-none" aria-label="5 out of 5 stars">★★★★★</span>
     </div>
   </div>
 
