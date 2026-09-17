@@ -531,3 +531,35 @@ create policy "artist_images_read" on public.artist_images for select using (tru
 -- bucket under the user's own folder (where log media already goes). The
 -- existing profiles_update policy already limits writes to your own row.
 alter table public.profiles add column if not exists avatar_url text;
+
+-- Phone number is now the way to sign up (app/auth/page.tsx), so a new
+-- account's placeholder username can no longer be its phone number:
+-- profiles are public, which would show the number at /u/<number> until the
+-- user picked a name. Sign-ups without an email get user_<first 8 hex
+-- characters of their id> instead. An email prefix that's already taken
+-- gets the same suffix, rather than failing the whole sign-up on the unique
+-- constraint. /choose-username replaces the placeholder either way.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  suffix text;
+  handle text;
+begin
+  suffix := substr(replace(new.id::text, '-', ''), 1, 8);
+  handle := coalesce(
+    nullif(regexp_replace(lower(split_part(coalesce(new.email, ''), '@', 1)), '[^a-z0-9_]', '_', 'g'), ''),
+    'user_' || suffix
+  );
+  if exists (select 1 from public.profiles where username = handle) then
+    handle := handle || '_' || suffix;
+  end if;
+
+  insert into public.profiles (id, username, display_name, username_set)
+  values (new.id, handle, nullif(split_part(coalesce(new.email, ''), '@', 1), ''), false);
+  return new;
+end;
+$$;

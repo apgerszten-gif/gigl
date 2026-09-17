@@ -16,3 +16,16 @@ export function normalizePhoneNumber(raw: string): string | null {
   if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) return `+${digitsOnly}`
   return null
 }
+
+// Sign-up only takes US and Canadian numbers for now: a real area code and
+// exchange (neither starts with 0 or 1), which also keeps texts from being
+// sent to numbers that could never receive them.
+export function isNorthAmericanNumber(e164: string): boolean {
+  return /^\+1[2-9]\d{2}[2-9]\d{6}$/.test(e164)
+}
+
+// '+15551234567' -> '(555) 123-4567'; other numbers are shown as stored.
+export function formatPhoneForDisplay(e164: string): string {
+  const match = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164)
+  return match ? `(${match[1]}) ${match[2]}-${match[3]}` : e164
+}

@@ -6,7 +6,8 @@ A Letterboxd-style app for live music. People log shows they've been to (a festi
 
 - Next.js 14.2 (App Router), React 18, TypeScript, Tailwind CSS 3.4
 - Supabase (Postgres + auth). `supabase-schema.sql` is append-only: new DDL goes at the end and is run by hand in the Supabase SQL editor.
-- Ticketmaster Discovery API (show catalogue), Twilio (SMS)
+- Ticketmaster Discovery API (show catalogue), Twilio (SMS show scoring, `/api/sms/*`)
+- **Sign-up is by phone** through Supabase Phone auth: `signInWithOtp` then `verifyOtp` in `app/auth/page.tsx`. Supabase delivers the codes through its Send SMS hook (Authentication → Hooks), which is configured in the dashboard, not in code. Email and password sign-in only remains for older accounts.
 - Vercel project `gigl-app`: production deploys from `main` and is served at gigl-review.vercel.app. The separate Vercel project `gigl` is a broken duplicate on the same repo; its failing checks can be ignored.
 
 ## Commands

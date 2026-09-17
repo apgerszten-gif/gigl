@@ -24,8 +24,10 @@ export default function ChooseUsernamePage() {
   useEffect(() => {
     if (authLoading) return
     if (!user) { router.replace('/'); return }
+    // Suggest the placeholder made from an email address. A phone sign-up's
+    // placeholder (user_1a2b3c4d) isn't worth suggesting.
     supabase.from('profiles').select('username').eq('id', user.id).single().then(({ data }) => {
-      if (data?.username) setUsername(data.username)
+      if (data?.username && user.email) setUsername(data.username)
       setChecking(false)
     })
   }, [authLoading, user, router])

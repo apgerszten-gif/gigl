@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
+import { pathAfterSignIn } from '@/lib/afterSignIn'
 import { LoadingLabel } from '@/components/ui'
 
 export default function AuthCallbackPage() {
@@ -20,19 +20,7 @@ export default function AuthCallbackPage() {
         return
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username_set')
-        .eq('id', session.user.id)
-        .single()
-
-      if (!profile || profile.username_set === false) {
-        router.replace('/choose-username')
-        return
-      }
-
-      const hasFestival = localStorage.getItem(LOCAL_STORAGE_KEY)
-      router.replace(hasFestival ? '/feed' : '/select-festival')
+      router.replace(await pathAfterSignIn(supabase, session.user.id))
     }
     run()
   }, [])

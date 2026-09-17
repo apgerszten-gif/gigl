@@ -166,4 +166,8 @@ Where the photos come from:
   - review cards
 - **Stage** (`/stage/[name]`), **Battle** (`/battle`), the follower lists, sign-in, username and legal pages all use the same pieces.
 - **Landing** (`/`, `components/IntroDemo.tsx`): a 16-second tour played in a mock phone (ink bezel, `shadow-riso-lg`) and built from the real components. It has four scenes: the feed with the Log tip and a tap, show search with a pick, star rating, and rankings. A "1 of 4" label and caption above the phone and progress dots below follow the scenes. Tapping or swiping anywhere, Skip, or the end of the tour goes to sign-up.
-- **Sign-in** (`/auth`): logo header, a slightly rotated collage of two app cards (an artist card with its date sticker and stars, and a review quote), the headline, a Sign up / Sign in segmented toggle, then the fields and button in a card. **Choose username** follows the same layout, with a feed-card preview that shows your handle as you type.
+- **Sign-in** (`/auth`): logo header, then a slightly rotated collage of two app cards (an artist card with its date sticker and stars, and a review quote). Below that are the headline and a card that changes by step:
+  - **Phone:** the phone number field and "Text me a code". This one step both signs people up and signs them back in. A "Sign in with email" link under the card is for accounts made before phone sign-up.
+  - **Code:** the number the code went to, with a Change link; a large spaced code field that submits once all 6 digits are in; Continue; and a resend link with a 60-second countdown.
+  - **Email:** email, password and Sign in, with a link back to the phone step.
+- **Choose username** follows the same layout, with a feed-card preview that shows your handle as you type.
