@@ -23,6 +23,14 @@ const CODE_LENGTH = 6
 // Supabase won't send the same number another code within 60 seconds.
 const RESEND_SECONDS = 60
 
+// Outside production, errors also show Supabase's own message, so a
+// texting setup problem can be read straight off the preview.
+const SHOW_ERROR_DETAILS = process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production'
+
+function withDetails(text: string, error: AuthError | null): string {
+  return SHOW_ERROR_DETAILS && error ? `${text} (${error.message})` : text
+}
+
 const codeInput =
   'w-full bg-transparent font-display text-2xl font-bold tracking-[0.4em] text-ink placeholder:text-ink-faint focus:outline-none'
 const textLink = 'text-[12px] font-semibold text-accent disabled:text-ink-faint'
@@ -66,7 +74,7 @@ export default function AuthPage() {
     setLoading(false)
     if (sendError) {
       console.error('[auth] sending code failed:', sendError)
-      setError(sendErrorText(sendError))
+      setError(withDetails(sendErrorText(sendError), sendError))
       return
     }
     setPhone(to)
@@ -90,7 +98,7 @@ export default function AuthPage() {
     setLoading(true)
     const { data, error: verifyError } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' })
     if (verifyError || !data.user) {
-      setError("That code didn't work or has expired. Check it, or send a new one.")
+      setError(withDetails("That code didn't work or has expired. Check it, or send a new one.", verifyError))
       setLoading(false)
       return
     }
