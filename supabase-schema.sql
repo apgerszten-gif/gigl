@@ -499,3 +499,35 @@ create policy "shows_read" on public.shows for select using (true);
 -- be a partial upstream failure as a real cancellation, and dropping a
 -- valid show is worse than briefly keeping a cancelled one. Revisit with a
 -- "missing from N consecutive syncs" rule if stale rows become a problem.
+
+-- Artist and profile photos.
+--
+-- shows.image_url is the event image Ticketmaster returns with each listing,
+-- saved by the nightly sync (app/api/cron/sync-shows) and shown in search.
+alter table public.shows add column if not exists image_url text;
+
+-- One photo per artist name, for everywhere a logged show appears. Logged
+-- shows outlive the shows catalogue (past-dated rows are pruned nightly), so
+-- they can't borrow shows.image_url. The nightly sync fills this table from
+-- the headliners of the events it already fetched, then looks up logged
+-- artists that are still missing through Ticketmaster's attraction search, a
+-- capped number per run. artist_key is the normalised name (see
+-- lib/artistImages.ts). A null image_url means "looked, found nothing
+-- usable"; checked_at lets those misses be retried after a while.
+create table if not exists public.artist_images (
+  artist_key  text primary key,
+  artist_name text not null,
+  image_url   text,
+  source      text not null default 'ticketmaster',
+  checked_at  timestamp with time zone not null default now()
+);
+
+-- Public read, service-role-only writes (the sync), same as public.shows.
+alter table public.artist_images enable row level security;
+drop policy if exists "artist_images_read" on public.artist_images;
+create policy "artist_images_read" on public.artist_images for select using (true);
+
+-- Profile photos, uploaded from the You screen into the show-photos storage
+-- bucket under the user's own folder (where log media already goes). The
+-- existing profiles_update policy already limits writes to your own row.
+alter table public.profiles add column if not exists avatar_url text;

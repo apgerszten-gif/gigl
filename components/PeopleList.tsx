@@ -6,6 +6,7 @@ interface Person {
   id:           string
   username:     string
   display_name: string
+  avatar_url?:  string | null
 }
 
 // Shared shell for /u/[username]/followers and /following - same
@@ -31,7 +32,7 @@ export function PeopleListPage({
             {people.map(p => (
               <Card key={p.id} flat className="flex items-center gap-3 px-3 py-2.5">
                 <Link href={`/u/${p.username}`} className="flex items-center gap-3 flex-1 min-w-0">
-                  <PersonPhoto name={p.display_name || p.username} className="w-10 h-10 text-base border border-ink/15" />
+                  <PersonPhoto name={p.display_name || p.username} src={p.avatar_url} className="w-10 h-10 text-base border border-ink/15" />
                   <div className="min-w-0">
                     <p className="font-display text-sm font-bold truncate">{p.display_name}</p>
                     <p className="text-[11px] text-ink-muted">@{p.username}</p>

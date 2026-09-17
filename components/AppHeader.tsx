@@ -17,7 +17,7 @@ export function AppHeader({ children, showProfile = true }: { children: React.Re
     <TopBar
       right={showProfile && user ? (
         <Link href="/profile" aria-label="Your profile" className="flex-shrink-0">
-          <HeaderPhoto name={name} />
+          <HeaderPhoto name={name} src={me?.avatar_url} />
         </Link>
       ) : undefined}
     >

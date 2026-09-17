@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
+import { useArtistImages } from '@/lib/useArtistImages'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const FEED_CACHE_KEY = 'gigl_feed_cache'
@@ -52,6 +53,7 @@ interface GlobalLog {
   venue:       string | null
   show_date:   string | null
   username:    string | null
+  avatar_url?: string | null
   photo_url:   string | null
   media_urls:  string[] | null
   review:      string | null
@@ -131,12 +133,16 @@ function FeedInner() {
     if (!logs) { setLoading(false); timeMark('feed:load total (no logs)', loadStart); return }
 
     const userIds = logs.map(l => l.user_id).filter((id, i, arr) => arr.indexOf(id) === i)
-    const { data: profiles } = await timeQuery(`feed:profiles-by-id(${userIds.length} ids)`, supabase.from('profiles').select('id, username').in('id', userIds))
+    const { data: profiles } = await timeQuery(`feed:profiles-by-id(${userIds.length} ids)`, supabase.from('profiles').select('id, username, avatar_url').in('id', userIds))
 
-    const usernameMap: Record<string, string> = {}
-    profiles?.forEach(p => { usernameMap[p.id] = p.username })
+    const profileMap: Record<string, { username: string; avatar_url: string | null }> = {}
+    profiles?.forEach(p => { profileMap[p.id] = p })
 
-    const withUsernames = logs.map(l => ({ ...l, username: usernameMap[l.user_id] ?? null }))
+    const withUsernames = logs.map(l => ({
+      ...l,
+      username:   profileMap[l.user_id]?.username ?? null,
+      avatar_url: profileMap[l.user_id]?.avatar_url ?? null,
+    }))
     setGlobalFeed(withUsernames)
     writeCache(FEED_CACHE_KEY, withUsernames)
     setLoading(false)
@@ -254,6 +260,8 @@ function FeedInner() {
     ? globalFeed.filter(item => item.user_id === user?.id || followingIds.has(item.user_id))
     : globalFeed
 
+  const artistImage = useArtistImages(visibleFeed.map(item => item.artist_name ?? ''))
+
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
@@ -310,7 +318,7 @@ function FeedInner() {
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <Link href={isMe ? '/profile' : `/u/${username}`} className="flex items-center gap-2.5 min-w-0">
-                    <PersonPhoto name={username} className="w-8 h-8 text-sm border border-ink/15" />
+                    <PersonPhoto name={username} src={item.avatar_url} className="w-8 h-8 text-sm border border-ink/15" />
                     <div className="min-w-0">
                       <p className={`text-sm font-semibold truncate ${isMe ? 'text-accent' : 'text-ink'}`}>@{username}</p>
                       <p className="text-[11px] text-ink-muted">{timeAgo(item.created_at)}</p>
@@ -329,7 +337,7 @@ function FeedInner() {
                       : <Place>{place}</Place>)}
                   </div>
                   <Link href={`/artist/${item.artist_id}`} aria-label={name} className="flex-shrink-0">
-                    <ArtistPhoto name={name} className="w-[76px] h-[76px]" iconSize={26}>
+                    <ArtistPhoto name={name} src={artistImage(name)} className="w-[76px] h-[76px]" iconSize={26}>
                       <DateTag isoDate={item.show_date} />
                     </ArtistPhoto>
                   </Link>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { showScore } from '@/lib/rating'
+import { getArtistImages } from '@/lib/artistImages'
 import { resolveMediaUrls } from '@/lib/media'
 import { MediaGrid } from '@/components/MediaGrid'
 import { FollowButton } from '@/components/FollowButton'
@@ -20,7 +21,7 @@ function resolvePhotoUrl(url: string): string {
 export default async function PublicProfile({ params }: { params: { username: string } }) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, username, display_name')
+    .select('id, username, display_name, avatar_url')
     .eq('username', params.username)
     .single()
 
@@ -33,6 +34,7 @@ export default async function PublicProfile({ params }: { params: { username: st
   ])
 
   const shows = (showsRaw ?? []).slice().sort((a, b) => showScore(b) - showScore(a))
+  const artistImage = await getArtistImages(supabase, shows.map(s => s.artist_name))
   const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.crowd_rating != null)
   const avgScore = ratedShows.length > 0
     ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
@@ -45,7 +47,7 @@ export default async function PublicProfile({ params }: { params: { username: st
       <div className="px-5 pt-4 pb-24 space-y-4">
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <PersonPhoto name={profile.display_name || profile.username} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
+            <PersonPhoto name={profile.display_name || profile.username} src={profile.avatar_url} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
             <div className="flex-1 min-w-0">
               <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">{profile.display_name}</h1>
               <p className="text-xs text-ink-muted">@{profile.username}</p>
@@ -95,7 +97,7 @@ export default async function PublicProfile({ params }: { params: { username: st
                     )}
                     <Link href={`/artist/${show.artist_id}`} className="p-3 flex items-center gap-3">
                       <span className="font-display text-2xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
-                      <ArtistPhoto name={show.artist_name} className="w-12 h-12" iconSize={16}>
+                      <ArtistPhoto name={show.artist_name} src={artistImage(show.artist_name)} className="w-12 h-12" iconSize={16}>
                         <DateTag isoDate={show.show_date} />
                       </ArtistPhoto>
                       <div className="flex-1 min-w-0">

@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/AuthProvider'
 import { ArtistPhoto, BackHeader, EmptyState, LoadingLabel, Place, Segmented, Stars, inputBox } from '@/components/ui'
 import { computeShowScore } from '@/lib/rating'
+import { useArtistImages } from '@/lib/useArtistImages'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
 
 type Day = string
@@ -49,6 +50,7 @@ function LogInner() {
         venue:      activeShow.venue,
       })
       if (activeShow.isoDate) params.set('showDate', activeShow.isoDate)
+      if (activeShow.imageUrl) params.set('image', activeShow.imageUrl)
       router.replace(`/log-show?${params.toString()}`)
       return
     }
@@ -92,6 +94,8 @@ function LogInner() {
     ? festivalArtists.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
     : getArtistsByDay(festival, activeDay)
   ).filter(a => isRerate ? loggedIds.has(a.id) : !loggedIds.has(a.id))
+
+  const artistImage = useArtistImages(allArtists.map(a => a.name))
 
   function openLogShow(a: FestivalArtist) {
     const params = new URLSearchParams({
@@ -155,7 +159,7 @@ function LogInner() {
                     i > 0 ? 'border-t border-ink/10' : ''
                   } ${locked ? 'opacity-50 cursor-default' : 'hover:bg-accent/5'}`}
                 >
-                  <ArtistPhoto name={a.name} className="w-12 h-12" iconSize={16} />
+                  <ArtistPhoto name={a.name} src={artistImage(a.name)} className="w-12 h-12" iconSize={16} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display text-[15px] font-bold leading-tight truncate">{a.name}</h3>
                     <Place className="mt-0.5">{a.stage}{setTime ? ` · ${setTime}` : ''}</Place>

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { recordBattleResult } from '@/lib/battleRecords'
 import { Logo } from '@/components/Logo'
 import { ArtistPhoto, BackHeader, Label, Place } from '@/components/ui'
+import { useArtistImages } from '@/lib/useArtistImages'
 
 const MAX_SESSION = 10
 
@@ -123,6 +124,8 @@ function BattleInner() {
     }, 700)
   }
 
+  const artistImage = useArtistImages(logs.map(l => l.artist_name))
+
   if (loading) return null
 
   return (
@@ -167,7 +170,7 @@ function BattleInner() {
                     } ${isLoser ? 'opacity-40' : ''} ${picked || tossUp ? 'cursor-default' : ''}`}
                   >
                     <div className="relative p-2.5 pb-0">
-                      <ArtistPhoto name={log.artist_name} className="w-full h-28" iconSize={32} />
+                      <ArtistPhoto name={log.artist_name} src={artistImage(log.artist_name)} className="w-full h-28" iconSize={32} />
                       {lit && (
                         <span className="absolute top-4 right-4 w-7 h-7 rounded-full bg-accent text-cream border-1.5 border-ink flex items-center justify-center font-bold">
                           {isTied ? '=' : <Check className="w-4 h-4" strokeWidth={3} />}

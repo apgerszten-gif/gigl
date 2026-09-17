@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { SYNC_CITIES } from '@/lib/shows/cities'
 import { fetchCityShowsPage, type SyncShow } from '@/lib/ticketmaster'
 import { upsertShows, prunePastShows } from '@/lib/shows/repository'
+import { saveHeadlinerImages, fillLoggedArtistImages } from '@/lib/shows/artistImageSync'
 
 // Nightly catalogue refresh: walks SYNC_CITIES, pulls each metro's upcoming
 // music listings from Ticketmaster, and upserts them into `shows` so that
@@ -82,6 +83,18 @@ export async function GET(req: NextRequest) {
     console.error('[sync-shows] prune failed:', err instanceof Error ? err.message : String(err))
   }
 
+  // Artist photos: free ones from the events above first, then a capped
+  // name lookup for logged artists still missing one. Neither is allowed to
+  // fail the run - a missing photo only means the placeholder shows.
+  let artistImagesSaved = 0
+  let artistImageLookups = { looked: 0, found: 0 }
+  try {
+    artistImagesSaved = await saveHeadlinerImages(shows)
+    artistImageLookups = await fillLoggedArtistImages()
+  } catch (err) {
+    console.error('[sync-shows] artist images failed:', err instanceof Error ? err.message : String(err))
+  }
+
   const summary = {
     cities:      SYNC_CITIES.length,
     cityErrors:  cityErrors.length,
@@ -89,6 +102,9 @@ export async function GET(req: NextRequest) {
     upserted,
     failed,
     pruned,
+    artistImagesSaved,
+    artistImagesLookedUp: artistImageLookups.looked,
+    artistImagesFound:    artistImageLookups.found,
     durationMs:  Date.now() - startedAt,
   }
   console.log('[sync-shows] complete', summary)

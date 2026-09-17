@@ -11,6 +11,7 @@ export interface ActiveShow {
   city:    string
   state:   string
   isoDate: string | null
+  imageUrl?: string | null // Ticketmaster's photo, carried into log-show
 }
 
 const ACTIVE_SHOW_KEY = 'gigl_active_show'

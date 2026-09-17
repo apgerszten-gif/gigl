@@ -1,8 +1,9 @@
-// Server-only wrapper around Ticketmaster's Discovery API (events search).
-// TICKETMASTER_API_KEY must never reach the browser - only called from
-// app/api/shows/search/route.ts.
+// Server-only wrapper around Ticketmaster's Discovery API (events and
+// attraction search). TICKETMASTER_API_KEY must never reach the browser -
+// only called from app/api/shows/search and app/api/cron/sync-shows.
 
 import { formatShowDate } from './dates'
+import { artistKey } from './artistImages'
 
 const TICKETMASTER_API_KEY = process.env.TICKETMASTER_API_KEY!
 
@@ -16,6 +17,7 @@ export interface Show {
   date: string          // display-formatted, e.g. 'Sep 12'
   isoDate: string | null // 'YYYY-MM-DD', carried through so a picked show can be logged with a real show_date
   emoji: string
+  imageUrl: string | null // Ticketmaster's photo for the headliner (or the event), see pickImage
 }
 
 interface TMClassification {
@@ -23,9 +25,17 @@ interface TMClassification {
   genre?: { name: string }
 }
 
+interface TMImage {
+  url:       string
+  ratio?:    string   // '16_9', '3_2', '4_3', ...
+  width?:    number
+  fallback?: boolean  // Ticketmaster's generic stand-in art, not a real photo
+}
+
 interface TMAttraction {
   name: string
   classifications?: TMClassification[]
+  images?: TMImage[]
 }
 
 interface TMVenue {
@@ -42,6 +52,7 @@ interface TMEvent {
   name: string
   dates?: { start?: { localDate?: string } }
   classifications?: TMClassification[]
+  images?: TMImage[]
   _embedded?: {
     venues?: TMVenue[]
     attractions?: TMAttraction[]
@@ -89,6 +100,21 @@ function emojiFor(event: TMEvent, headliner?: TMAttraction): string {
   return GENRE_EMOJI[genreName.toLowerCase()] ?? DEFAULT_EMOJI
 }
 
+// Each artist/event carries ~10 crops of the same photo. Gigl shows them as
+// small squares (object-cover), so prefer the less-wide 3:2 / 4:3 crops at
+// roughly 600px, which stay sharp on retina without pulling the 2048px
+// source. Ticketmaster's fallback images are generic stock art, never used.
+const PREFERRED_RATIOS = ['3_2', '4_3', '1_1']
+
+export function pickImage(images: TMImage[] | undefined): string | null {
+  const real = (images ?? []).filter(img => img.url && !img.fallback)
+  if (real.length === 0) return null
+  const byWidth = (list: TMImage[]) => list.slice().sort((a, b) => (a.width ?? 0) - (b.width ?? 0))
+  const preferred = byWidth(real.filter(img => img.ratio && PREFERRED_RATIOS.includes(img.ratio)))
+  const pool = preferred.length > 0 ? preferred : byWidth(real)
+  return (pool.find(img => (img.width ?? 0) >= 600) ?? pool.find(img => (img.width ?? 0) >= 300) ?? pool[pool.length - 1]).url
+}
+
 function toShow(event: TMEvent): Show {
   const venue = event._embedded?.venues?.[0]
   const attractions = event._embedded?.attractions ?? []
@@ -110,6 +136,7 @@ function toShow(event: TMEvent): Show {
     date:    formatShowDate(event.dates?.start?.localDate),
     isoDate: event.dates?.start?.localDate ?? null,
     emoji:   emojiFor(event, headliner),
+    imageUrl: pickImage(headliner?.images) ?? pickImage(event.images),
   }
 }
 
@@ -158,6 +185,10 @@ export interface SyncShow extends Show {
   // surrounding towns. Stored so a city's rows can be re-synced or purged as
   // a unit without guessing at venue city spellings.
   metro: string
+  // The headliner's own photo, for public.artist_images. Unlike imageUrl it
+  // never falls back to the event's image, since that may not show the
+  // artist, and it's null when the event lists no attraction at all.
+  artistImage: string | null
 }
 
 // Ticketmaster caps `size` at 200 and refuses to page beyond 1000 results
@@ -183,6 +214,7 @@ function toSyncShow(event: TMEvent, city: SyncCity): SyncShow {
     lat: Number.isFinite(lat) ? lat : city.lat,
     lng: Number.isFinite(lng) ? lng : city.lng,
     metro: `${city.city}, ${city.stateCode}`,
+    artistImage: pickImage(event._embedded?.attractions?.[0]?.images),
   }
 }
 
@@ -223,4 +255,32 @@ export async function fetchCityShowsPage(city: SyncCity, page: number): Promise<
     shows:      (data._embedded?.events ?? []).map(e => toSyncShow(e, city)),
     totalPages: data.page?.totalPages ?? 1,
   }
+}
+
+interface TMAttractionSearchResponse {
+  _embedded?: { attractions?: TMAttraction[] }
+}
+
+// A photo for an artist we only know by name (a festival set, say), found
+// through attraction search. Only an exact name match counts - the top
+// result for a short name is often a different act, and a wrong photo is
+// worse than the placeholder. Returns null when nothing usable turns up.
+export async function lookupArtistImage(name: string): Promise<string | null> {
+  const params = new URLSearchParams({
+    apikey:             TICKETMASTER_API_KEY,
+    keyword:            name,
+    classificationName: 'music',
+    size:               '10',
+  })
+
+  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/attractions.json?${params}`, { cache: 'no-store' })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Ticketmaster attraction search failed for ${name} (${res.status}): ${text}`)
+  }
+
+  const data: TMAttractionSearchResponse = await res.json()
+  const key = artistKey(name)
+  const match = (data._embedded?.attractions ?? []).find(a => artistKey(a.name) === key && pickImage(a.images))
+  return match ? pickImage(match.images) : null
 }

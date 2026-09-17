@@ -15,7 +15,7 @@ export default async function FollowersPage({ params }: { params: { username: st
   const ids = (followRows ?? []).map(r => r.follower_id)
 
   const people = ids.length > 0
-    ? (await supabase.from('profiles').select('id, username, display_name').in('id', ids)).data ?? []
+    ? (await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', ids)).data ?? []
     : []
 
   return (
