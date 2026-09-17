@@ -531,3 +531,19 @@ create policy "artist_images_read" on public.artist_images for select using (tru
 -- bucket under the user's own folder (where log media already goes). The
 -- existing profiles_update policy already limits writes to your own row.
 alter table public.profiles add column if not exists avatar_url text;
+
+-- "Near me" show search (the Near me control on /select-festival).
+--
+-- No PostGIS and no new columns: shows.lat/lng already hold the venue
+-- coordinates, or the metro centroid where Ticketmaster gave none, and the
+-- search filters with a plain lat/lng bounding box (lib/geo.ts) which is then
+-- trimmed to a real circle in JS. A composite btree serves the latitude range
+-- and keeps longitude on the same index tuple, so the box lookup never falls
+-- back to a sequential scan; it is not a spatial index and doesn't pretend to
+-- be one. Move to PostGIS + GIST only if coverage grows past a few hundred
+-- thousand rows or the radius has to be sorted on rather than filtered by.
+--
+-- Rows with a null lat or lng are simply never returned by a nearby search:
+-- they can't be placed, and inventing a location for them would be worse
+-- than leaving them out of a local list.
+create index if not exists shows_lat_lng_idx on public.shows (lat, lng);

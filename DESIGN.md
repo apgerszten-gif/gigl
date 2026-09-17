@@ -142,8 +142,9 @@ Where the photos come from:
 ### Search (`/select-festival`)
 - `AppHeader` titled "Find a show", or "What did you see?" when opened from Log.
 - Search input for artist, venue or city.
-- A "Coming up" label that changes to "Results for …" while typing.
-- One card of result rows, alternating `cream` / `cream-alt`. Each row has the artist photo with a date sticker, the artist, the place line, any support acts and a "+ Log" button. Tapping a row goes straight into logging.
+- A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and once it's on, radius chips for 25 / 50 / 100 mi. Tapping Near me is the only thing that asks for location — nothing prompts on load. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
+- A "Coming up" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on.
+- One card of result rows, alternating `cream` / `cream-alt`. Each row has the artist photo with a date sticker, the artist, the place line, any support acts and a "+ Log" button. With Near me on, the distance ("4.2 mi") sits above that button in the same 10px uppercase `ink-faint` style. Tapping a row goes straight into logging.
 - A dashed "Can't find your show?" tile *(mockup: adding your own show)*.
 
 ### You (`/profile`)

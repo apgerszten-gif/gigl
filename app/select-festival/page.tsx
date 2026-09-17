@@ -2,14 +2,16 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, Search } from 'lucide-react'
+import { MapPin, Plus, Search } from 'lucide-react'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { setActiveShow } from '@/lib/activeShow'
+import { formatDistance } from '@/lib/geo'
+import { useNearby, RADIUS_OPTIONS } from '@/lib/useNearby'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
-import { ArtistPhoto, DateTag, EmptyState, Label, Place, btnSecondary, inputBox } from '@/components/ui'
+import { ArtistPhoto, Chip, DateTag, EmptyState, Label, Place, btnSecondary, inputBox } from '@/components/ui'
 
 interface Show {
   id: string
@@ -22,9 +24,15 @@ interface Show {
   isoDate: string | null
   emoji: string
   imageUrl: string | null
+  distanceMiles?: number
 }
 
 const SEARCH_DEBOUNCE_MS = 350
+
+// Two decimal places is about 1km, which is a fraction of even the tightest
+// radius on offer - so the filter behaves identically, but a precise home
+// address never lands in a URL or a server log.
+const COORD_PRECISION = 2
 
 // Show search. The dock's Search tab opens it as "Find a show"; its Log tab
 // opens it with ?mode=log, since logging always starts by picking a show.
@@ -37,6 +45,13 @@ function SelectShowInner() {
   const isLogMode = searchParams.get('mode') === 'log'
 
   const [query, setQuery] = useState('')
+  const nearby = useNearby()
+
+  // Primitives, so the search effect below re-runs when the location
+  // actually changes rather than on every render that makes a new object.
+  const nearbyLat = nearby.active ? nearby.coords!.lat.toFixed(COORD_PRECISION) : null
+  const nearbyLng = nearby.active ? nearby.coords!.lng.toFixed(COORD_PRECISION) : null
+  const nearbyRadius = nearby.radiusMiles
 
   const [results, setResults] = useState<Show[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,13 +67,23 @@ function SelectShowInner() {
   // immediately rather than waiting out the debounce, so first paint and
   // "backspaced to empty" don't sit on an artificial delay.
   useEffect(() => {
+    // Hold the first request until the remembered Near me choice is back,
+    // so a returning local user doesn't see a nationwide list flash past.
+    if (!nearby.ready) return
+
     const trimmed = query.trim()
     const controller = new AbortController()
     const timeoutId = setTimeout(async () => {
       setLoading(true)
       setError(false)
       try {
-        const res = await fetch(`/api/shows/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal })
+        const params = new URLSearchParams({ q: trimmed })
+        if (nearbyLat && nearbyLng) {
+          params.set('lat', nearbyLat)
+          params.set('lng', nearbyLng)
+          params.set('radius', String(nearbyRadius))
+        }
+        const res = await fetch(`/api/shows/search?${params.toString()}`, { signal: controller.signal })
         if (!res.ok) throw new Error(`search failed: ${res.status}`)
         const data = await res.json()
         setResults(data.shows ?? [])
@@ -74,7 +99,7 @@ function SelectShowInner() {
     }, trimmed ? SEARCH_DEBOUNCE_MS : 0)
 
     return () => { clearTimeout(timeoutId); controller.abort() }
-  }, [query, retryToken])
+  }, [query, retryToken, nearby.ready, nearbyLat, nearbyLng, nearbyRadius])
 
   function select(show: Show) {
     localStorage.setItem(LOCAL_STORAGE_KEY, show.id)
@@ -128,10 +153,49 @@ function SelectShowInner() {
             className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
           />
         </label>
+
+        {/* Tapping Near me is what triggers the browser's permission prompt;
+            nothing asks for a location on load. See lib/useNearby.ts. */}
+        <div className="pt-2.5 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            aria-pressed={nearby.active}
+            disabled={nearby.status === 'locating'}
+            onClick={() => (nearby.active ? nearby.disable() : nearby.enable())}
+          >
+            <Chip active={nearby.active}>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="w-3 h-3" strokeWidth={2.5} />
+                {nearby.status === 'locating' ? 'Locating…' : 'Near me'}
+              </span>
+            </Chip>
+          </button>
+
+          {nearby.active && RADIUS_OPTIONS.map(miles => (
+            <button
+              key={miles}
+              type="button"
+              aria-pressed={nearby.radiusMiles === miles}
+              onClick={() => nearby.setRadius(miles)}
+            >
+              <Chip active={nearby.radiusMiles === miles}>{miles} mi</Chip>
+            </button>
+          ))}
+        </div>
+
+        {(nearby.status === 'denied' || nearby.status === 'unavailable') && (
+          <p className="pt-1.5 text-[11px] leading-snug text-ink-faint">
+            {nearby.status === 'denied'
+              ? 'Gigl can’t see your location. Allow it in your browser’s site settings to see shows near you.'
+              : 'Couldn’t get your location. Check that location services are on, then tap Near me again.'}
+          </p>
+        )}
       </div>
 
       <Label className="px-5 pt-4 pb-2">
-        {trimmedQuery ? <>Results for &ldquo;{trimmedQuery}&rdquo;</> : 'Coming up'}
+        {trimmedQuery
+          ? <>Results for &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` · within ${nearby.radiusMiles} mi` : ''}</>
+          : nearby.active ? `Coming up within ${nearby.radiusMiles} mi` : 'Coming up'}
       </Label>
 
       <main className="px-5 space-y-3">
@@ -164,7 +228,11 @@ function SelectShowInner() {
 
         {!loading && !error && results.length === 0 && (
           <EmptyState>
-            {trimmedQuery ? <>No shows matched &ldquo;{trimmedQuery}&rdquo; yet.</> : 'No upcoming shows to show right now.'}
+            {trimmedQuery
+              ? <>No shows matched &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` within ${nearby.radiusMiles} miles` : ''} yet.</>
+              : nearby.active
+              ? `Nothing coming up within ${nearby.radiusMiles} miles. Try a wider radius.`
+              : 'No upcoming shows to show right now.'}
           </EmptyState>
         )}
 
@@ -189,7 +257,14 @@ function SelectShowInner() {
                     <p className="mt-0.5 text-[11px] text-ink-faint truncate">with {s.support.join(', ')}</p>
                   )}
                 </div>
-                <span className={`${btnSecondary} flex-shrink-0 px-2.5 py-1 text-[10px]`}>+ Log</span>
+                <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                  {s.distanceMiles != null && (
+                    <span className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">
+                      {formatDistance(s.distanceMiles)}
+                    </span>
+                  )}
+                  <span className={`${btnSecondary} px-2.5 py-1 text-[10px]`}>+ Log</span>
+                </div>
               </button>
             ))}
           </div>

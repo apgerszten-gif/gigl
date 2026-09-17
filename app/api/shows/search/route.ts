@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchShows } from '@/lib/ticketmaster'
-import { searchStoredShows, storedShowCount } from '@/lib/shows/repository'
+import { searchStoredShows, storedShowCount, type NearbyFilter } from '@/lib/shows/repository'
 
 // GET /api/shows/search?q=turnstile — searches the `shows` catalogue table,
 // which the nightly job at /api/cron/sync-shows keeps populated. `q` blank or
 // omitted returns the soonest upcoming shows (the page's initial browse list).
+//
+// Optional `lat`, `lng` and `radius` (miles) narrow that to shows near a
+// point, each result carrying its `distanceMiles`. The browser supplies the
+// coordinates from the Near me control on /select-festival; they're read
+// per-request and never stored.
 //
 // This used to proxy Ticketmaster on every request, which made each visitor
 // cost an upstream call against a 5000/day cap. Reading Postgres makes that a
@@ -19,11 +24,35 @@ import { searchStoredShows, storedShowCount } from '@/lib/shows/repository'
 // so it stays cached.
 export const fetchCache = 'default-no-store'
 
+// A radius the client didn't send, or sent as nonsense. The ceiling exists so
+// a hand-typed `radius=100000` can't turn the bounding box into a table scan.
+const DEFAULT_RADIUS_MILES = 50
+const MAX_RADIUS_MILES     = 500
+
+// Returns null unless there is a complete, in-range coordinate pair: a
+// half-supplied or malformed location is treated as no location at all
+// rather than as a point off the coast of Africa.
+function readNearby(params: URLSearchParams): NearbyFilter | null {
+  const lat = Number(params.get('lat'))
+  const lng = Number(params.get('lng'))
+  if (!params.has('lat') || !params.has('lng')) return null
+  if (!Number.isFinite(lat) || Math.abs(lat) > 90)  return null
+  if (!Number.isFinite(lng) || Math.abs(lng) > 180) return null
+
+  const requested = Number(params.get('radius'))
+  const radiusMiles = Number.isFinite(requested) && requested > 0
+    ? Math.min(requested, MAX_RADIUS_MILES)
+    : DEFAULT_RADIUS_MILES
+
+  return { centre: { lat, lng }, radiusMiles }
+}
+
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? ''
+  const nearby = readNearby(req.nextUrl.searchParams)
 
   try {
-    const shows = await searchStoredShows(q)
+    const shows = await searchStoredShows(q, { nearby })
     if (shows.length > 0) return NextResponse.json({ shows })
 
     // Empty result is usually a genuine "no matches" and should be returned
@@ -33,7 +62,11 @@ export async function GET(req: NextRequest) {
     // Once the table has rows this branch stops being reachable, which is
     // what keeps the fallback from quietly reintroducing per-visitor API
     // calls.
-    if (await storedShowCount() === 0) {
+    //
+    // Never for a nearby search: searchShows() has no location filter, so
+    // falling back there would answer "what's on near me" with shows from
+    // across the country. An empty nearby result stays empty.
+    if (!nearby && await storedShowCount() === 0) {
       console.warn('[shows/search] shows table is empty; falling back to live Ticketmaster. Has the sync run?')
       return NextResponse.json({ shows: await searchShows(q) })
     }

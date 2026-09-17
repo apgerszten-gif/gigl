@@ -18,6 +18,10 @@ export interface Show {
   isoDate: string | null // 'YYYY-MM-DD', carried through so a picked show can be logged with a real show_date
   emoji: string
   imageUrl: string | null // Ticketmaster's photo for the headliner (or the event), see pickImage
+  // Miles from the searcher, present only on a "near me" search of the
+  // stored catalogue (see lib/shows/repository.ts). Live Ticketmaster
+  // results never carry it, since that path has no location filter.
+  distanceMiles?: number
 }
 
 interface TMClassification {

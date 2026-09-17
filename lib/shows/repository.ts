@@ -9,6 +9,7 @@
 import { supabase } from '../supabase'
 import { supabaseAdmin } from '../supabaseAdmin'
 import { formatShowDate } from '../dates'
+import { boundingBox, distanceInMiles, type Coords } from '../geo'
 import type { Show, SyncShow } from '../ticketmaster'
 
 // Matches the `shows` table's columns; the API layer maps this to the `Show`
@@ -24,15 +25,24 @@ interface ShowRow {
   show_date: string | null
   emoji:     string
   image_url: string | null
+  // Null on any row Ticketmaster gave no venue coordinates for and whose
+  // sync city couldn't supply a centroid either. Such a row can't be placed,
+  // so it never appears in a nearby search - see searchStoredShows.
+  lat:       number | null
+  lng:       number | null
 }
 
-const SHOW_COLUMNS = 'id, artist, support, venue, city, state, show_date, emoji, image_url'
+const SHOW_COLUMNS = 'id, artist, support, venue, city, state, show_date, emoji, image_url, lat, lng'
 
 // Ticketmaster's own browse list returned 20; keeping the same ceiling so the
 // results list doesn't suddenly grow a scroll region it was never designed for.
 const DEFAULT_LIMIT = 20
 
-function toShow(row: ShowRow): Show {
+function toShow(row: ShowRow, from?: Coords): Show {
+  const distanceMiles = from && row.lat != null && row.lng != null
+    ? distanceInMiles(from, { lat: row.lat, lng: row.lng })
+    : undefined
+
   return {
     id:      row.id,
     artist:  row.artist,
@@ -44,6 +54,7 @@ function toShow(row: ShowRow): Show {
     isoDate: row.show_date,
     emoji:   row.emoji,
     imageUrl: row.image_url,
+    distanceMiles,
   }
 }
 
@@ -58,9 +69,33 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+export interface NearbyFilter {
+  centre:      Coords
+  radiusMiles: number
+}
+
+// The bounding box is a square around a circle, so up to ~21% of what the
+// database returns gets trimmed by the exact distance check below. Ask for
+// several pages' worth so a full list survives that, and so a dense metro
+// doesn't come back short.
+const NEARBY_OVERFETCH = 4
+
+export interface SearchOptions {
+  limit?:  number
+  // When set, only shows within `radiusMiles` of `centre` come back, each
+  // carrying its `distanceMiles`. Rows with no coordinates are excluded
+  // rather than guessed at.
+  nearby?: NearbyFilter | null
+}
+
 // Blank keyword -> browse mode: the soonest upcoming shows, which is what the
-// page renders before anything is typed.
-export async function searchStoredShows(keyword: string, limit = DEFAULT_LIMIT): Promise<Show[]> {
+// page renders before anything is typed. Ordering is by date either way,
+// including with a nearby filter: "what's on around me" reads as a date list
+// that happens to be local, not as a proximity ranking that jumps between
+// next week and next spring.
+export async function searchStoredShows(keyword: string, options: SearchOptions = {}): Promise<Show[]> {
+  const { limit = DEFAULT_LIMIT, nearby } = options
+
   let query = supabase
     .from('shows')
     .select(SHOW_COLUMNS)
@@ -68,7 +103,21 @@ export async function searchStoredShows(keyword: string, limit = DEFAULT_LIMIT):
     // day, so filter here too rather than trusting the sync's timing.
     .gte('show_date', todayIso())
     .order('show_date', { ascending: true })
-    .limit(limit)
+    .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
+
+  if (nearby) {
+    // A box on two indexed columns, not PostGIS: see lib/geo.ts. These
+    // comparisons are never true for a NULL, which is exactly the wanted
+    // behaviour for a row with no coordinates.
+    //
+    // No antimeridian wraparound: a box spanning +/-180 would need to be
+    // split into two, and SYNC_CITIES is US and Canada only. Revisit if
+    // coverage ever crosses the Pacific.
+    const box = boundingBox(nearby.centre, nearby.radiusMiles)
+    query = query
+      .gte('lat', box.minLat).lte('lat', box.maxLat)
+      .gte('lng', box.minLng).lte('lng', box.maxLng)
+  }
 
   const trimmed = escapeForOrFilter(keyword)
   if (trimmed) {
@@ -80,7 +129,12 @@ export async function searchStoredShows(keyword: string, limit = DEFAULT_LIMIT):
   const { data, error } = await query
   if (error) throw new Error(`shows search failed: ${error.message}`)
 
-  return (data ?? []).map(toShow)
+  const rows = (data ?? []).map(row => toShow(row, nearby?.centre))
+  if (!nearby) return rows
+
+  return rows
+    .filter(show => show.distanceMiles != null && show.distanceMiles <= nearby.radiusMiles)
+    .slice(0, limit)
 }
 
 // Whether the catalogue has been populated at all. Used only to decide

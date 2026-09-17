@@ -18,6 +18,7 @@ A Letterboxd-style app for live music. People log shows they've been to (a festi
 
 - **Next 14 caches `fetch` indefinitely, including supabase-js requests.** A GET route handler that reads Supabase needs `export const fetchCache = 'default-no-store'` (see `app/api/shows/search/route.ts`), or it keeps serving its first result forever.
 - Show search reads the `shows` table, which `/api/cron/sync-shows` refills nightly at 09:00 UTC. That route needs `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY`.
+- **"Near me" search is a bounding box, not PostGIS.** `/api/shows/search` takes optional `lat`/`lng`/`radius`; `lib/geo.ts` turns that into a lat/lng box the query filters on, then trims the corners with a real haversine distance. Coordinates come from `lib/useNearby.ts` in the browser, are rounded to 2 decimal places before going in the URL, and are never stored. Rows with a null `lat`/`lng` never appear in a nearby search, and a nearby search never falls back to live Ticketmaster — that path has no location filter.
 - **Ratings are stars out of 5.** Each log has three 1–5 star sub-ratings (performance, venue, crowd). `lib/rating.ts` averages them into the show score. Never display or store ratings on a 10-point scale.
 
 ## Design system
