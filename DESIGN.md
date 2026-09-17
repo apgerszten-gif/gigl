@@ -84,7 +84,7 @@ Use the component rather than retyping its classes. The class lists are here so 
 | Pull quote | `PullQuote` | `border-l-2 border-accent pl-3 font-display text-[15px] leading-snug` |
 | Headings | — | `font-display font-bold tracking-tight`: `text-xl` for card titles, `text-2xl` for page titles |
 | Big numbers | `Stat` in stat rows | `font-display font-bold`. Rank numbers are `text-accent` |
-| Artist photo | `ArtistPhoto` | Size set by the caller (`w-14 h-14` in lists, `w-[76px] h-[76px]` on feed cards). Frame: `rounded-card border-1.5 border-ink overflow-hidden`, with the image set to `object-cover`. With no photo, the frame is tinted (`bg-terra/25`, `bg-accent/15` or `bg-ink/10`, picked per artist) and holds a `.halftone` layer with a `MicVocal` icon in `text-ink/45`. Overlays such as the date sticker go outside the clipped frame so they can overhang |
+| Artist photo | `ArtistPhoto` | Size set by the caller (`w-14 h-14` in lists, `w-[68px] h-[68px]` on feed cards). Frame: `rounded-card border-1.5 border-ink overflow-hidden`, with the image set to `object-cover`. With no photo, the frame is tinted (`bg-terra/25`, `bg-accent/15` or `bg-ink/10`, picked per artist) and holds a `.halftone` layer with a `MicVocal` icon in `text-ink/45`. Overlays such as the date sticker go outside the clipped frame so they can overhang |
 | Date sticker | `DateTag` (takes an ISO date) | Month and day on an artist photo's corner: `absolute -bottom-1.5 -right-1.5 -rotate-3 rounded bg-cream border-1.5 border-ink shadow-riso`. The month is 8px uppercase `ink-muted`; the day is 13px `font-display` bold |
 | Place line | `Place` | `flex items-center gap-1 text-[12px] text-ink-muted`: a `MapPin` icon (`w-3 h-3 text-accent`), then "Venue, City" truncated to one line |
 | Your profile photo (header) | `AppHeader` | `w-9 h-9 rounded-full border-1.5 border-ink shadow-riso` inside a link to You. On You itself it's `w-16 h-16` |
@@ -118,7 +118,8 @@ Where the photos come from:
 - Segmented toggle: All activity / Following. The style guide also shows a Popular option and filter chips for weekend, city and genre *(mockup)*.
 - Review cards, each with:
   - any photos or videos the reviewer attached, full-bleed at the top
-  - the reviewer's photo, handle and timestamp, with the star rating on the right
+  - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
+  - the reviewer's photo, handle (`text-[12.6px] font-semibold`) and timestamp, with the star rating on the right
   - the artist heading and place line, with the artist photo and date sticker beside them (festival logs show the stage and day instead)
   - the review as a pull quote, then its tags as chips
   - the reaction bar (heart, fire, laugh, wow, comments)

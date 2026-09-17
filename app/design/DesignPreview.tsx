@@ -113,12 +113,12 @@ function FeedScreen({ onProfile }: { onProfile: () => void }) {
       <main className="px-5 pt-4 space-y-4">
         {REVIEWS.map(review => (
           <Card key={review.handle} className="overflow-hidden">
-            <div className="p-4 space-y-3">
+            <div className="px-4 pt-3 pb-3 space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <PersonPhoto name={review.handle} className="w-8 h-8 text-sm border border-ink/15" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">@{review.handle}</p>
+                    <p className="text-[12.6px] font-semibold truncate">@{review.handle}</p>
                     <p className="text-[11px] text-ink-muted">{review.when}</p>
                   </div>
                 </div>
@@ -130,7 +130,7 @@ function FeedScreen({ onProfile }: { onProfile: () => void }) {
                   <h3 className="font-display text-xl font-bold tracking-tight leading-tight">{review.artist}</h3>
                   <Place>{review.place}</Place>
                 </div>
-                <ArtistPhoto name={review.artist} className="w-[76px] h-[76px]" iconSize={26}>
+                <ArtistPhoto name={review.artist} className="w-[68px] h-[68px]" iconSize={23}>
                   <DateTag isoDate={review.date} />
                 </ArtistPhoto>
               </div>

@@ -315,12 +315,12 @@ function FeedInner() {
                 </div>
               )}
 
-              <div className="p-4 space-y-3">
+              <div className="px-4 pt-3 pb-3 space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <Link href={isMe ? '/profile' : `/u/${username}`} className="flex items-center gap-2.5 min-w-0">
                     <PersonPhoto name={username} src={item.avatar_url} className="w-8 h-8 text-sm border border-ink/15" />
                     <div className="min-w-0">
-                      <p className={`text-sm font-semibold truncate ${isMe ? 'text-accent' : 'text-ink'}`}>@{username}</p>
+                      <p className={`text-[12.6px] font-semibold truncate ${isMe ? 'text-accent' : 'text-ink'}`}>@{username}</p>
                       <p className="text-[11px] text-ink-muted">{timeAgo(item.created_at)}</p>
                     </div>
                   </Link>
@@ -337,7 +337,7 @@ function FeedInner() {
                       : <Place>{place}</Place>)}
                   </div>
                   <Link href={`/artist/${item.artist_id}`} aria-label={name} className="flex-shrink-0">
-                    <ArtistPhoto name={name} src={artistImage(name)} className="w-[76px] h-[76px]" iconSize={26}>
+                    <ArtistPhoto name={name} src={artistImage(name)} className="w-[68px] h-[68px]" iconSize={23}>
                       <DateTag isoDate={item.show_date} />
                     </ArtistPhoto>
                   </Link>
