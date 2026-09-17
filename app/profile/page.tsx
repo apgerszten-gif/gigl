@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Check, ImagePlus, Pencil, Share2 } from 'lucide-react'
+import { Camera, Check, ImagePlus, Loader2, Pencil, Share2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -16,10 +16,13 @@ import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { Logo } from '@/components/Logo'
 import {
-  ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf,
+  ArtistPhoto, Card, Chip, DateTag, EmptyState, ErrorNote, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf,
   btnPrimary, btnQuiet, iconBtn, inputBox,
 } from '@/components/ui'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
+import { uploadAvatar, removeAvatar } from '@/lib/avatar'
+import { updateMyProfile } from '@/lib/useMyProfile'
+import { useArtistImages } from '@/lib/useArtistImages'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
@@ -65,6 +68,7 @@ interface Show {
 interface Profile {
   username:            string
   display_name:        string
+  avatar_url:          string | null
   battle_mode_unlocked: boolean
 }
 
@@ -88,6 +92,9 @@ export default function ProfilePage() {
   const [followerCount, setFollowerCount]   = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [avatarBusy, setAvatarBusy]         = useState(false)
+  const [avatarError, setAvatarError]       = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -98,7 +105,7 @@ export default function ProfilePage() {
       console.log(`[perf] profile:load start userId=${userId}`)
 
       const [{ data: prof }, { data: showData }] = await Promise.all([
-        timeQuery('profile:profiles', supabase.from('profiles').select('username, display_name, battle_mode_unlocked').eq('id', userId).single()),
+        timeQuery('profile:profiles', supabase.from('profiles').select('username, display_name, avatar_url, battle_mode_unlocked').eq('id', userId).single()),
         timeQuery('profile:logged_shows', supabase.from('logged_shows').select('*').eq('user_id', userId)),
       ])
       setProfile(prof)
@@ -217,6 +224,40 @@ export default function ProfilePage() {
     ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
     : 0
 
+  async function changeAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !user || !profile) return
+    setAvatarBusy(true)
+    setAvatarError(null)
+    try {
+      const url = await uploadAvatar(supabase, user.id, file, profile.avatar_url)
+      setProfile(p => p ? { ...p, avatar_url: url } : p)
+      updateMyProfile(user.id, { avatar_url: url })
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : 'Upload failed.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  async function clearAvatar() {
+    if (!user || !profile) return
+    setAvatarBusy(true)
+    setAvatarError(null)
+    try {
+      await removeAvatar(supabase, user.id, profile.avatar_url)
+      setProfile(p => p ? { ...p, avatar_url: null } : p)
+      updateMyProfile(user.id, { avatar_url: null })
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : 'Removing your photo failed.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  const artistImage = useArtistImages(shows.map(s => s.artist_name))
+
   if (loading) return (
     <div className="min-h-screen bg-paper flex items-center justify-center">
       <div className="w-7 h-7 rounded-full border-2 border-accent border-t-transparent animate-spin" />
@@ -243,12 +284,37 @@ export default function ProfilePage() {
       <div className="px-5 pt-4 space-y-4">
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <PersonPhoto name={name} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarBusy}
+              aria-label={profile?.avatar_url ? 'Change profile photo' : 'Add a profile photo'}
+              className="relative flex-shrink-0"
+            >
+              <PersonPhoto name={name} src={profile?.avatar_url} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-accent text-cream border-1.5 border-ink flex items-center justify-center">
+                {avatarBusy
+                  ? <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} />
+                  : <Camera className="w-3 h-3" strokeWidth={2.5} />}
+              </span>
+            </button>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={changeAvatar} />
             <div className="flex-1 min-w-0">
               <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">{profile?.display_name}</h1>
               <p className="text-xs text-ink-muted">@{profile?.username}</p>
+              {profile?.avatar_url ? (
+                <button type="button" onClick={clearAvatar} disabled={avatarBusy} className="mt-1 text-[11px] text-ink-faint underline underline-offset-[3px]">
+                  Remove photo
+                </button>
+              ) : (
+                <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarBusy} className="mt-1 text-[11px] font-semibold text-accent">
+                  + Add a photo
+                </button>
+              )}
             </div>
           </div>
+
+          {avatarError && <ErrorNote>{avatarError}</ErrorNote>}
 
           {/* Two pairs - your own numbers, then your social graph - split by a heavier rule. */}
           <div className="flex border-t border-ink/10 pt-3">
@@ -298,7 +364,7 @@ export default function ProfilePage() {
 
                     <div className="p-3 flex items-center gap-3">
                       <span className="font-display text-2xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
-                      <ArtistPhoto name={show.artist_name} className="w-12 h-12" iconSize={16}>
+                      <ArtistPhoto name={show.artist_name} src={artistImage(show.artist_name)} className="w-12 h-12" iconSize={16}>
                         <DateTag isoDate={show.show_date} />
                       </ArtistPhoto>
                       <div className="flex-1 min-w-0">

@@ -13,6 +13,7 @@ interface CommentRow {
   user_id:      string
   username:     string | null
   display_name: string | null
+  avatar_url:   string | null
 }
 
 function timeAgo(dateStr: string) {
@@ -62,17 +63,18 @@ export function CommentsModal({
 
       const userIds = rows.map(r => r.user_id).filter((id, i, arr) => arr.indexOf(id) === i)
       const { data: profiles } = userIds.length
-        ? await supabase.from('profiles').select('id, username, display_name').in('id', userIds)
+        ? await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds)
         : { data: [] }
       if (cancelled) return
 
-      const profileMap: Record<string, { username: string; display_name: string | null }> = {}
-      profiles?.forEach(p => { profileMap[p.id] = { username: p.username, display_name: p.display_name } })
+      const profileMap: Record<string, { username: string; display_name: string | null; avatar_url: string | null }> = {}
+      profiles?.forEach(p => { profileMap[p.id] = p })
 
       setComments(rows.map(r => ({
         ...r,
         username:     profileMap[r.user_id]?.username ?? null,
         display_name: profileMap[r.user_id]?.display_name ?? null,
+        avatar_url:   profileMap[r.user_id]?.avatar_url ?? null,
       })))
       setLoading(false)
     }
@@ -98,7 +100,7 @@ export function CommentsModal({
     setBody('')
     setComments(prev => [...prev, {
       id: data.id, body: text, created_at: data.created_at, user_id: user.id,
-      username: null, display_name: null,
+      username: null, display_name: null, avatar_url: null,
     }])
     onCountChange(1)
   }
@@ -117,7 +119,7 @@ export function CommentsModal({
         <div className="flex flex-col gap-3.5">
           {comments.map(c => (
             <div key={c.id} className="flex gap-2.5 items-start">
-              <PersonPhoto name={c.display_name || c.username || '?'} className="w-8 h-8 text-xs border border-ink/15" />
+              <PersonPhoto name={c.display_name || c.username || '?'} src={c.avatar_url} className="w-8 h-8 text-xs border border-ink/15" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5">
                   <span className="font-display text-xs font-bold">

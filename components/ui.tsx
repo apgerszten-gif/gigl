@@ -115,9 +115,9 @@ function tintFor(name: string) {
   return PHOTO_TINTS[sum % PHOTO_TINTS.length]
 }
 
-// Square artist photo with a riso border. Gigl stores no artist images yet,
-// so this is usually the halftone-and-mic placeholder. `children` (e.g. a
-// DateTag) sits outside the clipped frame so it can overhang the corner.
+// Square artist photo with a riso border, or the halftone-and-mic
+// placeholder when there's no photo. `children` (e.g. a DateTag) sits
+// outside the clipped frame so it can overhang the corner.
 export function ArtistPhoto({ name, src, className, iconSize = 20, children }: {
   name: string; src?: string | null; className: string; iconSize?: number; children?: React.ReactNode
 }) {
@@ -137,7 +137,7 @@ export function ArtistPhoto({ name, src, className, iconSize = 20, children }: {
   )
 }
 
-// Round profile photo; the initial when there's no photo (there never is yet).
+// Round profile photo; the initial when there's no photo.
 export function PersonPhoto({ name, src, className }: { name: string; src?: string | null; className: string }) {
   return (
     <div className={`flex-shrink-0 rounded-full overflow-hidden bg-paper flex items-center justify-center font-display font-bold text-ink-muted ${className}`}>
@@ -258,8 +258,8 @@ export function TopBar({ children, right }: { children: React.ReactNode; right?:
 }
 
 // The header's profile photo.
-export function HeaderPhoto({ name }: { name: string }) {
-  return <PersonPhoto name={name} className="w-9 h-9 text-sm border-1.5 border-ink shadow-riso" />
+export function HeaderPhoto({ name, src }: { name: string; src?: string | null }) {
+  return <PersonPhoto name={name} src={src} className="w-9 h-9 text-sm border-1.5 border-ink shadow-riso" />
 }
 
 // Header for pages you arrive at from somewhere (artist, profile, lists,

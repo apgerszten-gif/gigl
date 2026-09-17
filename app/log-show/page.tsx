@@ -15,6 +15,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { ArtistPhoto, Card, Chip, Label, PersonPhoto, Place, Stars, btnPrimary, headerClass, inputBox } from '@/components/ui'
 import { enqueuePendingLog, getPendingLogForArtist, flushPendingLogs } from '@/lib/pendingLogs'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
+import { useArtistImages } from '@/lib/useArtistImages'
 
 const MAX_VIDEOS = 1
 const MAX_PHOTOS = 2
@@ -134,6 +135,10 @@ function LogShowInner() {
   const dayParam       = searchParams.get('day') ?? ''
   const venueParam     = searchParams.get('venue') ?? ''
   const showDateParam  = searchParams.get('showDate') ?? ''
+  // Ticketmaster's photo for a show picked in search; otherwise the artist's
+  // photo from artist_images, if there is one.
+  const imageParam     = searchParams.get('image')
+  const artistImage    = useArtistImages([artistName])
 
   const [stage, setStage]         = useState(stageParam)
   const [day, setDay]             = useState(dayParam)
@@ -229,9 +234,9 @@ function LogShowInner() {
 
         if (tagRows && tagRows.length > 0) {
           const confirmedIds = tagRows.filter(r => !r.pending_invite && r.tagged_user_id).map(r => r.tagged_user_id as string)
-          const profileMap = new Map<string, { username: string; display_name: string }>()
+          const profileMap = new Map<string, { username: string; display_name: string; avatar_url: string | null }>()
           if (confirmedIds.length > 0) {
-            const { data: profs } = await supabase.from('profiles').select('id, username, display_name').in('id', confirmedIds)
+            const { data: profs } = await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', confirmedIds)
             profs?.forEach(p => profileMap.set(p.id, p))
           }
           setTaggedFriends(tagRows.map(r => {
@@ -243,6 +248,7 @@ function LogShowInner() {
               userId: r.tagged_user_id,
               username: prof?.username ?? null,
               displayName: prof?.display_name ?? prof?.username ?? 'Friend',
+              avatarUrl: prof?.avatar_url ?? null,
               pendingInvite: false,
               inviteContact: null,
             }
@@ -516,7 +522,7 @@ function LogShowInner() {
 
       <div className="px-5 pt-4 pb-10 space-y-5">
         <Card className="p-3 flex items-center gap-3">
-          <ArtistPhoto name={artistName} className="w-14 h-14" />
+          <ArtistPhoto name={artistName} src={imageParam || artistImage(artistName)} className="w-14 h-14" />
           <div className="flex-1 min-w-0">
             {dateLabel && <Label tone="accent">{dateLabel}</Label>}
             <h2 className="font-display text-base font-bold leading-tight truncate">{artistName}</h2>
@@ -599,6 +605,7 @@ function LogShowInner() {
                     <PersonPhoto
                       key={f.userId ?? f.inviteContact ?? i}
                       name={f.displayName}
+                      src={f.avatarUrl}
                       className={`w-7 h-7 text-[11px] border-2 border-cream ${i > 0 ? '-ml-2.5' : ''}`}
                     />
                   ))}

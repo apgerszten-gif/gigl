@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { computeShowScore } from '@/lib/rating'
+import { getArtistImages } from '@/lib/artistImages'
 import { Logo } from '@/components/Logo'
 import { ArtistPhoto, BackHeader, Card, Chip, Label, Stars } from '@/components/ui'
 
@@ -42,6 +43,7 @@ export default async function StagePage({ params }: { params: { stageName: strin
   if (rows.length === 0) notFound()
 
   const totalRatings = rows.reduce((sum, r) => sum + r.count, 0)
+  const artistImage = await getArtistImages(supabase, rows.map(r => r.name))
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -62,7 +64,7 @@ export default async function StagePage({ params }: { params: { stageName: strin
             <Link key={row.artist_id} href={`/artist/${row.artist_id}`} className="block">
               <Card className="p-3 flex items-center gap-3">
                 <span className="font-display text-3xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
-                <ArtistPhoto name={row.name} className="w-12 h-12" iconSize={16} />
+                <ArtistPhoto name={row.name} src={artistImage(row.name)} className="w-12 h-12" iconSize={16} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-display text-[15px] font-bold leading-tight truncate">{row.name}</h3>

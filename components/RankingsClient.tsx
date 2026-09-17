@@ -10,6 +10,7 @@ import BottomNav from '@/components/BottomNav'
 import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { timeQuery } from '@/lib/queryTiming'
+import { useArtistImages } from '@/lib/useArtistImages'
 import { aggregateArtistRows, RANKINGS_SELECT, type ArtistRow } from '@/lib/rankings'
 
 export type { ArtistRow }
@@ -111,6 +112,8 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const activeFilter = days.includes(filter) ? filter : 'all'
   const visible = activeFilter === 'all' ? rows : rows.filter(r => r.day === activeFilter)
 
+  const artistImage = useArtistImages(visible.map(r => r.name))
+
   function dayLabel(d: string) {
     return d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)
   }
@@ -165,7 +168,7 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
             >
               <Card className="p-3 flex items-center gap-3">
                 <span className="font-display text-3xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
-                <ArtistPhoto name={row.name} className="w-14 h-14">
+                <ArtistPhoto name={row.name} src={artistImage(row.name)} className="w-14 h-14">
                   <DateTag isoDate={row.showDate} />
                 </ArtistPhoto>
                 <div className="flex-1 min-w-0">

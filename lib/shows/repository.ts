@@ -23,9 +23,10 @@ interface ShowRow {
   state:     string
   show_date: string | null
   emoji:     string
+  image_url: string | null
 }
 
-const SHOW_COLUMNS = 'id, artist, support, venue, city, state, show_date, emoji'
+const SHOW_COLUMNS = 'id, artist, support, venue, city, state, show_date, emoji, image_url'
 
 // Ticketmaster's own browse list returned 20; keeping the same ceiling so the
 // results list doesn't suddenly grow a scroll region it was never designed for.
@@ -42,6 +43,7 @@ function toShow(row: ShowRow): Show {
     date:    formatShowDate(row.show_date ?? undefined),
     isoDate: row.show_date,
     emoji:   row.emoji,
+    imageUrl: row.image_url,
   }
 }
 
@@ -119,6 +121,7 @@ export async function upsertShows(shows: SyncShow[]): Promise<UpsertResult> {
     lng:          s.lng,
     emoji:        s.emoji,
     metro:        s.metro,
+    image_url:    s.imageUrl,
     last_seen_at: now,
   }))
 

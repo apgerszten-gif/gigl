@@ -102,11 +102,16 @@ Use the component rather than retyping its classes. The class lists are here so 
 
 ## 5. Core screens
 
-The real screens below all follow the patterns above. The style guide also shows items marked *(mockup)*: features Gigl doesn't have yet. Items marked *(needs data)* need data Gigl doesn't store yet. Don't build either without asking.
+The real screens below all follow the patterns above. The style guide also shows items marked *(mockup)*: features Gigl doesn't have yet. Don't build them without asking.
 
-- **Artist photos** *(needs data)*: Ticketmaster returns event and artist images, but the nightly sync doesn't save them. Showing them needs an image URL column on `shows` and the Ticketmaster image host added to `next.config.js`.
-- **Profile photos** *(needs data)*: `profiles` has no photo column and there's no upload flow.
-- Until then, both fall back to the placeholders in section 4.
+Where the photos come from:
+- **Artist photos**:
+  - Search results use `shows.image_url`, the photo Ticketmaster sends with each listing.
+  - Everywhere else a logged show appears, the photo comes from `public.artist_images`, looked up by artist name (`lib/artistImages.ts`; `useArtistImages` in client components).
+  - The nightly sync fills that table from the headliners of the shows it fetches, then looks up up to 40 logged artists a night that are still missing (`lib/shows/artistImageSync.ts`).
+  - Images load with a plain `<img>` from Ticketmaster's CDN, so `next.config.js` needs no change.
+- **Profile photos**: `profiles.avatar_url`. You set it by tapping your photo on You, which crops the image to a 512px square and uploads it to the `show-photos` bucket under your own folder (`lib/avatar.ts`).
+- An artist or person without a photo falls back to the placeholders in section 4.
 
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
@@ -143,7 +148,7 @@ The real screens below all follow the patterns above. The style guide also shows
 ### You (`/profile`)
 - `AppHeader` with the logo and a share button, which shares or copies your public profile link. There's no profile photo in the header, since this page is your profile.
 - Profile card:
-  - your photo (`w-16 h-16`), name and handle
+  - your photo (`w-16 h-16`) with a sienna camera badge; tapping it adds or changes the photo. Under your name and handle, "+ Add a photo" or "Remove photo".
   - a stats row in two pairs, split by a 1.5px ink rule: gigs and average rating (stars), then followers and following
   - the style guide also shows a city place line *(mockup)*
 - "My rankings": ranked cards like the Rankings page, with any media, the review and tags. Each card's edit button opens an inline editor for the photo, review and tags, with options to update the ratings or remove the log.

@@ -15,6 +15,7 @@ export interface TaggedFriend {
   userId:        string | null
   username:      string | null
   displayName:   string
+  avatarUrl?:    string | null
   pendingInvite: boolean
   inviteContact: string | null
 }
@@ -23,6 +24,7 @@ interface ProfileResult {
   id:           string
   username:     string
   display_name: string
+  avatar_url:   string | null
 }
 
 function keyOf(f: TaggedFriend): string {
@@ -63,7 +65,7 @@ export function TagFriendsModal({
       const { data: followRows } = await supabase.from('follows').select('following_id').eq('follower_id', user!.id)
       const ids = (followRows ?? []).map(r => r.following_id)
       if (ids.length === 0) { if (!cancelled) setSuggested([]); return }
-      const { data } = await supabase.from('profiles').select('id, username, display_name').in('id', ids)
+      const { data } = await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', ids)
       if (!cancelled) setSuggested(data ?? [])
     }
     loadSuggested()
@@ -77,7 +79,7 @@ export function TagFriendsModal({
     setSearching(true)
     const t = setTimeout(async () => {
       const { data } = await supabase.from('profiles')
-        .select('id, username, display_name')
+        .select('id, username, display_name, avatar_url')
         .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
         .neq('id', user?.id ?? '')
         .limit(20)
@@ -94,7 +96,7 @@ export function TagFriendsModal({
   function toggleProfile(p: ProfileResult) {
     setSelected(prev => isSelected(p.id)
       ? prev.filter(f => f.userId !== p.id)
-      : [...prev, { userId: p.id, username: p.username, displayName: p.display_name, pendingInvite: false, inviteContact: null }])
+      : [...prev, { userId: p.id, username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url, pendingInvite: false, inviteContact: null }])
   }
 
   function removeFriend(f: TaggedFriend) {
@@ -170,7 +172,7 @@ export function TagFriendsModal({
             return (
               <button key={p.id} type="button" onClick={() => toggleProfile(p)} className="w-full text-left">
                 <Card flat className="flex items-center gap-3 px-3 py-2.5">
-                  <PersonPhoto name={p.display_name || p.username} className="w-9 h-9 text-sm border border-ink/15" />
+                  <PersonPhoto name={p.display_name || p.username} src={p.avatar_url} className="w-9 h-9 text-sm border border-ink/15" />
                   <div className="flex-1 min-w-0">
                     <p className="font-display text-[13px] font-bold truncate">{p.display_name}</p>
                     <p className="text-[11px] text-ink-muted">@{p.username}</p>

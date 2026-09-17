@@ -21,6 +21,7 @@ interface Show {
   date: string
   isoDate: string | null
   emoji: string
+  imageUrl: string | null
 }
 
 const SEARCH_DEBOUNCE_MS = 350
@@ -83,7 +84,7 @@ function SelectShowInner() {
     // fully-specified show, never a bare festival id. Persisted separately
     // from LOCAL_STORAGE_KEY (which only holds the id) so /log can pull the
     // artist/venue/date back out without re-fetching - see lib/activeShow.
-    setActiveShow({ id: show.id, artist: show.artist, venue: show.venue, city: show.city, state: show.state, isoDate: show.isoDate })
+    setActiveShow({ id: show.id, artist: show.artist, venue: show.venue, city: show.city, state: show.state, isoDate: show.isoDate, imageUrl: show.imageUrl })
 
     // Best-effort, fire-and-forget — this is only needed so the SMS webhook
     // (which has no access to a browser's localStorage) knows which show
@@ -178,7 +179,7 @@ function SelectShowInner() {
                   i % 2 ? 'bg-cream-alt' : ''
                 } ${i > 0 ? 'border-t border-ink/10' : ''}`}
               >
-                <ArtistPhoto name={s.artist} className="w-14 h-14" iconSize={18}>
+                <ArtistPhoto name={s.artist} src={s.imageUrl} className="w-14 h-14" iconSize={18}>
                   <DateTag isoDate={s.isoDate} />
                 </ArtistPhoto>
                 <div className="flex-1 min-w-0">

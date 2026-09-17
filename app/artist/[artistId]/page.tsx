@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { computeShowScore } from '@/lib/rating'
+import { getArtistImages } from '@/lib/artistImages'
 import { formatShowDate } from '@/lib/dates'
 import { resolveMediaUrls } from '@/lib/media'
 import { Logo } from '@/components/Logo'
@@ -43,16 +44,17 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   const userIds = Array.from(new Set(logs.map(l => l.user_id)))
   const { data: profiles } = await timeQuery(`artist:profiles(${userIds.length} ids)`, supabase
-    .from('profiles').select('id, username').in('id', userIds))
+    .from('profiles').select('id, username, avatar_url').in('id', userIds))
 
-  const usernameMap: Record<string, string> = {}
-  profiles?.forEach(p => { usernameMap[p.id] = p.username })
+  const profileMap: Record<string, { username: string; avatar_url: string | null }> = {}
+  profiles?.forEach(p => { profileMap[p.id] = p })
 
   const artistName = logs[0]?.artist_name ?? 'Unknown'
   const stage      = logs[0]?.stage ?? ''
   const day        = logs[0]?.day   ?? ''
   const venueName  = logs[0]?.venue ?? ''
   const showDate   = logs[0]?.show_date ?? null
+  const artistImage = await getArtistImages(supabase, [artistName])
 
   const rated = logs
     .filter(l => l.performance_rating != null && l.venue_rating != null && l.crowd_rating != null)
@@ -85,7 +87,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
       <div className="px-5 pt-5 pb-24 space-y-5">
         <div className="flex items-center gap-4">
-          <ArtistPhoto name={artistName} className="w-24 h-24" iconSize={34}>
+          <ArtistPhoto name={artistName} src={artistImage(artistName)} className="w-24 h-24" iconSize={34}>
             <DateTag isoDate={showDate} />
           </ArtistPhoto>
           <div className="flex-1 min-w-0 space-y-1.5">
@@ -138,12 +140,13 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           ) : (
             <div className="flex flex-col gap-3">
               {reviews.map((log, i) => {
-                const username = usernameMap[log.user_id] ?? 'anonymous'
+                const reviewer = profileMap[log.user_id]
+                const username = reviewer?.username ?? 'anonymous'
                 return (
                   <Card key={i} className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <Link href={`/u/${username}`} className="flex items-center gap-2.5 min-w-0">
-                        <PersonPhoto name={username} className="w-8 h-8 text-sm border border-ink/15" />
+                        <PersonPhoto name={username} src={reviewer?.avatar_url} className="w-8 h-8 text-sm border border-ink/15" />
                         <span className="text-sm font-semibold truncate">@{username}</span>
                       </Link>
                       <Stars score={log.score} size={15} />
