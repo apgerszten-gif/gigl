@@ -65,7 +65,7 @@ interface TMEvent {
 
 interface TMEventSearchResponse {
   _embedded?: { events?: TMEvent[] }
-  page?: { totalPages?: number; number?: number }
+  page?: { totalPages?: number; number?: number; totalElements?: number }
 }
 
 // Coarse genre -> emoji mapping. Ticketmaster's data has no emoji/icon field
@@ -206,30 +206,124 @@ function toSyncShow(event: TMEvent, city: SyncCity): SyncShow {
   }
 }
 
+// Ticketmaster refuses to page beyond 1000 results for a single query. That
+// is not a page-count limit you can raise - it is a hard ceiling on what one
+// querystring can ever return, so a city with more listings than this simply
+// has the remainder amputated no matter how politely you page.
+//
+// Measured against the live API: Las Vegas has 2,806 upcoming music events,
+// New York 1,937 and Chicago 1,208. One query per city therefore lost 2,951
+// events - which is almost exactly the gap between what the catalogue held
+// and what Ticketmaster actually has for these metros.
+//
+// The fix is to ask narrower questions. A query scoped to a date window gets
+// its own 1000-result budget, so splitting a dense city's year into months
+// brings every slice well under the ceiling. See fetchCityWindows below and
+// its use in app/api/cron/sync-shows.
+export const TM_RESULT_CAP = 1000
+
+// Carries the HTTP status so a caller can tell a rate-limit blip (429, worth
+// retrying - the identical request will succeed in a moment) from a broken
+// query (4xx that will fail again no matter how long you wait).
+export class TicketmasterError extends Error {
+  readonly status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'TicketmasterError'
+    this.status = status
+  }
+}
+
+// An inclusive date window to scope a city query to. Absent means "everything
+// upcoming", which is what all but a handful of cities need.
+export interface DateWindow {
+  from: string // 'YYYY-MM-DD'
+  to:   string
+}
+
 export interface CityPageResult {
   shows:      SyncShow[]
   totalPages: number
+  // Total matching events upstream, not the number returned. The caller uses
+  // it to notice that a city is over TM_RESULT_CAP and needs splitting - which
+  // is why it's read off the first page rather than costing a probe request of
+  // its own.
+  totalElements: number
 }
 
-// One page of one city's upcoming music listings. Deliberately a single
-// page rather than a loop: the caller owns pacing, because Ticketmaster's
-// free tier allows 5 requests/sec and a loop in here would have no view of
-// the requests the other cities are making.
-export async function fetchCityShowsPage(city: SyncCity, page: number): Promise<CityPageResult> {
+// Consecutive month-long windows starting today, plus an open-ended tail so a
+// listing further out than `months` is still reachable. Only used for cities
+// over the cap, since for everyone else it would multiply requests for nothing.
+export function monthlyWindows(months: number): DateWindow[] {
+  const windows: DateWindow[] = []
+  const day = (d: Date) => d.toISOString().slice(0, 10)
+
+  for (let i = 0; i < months; i++) {
+    const from = new Date(); from.setUTCMonth(from.getUTCMonth() + i)
+    const to   = new Date(); to.setUTCMonth(to.getUTCMonth() + i + 1); to.setUTCDate(to.getUTCDate() - 1)
+    windows.push({ from: day(from), to: day(to) })
+  }
+
+  // The tail. Without it, a show scheduled beyond the last window would be
+  // invisible in exactly the cities this splitting exists to serve.
+  const tailFrom = new Date(); tailFrom.setUTCMonth(tailFrom.getUTCMonth() + months)
+  const tailTo   = new Date(); tailTo.setUTCFullYear(tailTo.getUTCFullYear() + 5)
+  windows.push({ from: day(tailFrom), to: day(tailTo) })
+
+  return windows
+}
+
+export interface FetchOptions {
+  window?: DateWindow
+  // When set, the query becomes "within this many miles of the city's
+  // centroid" instead of "whose venue city field matches this city".
+  //
+  // The sync runs both, because neither contains the other. Measured across
+  // all 148 cities: the radius pass found 5,848 events the name pass never
+  // returns - venues in surrounding towns nobody thought to name - and the
+  // name pass found 1,223 the radius pass never returns, because a venue
+  // Ticketmaster lists without coordinates cannot match a geographic filter
+  // at any radius. Running only one of them silently loses thousands of shows
+  // either way; ids dedupe the large overlap.
+  radiusMiles?: number
+}
+
+// One page of one city's upcoming music listings, optionally scoped to a date
+// window and/or queried by radius rather than by city name. Deliberately a
+// single page rather than a loop: the caller owns pacing, because
+// Ticketmaster's free tier allows 5 requests/sec and a loop in here would have
+// no view of the requests the other cities are making.
+export async function fetchCityShowsPage(city: SyncCity, page: number, options: FetchOptions = {}): Promise<CityPageResult> {
+  const { window, radiusMiles } = options
+
   const params = new URLSearchParams({
     apikey:             TICKETMASTER_API_KEY,
-    countryCode:        'US',
     classificationName: 'music',
-    city:               city.city,
-    stateCode:          city.stateCode,
     size:               String(TM_MAX_PAGE_SIZE),
     page:               String(page),
-    // Soonest first. A metro busy enough to hit the 1000-result deep paging
-    // ceiling keeps the shows about to happen, which are the ones due to
-    // enter the catalogue's past week within days; a listing nine months out
-    // has many more nights to be captured on.
+    // Soonest first, so that a city still hitting the ceiling inside a single
+    // window keeps the shows about to happen - the ones due to enter the
+    // catalogue's past week within days. A listing nine months out has many
+    // more nights to be captured on.
     sort:               'date,asc',
   })
+
+  if (radiusMiles) {
+    // No countryCode: the filter is geographic, so a radius around Detroit or
+    // Buffalo legitimately reaches into Ontario and those are real shows.
+    params.set('latlong', `${city.lat},${city.lng}`)
+    params.set('radius',  String(radiusMiles))
+    params.set('unit',    'miles')
+  } else {
+    params.set('countryCode', city.countryCode ?? 'US')
+    params.set('city',        city.city)
+    params.set('stateCode',   city.stateCode)
+  }
+
+  if (window) {
+    params.set('startDateTime', `${window.from}T00:00:00Z`)
+    params.set('endDateTime',   `${window.to}T23:59:59Z`)
+  }
 
   const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params}`, {
     // Explicitly uncached: this runs once a night and exists precisely to
@@ -239,13 +333,16 @@ export async function fetchCityShowsPage(city: SyncCity, page: number): Promise<
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`Ticketmaster city sync failed for ${city.city} p${page} (${res.status}): ${text}`)
+    const scope = radiusMiles ? `${city.city} r${radiusMiles}mi` : city.city
+    const where = window ? `${scope} ${window.from}..${window.to} p${page}` : `${scope} p${page}`
+    throw new TicketmasterError(`Ticketmaster city sync failed for ${where} (${res.status}): ${text}`, res.status)
   }
 
   const data: TMEventSearchResponse = await res.json()
   return {
-    shows:      (data._embedded?.events ?? []).map(e => toSyncShow(e, city)),
-    totalPages: data.page?.totalPages ?? 1,
+    shows:         (data._embedded?.events ?? []).map(e => toSyncShow(e, city)),
+    totalPages:    data.page?.totalPages ?? 1,
+    totalElements: data.page?.totalElements ?? 0,
   }
 }
 

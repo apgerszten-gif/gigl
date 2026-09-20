@@ -8,3 +8,7 @@ node_modules/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# throwaway output from scripts/ probes
+scripts/.tmp/
+scripts/*-result.json
