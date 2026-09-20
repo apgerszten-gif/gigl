@@ -336,7 +336,7 @@ function RankingsScene() {
         ))}
       </div>
 
-      <DockBar active="rankings" mode="static" contained />
+      <DockBar active="feed" mode="static" contained />
     </div>
   )
 }

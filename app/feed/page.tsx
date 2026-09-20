@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -12,9 +12,10 @@ import { ReactionBar } from '@/components/ReactionBar'
 import { CommentsModal } from '@/components/CommentsModal'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
+import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
 import {
-  ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Segmented, Stars,
+  ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars,
 } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
@@ -70,7 +71,13 @@ function FeedInner() {
   const [showLogTip, setShowLogTip]       = useState(false)
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
-  const [filterMode, setFilterMode]       = useState<'all' | 'following'>('all')
+  // Carried in the URL only when arriving from Rankings, which is a route
+  // rather than state - see components/FeedTabs.tsx. Read once on mount;
+  // every other change to this comes from the control itself.
+  const searchParams = useSearchParams()
+  const [filterMode, setFilterMode]       = useState<'all' | 'following'>(
+    searchParams.get('filter') === 'following' ? 'following' : 'all',
+  )
   const [followingIds, setFollowingIds]   = useState<Set<string>>(new Set())
   const [interactions, setInteractions]   = useState<Record<string, Interactions>>({})
   const [activeComments, setActiveComments] = useState<string | null>(null)
@@ -269,11 +276,7 @@ function FeedInner() {
       </AppHeader>
 
       <div className="px-5 pt-3">
-        <Segmented
-          options={[{ value: 'all', label: 'All activity' }, { value: 'following', label: 'Following' }]}
-          value={filterMode}
-          onChange={setFilterMode}
-        />
+        <FeedTabs value={filterMode} onFilterChange={setFilterMode} />
       </div>
 
       <main className="px-5 pt-4 space-y-4">

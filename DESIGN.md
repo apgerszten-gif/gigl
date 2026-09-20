@@ -49,16 +49,16 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 - **Header**: Sticky, `bg-paper/90` with a backdrop blur and a `border-ink/10` bottom rule. The logo or page title sits on the left, and any page actions (such as a share icon button) sit to its right.
   - On Feed, Rankings and Search, **your profile photo sits at the far right**. The header is sticky, so the photo stays in view while scrolling. Tapping it opens You.
   - Leave the photo off on You itself, which has a share button instead, and in the Log flow.
-- **Bottom dock**: Five tabs with Log in the centre, using `lucide-react` icons at stroke 1.75:
+- **Bottom dock**: Three tabs with Log in the centre, using `lucide-react` icons at stroke 1.75:
   1. **Feed** (`Newspaper`)
-  2. **Rankings** (`BarChart2`)
-  3. **Log** (`Plus`), shown as a raised sienna circle with an ink border and a riso shadow
-  4. **Search** (`Search`)
-  5. **You** (`CircleUser`), the profile
+  2. **Log** (`Plus`), shown as a raised sienna circle with an ink border and a riso shadow
+  3. **You** (`CircleUser`), the profile
 
-  The dock is cream with a 1.5px ink top border. Labels are 9px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. Search is the fourth tab so that Log can sit in the middle with two tabs either side.
+  The dock is cream with a 1.5px ink top border. Labels are 9px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. One tab either side of Log puts it at true centre without a filler tab.
 
-  Log and Search both open show search (`/select-festival`), because logging always starts by picking a show. Log adds `?mode=log`, which changes the heading to "What did you see?".
+  It used to be five. **Search** was removed because it opened the same screen as Log — both went to `/select-festival`, differing only in a heading — and once search returned only shows that had already happened, "find a show" stopped being a separate idea from "log a show". **Rankings** became a view on Feed rather than a destination: it is the same logged shows read as an aggregate instead of as a stream.
+
+  Log opens `/select-festival`. `/rankings` lights the Feed tab.
 - **Focused pages** (artist, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
 
 ---
@@ -115,7 +115,7 @@ Where the photos come from:
 
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
-- Segmented toggle: All activity / Following. The style guide also shows a Popular option and filter chips for weekend, city and genre *(mockup)*.
+- Segmented view switch: All activity / Following / Rankings. The first two filter the stream in place; Rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
 - Review cards, each with:
   - any photos or videos the reviewer attached, full-bleed at the top
   - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
@@ -126,7 +126,8 @@ Where the photos come from:
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
 
 ### Rankings (`/rankings`)
-- `AppHeader` with an "Everyone's ratings" label and the title.
+- Reached from the Feed view switch, not the dock. Its own route, so the segmented control navigates rather than toggling state.
+- `AppHeader` with an "Everyone's ratings" label and the title, then the same view switch as Feed with Rankings selected.
 - Underline day tabs, only when the logged shows span more than one day.
 - Ranked cards: a sienna rank number, the artist photo with its date sticker, the artist with stars, the place line, a rating-count chip and any battle record.
 - The style guide also shows a milestone callout and a "View gig map" pill *(mockup)*.
@@ -139,8 +140,8 @@ Where the photos come from:
 - Full-width primary button: "Save log".
 - `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
 
-### Search (`/select-festival`)
-- `AppHeader` titled "Find a show", or "What did you see?" when opened from Log.
+### Pick a show (`/select-festival`)
+- The first step of logging, and the only thing the Log button opens. `AppHeader` titled "What did you see?" under a "Log a show" label.
 - Search input for artist, venue or city.
 - A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and while it's on, radius chips for 10 / 50 / 100 mi. Location is asked for on arrival, so the chip reports the filter rather than starting it; it reads "Locating…" and is disabled while the browser answers. Turning it off is remembered. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
 - A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on. The catalogue only holds shows that have already happened — you log what you went to — so results run newest first, last night at the top.

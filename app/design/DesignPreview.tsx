@@ -16,7 +16,9 @@ import {
 // Ratings are stars only; a show's rating is the average of three whole-star
 // sub-ratings, so it lands on thirds (5, 4.67, 4.33...).
 
-type Screen = 'feed' | 'rankings' | 'log' | 'search' | 'profile'
+// 'pick' is the show picker the Log button opens; 'log' is the rating form
+// it leads to. There is no 'search' any more - see components/BottomNav.tsx.
+type Screen = 'feed' | 'rankings' | 'pick' | 'log' | 'profile'
 
 const ME = { name: 'Alex Gerszten', handle: 'gers_tunes' }
 
@@ -34,13 +36,19 @@ export function DesignPreview() {
         Style guide · sample data
       </div>
 
-      {screen === 'feed'     && <FeedScreen onProfile={openProfile} />}
+      {screen === 'feed'     && <FeedScreen onProfile={openProfile} onRankings={() => setScreen('rankings')} />}
       {screen === 'rankings' && <RankingsScreen onProfile={openProfile} />}
       {screen === 'log'      && <LogShowScreen />}
-      {screen === 'search'   && <SearchScreen onProfile={openProfile} onPick={() => setScreen('log')} />}
+      {screen === 'pick'     && <PickShowScreen onProfile={openProfile} onPick={() => setScreen('log')} />}
       {screen === 'profile'  && <ProfileScreen />}
 
-      <DockBar active={screen} mode="buttons" onSelect={setScreen} />
+      {/* Rankings is a view of Feed and the picker belongs to Log, so both
+          map onto the three real tabs rather than getting one each. */}
+      <DockBar
+        active={screen === 'rankings' ? 'feed' : screen === 'pick' ? 'log' : screen}
+        mode="buttons"
+        onSelect={tab => setScreen(tab === 'log' ? 'pick' : tab)}
+      />
     </div>
   )
 }
@@ -85,8 +93,8 @@ const REVIEWS = [
   },
 ]
 
-function FeedScreen({ onProfile }: { onProfile: () => void }) {
-  const [filter, setFilter] = useState<'all' | 'following' | 'popular'>('all')
+function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankings: () => void }) {
+  const [filter, setFilter] = useState<'all' | 'following' | 'rankings'>('all')
   return (
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
@@ -98,10 +106,10 @@ function FeedScreen({ onProfile }: { onProfile: () => void }) {
           options={[
             { value: 'all', label: 'All activity' },
             { value: 'following', label: 'Following' },
-            { value: 'popular', label: 'Popular' },
+            { value: 'rankings', label: 'Rankings' },
           ]}
           value={filter}
-          onChange={setFilter}
+          onChange={next => (next === 'rankings' ? onRankings() : setFilter(next))}
         />
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <Chip active>This weekend</Chip>
@@ -311,7 +319,7 @@ const RESULTS = [
   { artist: 'Mitski',             place: 'Shrine Auditorium, Los Angeles, CA',    date: '2026-09-14' },
 ]
 
-function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: () => void }) {
+function PickShowScreen({ onProfile, onPick }: { onProfile: () => void; onPick: () => void }) {
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const results = RESULTS.filter(r => !q || r.artist.toLowerCase().includes(q) || r.place.toLowerCase().includes(q))

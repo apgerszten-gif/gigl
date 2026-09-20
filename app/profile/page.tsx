@@ -344,7 +344,7 @@ export default function ProfilePage() {
           {shows.length === 0 ? (
             <EmptyState>
               <p className="mb-4">No shows logged yet</p>
-              <Link href="/select-festival?mode=log" className={`${btnPrimary} px-6 py-3 text-xs`}>Log your first show →</Link>
+              <Link href="/select-festival" className={`${btnPrimary} px-6 py-3 text-xs`}>Log your first show →</Link>
             </EmptyState>
           ) : (
             <div className="flex flex-col gap-3">

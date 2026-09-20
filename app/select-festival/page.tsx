@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { MapPin, Plus, Search } from 'lucide-react'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { setActiveShow } from '@/lib/activeShow'
@@ -34,15 +34,18 @@ const SEARCH_DEBOUNCE_MS = 350
 // address never lands in a URL or a server log.
 const COORD_PRECISION = 2
 
-// Show search. The dock's Search tab opens it as "Find a show"; its Log tab
-// opens it with ?mode=log, since logging always starts by picking a show.
-function SelectShowInner() {
-  const router       = useRouter()
-  const searchParams = useSearchParams()
-  const supabase     = createClient()
+// Picking the show you went to - the first step of logging one, and the only
+// thing the dock's Log button opens.
+//
+// This used to serve two dock tabs: Search, headed "Find a show", and Log
+// with ?mode=log, headed "What did you see?". Same screen, same results,
+// different sentence. Once search started returning only shows that have
+// already happened there was no second idea left to express, so the Search
+// tab and the mode flag both went.
+export default function SelectShowPage() {
+  const router   = useRouter()
+  const supabase = createClient()
   const { user, loading: authLoading } = useAuth()
-
-  const isLogMode = searchParams.get('mode') === 'log'
 
   const [query, setQuery] = useState('')
   const nearby = useNearby()
@@ -136,9 +139,9 @@ function SelectShowInner() {
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
         <div className="min-w-0">
-          <Label>{isLogMode ? 'Log a show' : 'Search'}</Label>
+          <Label>Log a show</Label>
           <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">
-            {isLogMode ? <>What did you see<span className="text-accent">?</span></> : 'Find a show'}
+            What did you see<span className="text-accent">?</span>
           </h1>
         </div>
       </AppHeader>
@@ -289,10 +292,3 @@ function SelectShowInner() {
   )
 }
 
-export default function SelectShowPage() {
-  return (
-    <Suspense fallback={null}>
-      <SelectShowInner />
-    </Suspense>
-  )
-}

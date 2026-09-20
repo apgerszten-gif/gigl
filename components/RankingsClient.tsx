@@ -7,6 +7,7 @@ import { BattleModeCard } from '@/components/BattleModeCard'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
+import { FeedTabs } from '@/components/FeedTabs'
 import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { timeQuery } from '@/lib/queryTiming'
@@ -126,6 +127,14 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
           <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Rankings</h1>
         </div>
       </AppHeader>
+
+      {/* Same control as Feed, with Rankings selected. Rankings is a view of
+          the feed rather than its own destination since the dock dropped to
+          three tabs - see components/FeedTabs.tsx. No onFilterChange here:
+          from this page both filter options are a navigation back to Feed. */}
+      <div className="px-5 pt-3">
+        <FeedTabs value="rankings" />
+      </div>
 
       {/* Day filter - only worth showing once the logged shows actually span
           more than one day; with a single day 'All' is the whole list. */}

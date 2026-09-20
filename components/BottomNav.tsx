@@ -1,23 +1,28 @@
 'use client'
 
-import { Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
-import { BarChart2, CircleUser, Newspaper, Plus, Search, X } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { CircleUser, Newspaper, Plus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-export type DockTab = 'feed' | 'rankings' | 'log' | 'search' | 'profile'
+export type DockTab = 'feed' | 'log' | 'profile'
 
-// Log sits in the centre with two tabs either side; Search is the fourth tab
-// that makes that symmetry possible. Both Log and Search open show search -
-// logging always starts by picking a show - with Log asking "what did you
-// see?" instead of "find a show".
+// Three tabs, Log dead centre with one either side.
+//
+// There used to be five. Search was the fourth, and DESIGN.md admitted why:
+// it existed "so that Log can sit in the middle with two tabs either side".
+// It also pointed at the same screen as Log - both opened /select-festival,
+// differing only in a heading - and once search started returning only shows
+// that have already happened, "find a show" stopped being a separate idea
+// from "log a show" altogether. A spacer with a job title.
+//
+// Rankings moved to a view on Feed rather than a destination of its own:
+// both are the same logs read two ways, activity and aggregate. See
+// components/FeedTabs.tsx.
 const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon }[] = [
-  { id: 'feed',     label: 'Feed',     href: '/feed',                     Icon: Newspaper },
-  { id: 'rankings', label: 'Rankings', href: '/rankings',                 Icon: BarChart2 },
-  { id: 'log',      label: 'Log',      href: '/select-festival?mode=log', Icon: Plus },
-  { id: 'search',   label: 'Search',   href: '/select-festival',          Icon: Search },
-  { id: 'profile',  label: 'You',      href: '/profile',                  Icon: CircleUser },
+  { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper },
+  { id: 'log',     label: 'Log',  href: '/select-festival',  Icon: Plus },
+  { id: 'profile', label: 'You',  href: '/profile',          Icon: CircleUser },
 ]
 
 interface Props {
@@ -26,25 +31,17 @@ interface Props {
   onDismissLogTip?: () => void
 }
 
-// The persistent 5-tab dock from DESIGN.md, routed.
+// The persistent 3-tab dock from DESIGN.md, routed. No Suspense wrapper any
+// more: the only thing that needed useSearchParams was telling the Log tab
+// apart from the Search tab by `?mode=log`, and neither survives.
 export default function BottomNav(props: Props) {
-  return (
-    <Suspense fallback={<DockBar active={null} mode="links" {...props} />}>
-      <DockWithRoute {...props} />
-    </Suspense>
-  )
-}
-
-function DockWithRoute(props: Props) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
 
   let active: DockTab | null = null
-  if (pathname.startsWith('/feed')) active = 'feed'
-  else if (pathname.startsWith('/rankings')) active = 'rankings'
+  // /rankings lights Feed, because Rankings is one of Feed's views now.
+  if (pathname.startsWith('/feed') || pathname.startsWith('/rankings')) active = 'feed'
   else if (pathname.startsWith('/profile')) active = 'profile'
-  else if (pathname.startsWith('/select-festival')) active = searchParams.get('mode') === 'log' ? 'log' : 'search'
-  else if (pathname.startsWith('/log')) active = 'log'
+  else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log')) active = 'log'
 
   return <DockBar active={active} mode="links" {...props} />
 }
