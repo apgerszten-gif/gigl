@@ -5,19 +5,21 @@ import type { Coords } from './geo'
 
 // Browser geolocation for the "near me" filter on show search.
 //
-// Two rules shape this:
+// The location is asked for on arrival, not on a tap: a list of shows is
+// only useful once it's local, so the filter is the default rather than an
+// opt-in. Three things keep that from being hostile:
 //
-// 1. **Never ask on page load.** The permission prompt is a one-shot: a
-//    person who dismisses it on arrival, before they know what it is for,
-//    has to dig into site settings to undo that. So the prompt only fires
-//    from a tap on the Near me control. (Safari on iOS also drops prompts
-//    that aren't tied to a user gesture, so an on-load request would often
-//    fail silently anyway.)
-// 2. **Remember the choice, not just the position.** Once someone has opted
-//    in, the filter should already be on next visit. Re-requesting a
-//    position when permission is still granted doesn't re-prompt, so this
-//    re-asks the browser on mount and only falls back to the cached fix for
-//    the moment before it answers.
+// 1. **An explicit "off" is a standing answer.** Turning the Near me chip
+//    off is remembered, and a later visit neither re-prompts nor re-filters.
+//    Only tapping it back on asks again.
+// 2. **A refusal is never re-asked either.** The Permissions API is checked
+//    first, so a browser that has already been told no is not put through
+//    another request it would only reject.
+// 3. **The list doesn't wait on the dialog.** While the prompt is up, the
+//    unfiltered "Coming up" list loads behind it, and re-filters once the
+//    answer arrives. Only when permission is already granted (or a recent
+//    fix is cached) does the first search hold for coordinates, because
+//    then they're milliseconds away and the flash would be pointless.
 
 const STORAGE_KEY = 'gigl.nearby.v1'
 
@@ -30,14 +32,14 @@ const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000
 const POSITION_MAX_AGE_MS = 5 * 60 * 1000
 const POSITION_TIMEOUT_MS = 10_000
 
-export const RADIUS_OPTIONS = [25, 50, 100] as const
+export const RADIUS_OPTIONS = [10, 50, 100] as const
 export type RadiusMiles = (typeof RADIUS_OPTIONS)[number]
 export const DEFAULT_RADIUS: RadiusMiles = 50
 
 export type NearbyStatus =
-  | 'off'          // not asked for, or turned back off
-  | 'locating'     // waiting on the browser (may be showing its prompt)
+  | 'locating'     // waiting on the browser (its prompt may be up)
   | 'on'           // we have a position and the filter is live
+  | 'off'          // turned off here, and remembered - we won't re-ask
   | 'denied'       // permission refused - only the person can undo this
   | 'unavailable'  // no geolocation API, insecure origin, or the fix failed
 
@@ -74,14 +76,28 @@ function isRadius(value: unknown): value is RadiusMiles {
   return RADIUS_OPTIONS.includes(value as RadiusMiles)
 }
 
+// 'granted' | 'prompt' | 'denied', or null when the browser can't say -
+// older Safari has no Permissions API, and some implementations throw on
+// the 'geolocation' name rather than returning a state.
+async function permissionState(): Promise<PermissionState | null> {
+  try {
+    if (!navigator.permissions?.query) return null
+    const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
+    return result.state
+  } catch {
+    return null
+  }
+}
+
 export interface Nearby {
   status:      NearbyStatus
   coords:      Coords | null
   radiusMiles: RadiusMiles
   /**
-   * False until the remembered choice has been read back. Callers that
-   * fetch on mount should wait for it, or a returning near-me user sees an
-   * unfiltered list flash past before the filter reapplies.
+   * False while the first search should wait. It only stays false when
+   * coordinates are imminent (permission already granted, or a recent fix
+   * cached); a first-time prompt flips it straight to true so the list
+   * loads behind the dialog.
    */
   ready:       boolean
   /** True once there is a position to filter by. */
@@ -92,7 +108,7 @@ export interface Nearby {
 }
 
 export function useNearby(): Nearby {
-  const [status, setStatus]   = useState<NearbyStatus>('off')
+  const [status, setStatus]   = useState<NearbyStatus>('locating')
   const [coords, setCoords]   = useState<Coords | null>(null)
   const [radiusMiles, setRadiusMiles] = useState<RadiusMiles>(DEFAULT_RADIUS)
   const [ready, setReady]     = useState(false)
@@ -100,6 +116,7 @@ export function useNearby(): Nearby {
   const request = useCallback((radius: RadiusMiles) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setStatus('unavailable')
+      setReady(true)
       return
     }
 
@@ -109,46 +126,75 @@ export function useNearby(): Nearby {
         const next = { lat: position.coords.latitude, lng: position.coords.longitude }
         setCoords(next)
         setStatus('on')
+        setReady(true)
         writeStored({ enabled: true, radiusMiles: radius, coords: next, savedAt: Date.now() })
       },
       error => {
+        const denied = error.code === error.PERMISSION_DENIED
         // PERMISSION_DENIED is the only one worth a different message: the
         // person has to change it in site settings, so telling them to
         // "try again" would be a lie. Position-unavailable and timeout are
         // both transient and retryable.
-        setStatus(error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable')
-        writeStored({ enabled: false, radiusMiles: radius })
+        setStatus(denied ? 'denied' : 'unavailable')
+        setReady(true)
+        // Only a refusal is worth remembering. Recording a timeout would
+        // turn one bad fix into a permanently disabled filter.
+        if (denied) writeStored({ enabled: false, radiusMiles: radius })
       },
       { enableHighAccuracy: false, maximumAge: POSITION_MAX_AGE_MS, timeout: POSITION_TIMEOUT_MS },
     )
   }, [])
 
-  // Restore a previous opt-in. The cached fix paints results immediately;
-  // the request behind it replaces those coordinates a moment later, and
-  // catches the case where permission was revoked since.
   useEffect(() => {
-    const stored = readStored()
-    // Set last: everything above it is what callers are waiting to see.
-    if (!stored) { setReady(true); return }
-    if (isRadius(stored.radiusMiles)) setRadiusMiles(stored.radiusMiles)
-    if (!stored.enabled) { setReady(true); return }
+    let cancelled = false
 
-    const radius = isRadius(stored.radiusMiles) ? stored.radiusMiles : DEFAULT_RADIUS
-    const fresh = stored.coords && stored.savedAt && Date.now() - stored.savedAt < CACHE_MAX_AGE_MS
-    if (fresh && stored.coords) {
-      setCoords(stored.coords)
-      setStatus('on')
+    const stored = readStored()
+    if (stored && isRadius(stored.radiusMiles)) setRadiusMiles(stored.radiusMiles)
+    const radius = stored && isRadius(stored.radiusMiles) ? stored.radiusMiles : DEFAULT_RADIUS
+
+    // Turned off here on a previous visit. That's an answer, not an absence
+    // of one, so don't quietly start asking again.
+    if (stored && !stored.enabled) { setStatus('off'); setReady(true); return }
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setStatus('unavailable'); setReady(true); return
     }
-    setReady(true)
-    // Fire-and-forget: the cached fix above (when there is one) already has
-    // the list filtered; this just refreshes it and catches a revoked
-    // permission.
-    request(radius)
+
+    // A recent fix filters the very first search, so nothing has to wait for
+    // the live one that follows.
+    const cached = stored?.coords && stored.savedAt && Date.now() - stored.savedAt < CACHE_MAX_AGE_MS
+      ? stored.coords
+      : null
+    if (cached) {
+      setCoords(cached)
+      setStatus('on')
+      setReady(true)
+    }
+
+    async function start() {
+      const state = await permissionState()
+      if (cancelled) return
+
+      // Already refused. getCurrentPosition would only fail, and on some
+      // browsers not immediately, so skip it and say so.
+      if (state === 'denied') { setStatus('denied'); setReady(true); return }
+
+      // The prompt is about to go up and may sit there for a while. Release
+      // the list so there's something behind it. With permission already
+      // granted there's no dialog and the fix is nearly instant, so holding
+      // avoids an unfiltered flash instead of causing a wait.
+      if (state !== 'granted' && !cached) setReady(true)
+
+      request(radius)
+    }
+    start()
+
+    return () => { cancelled = true }
   }, [request])
 
   const enable = useCallback(() => {
-    // Someone who was refused once can tap again after fixing it in site
-    // settings; the browser answers straight away either way.
+    // Also the retry after a refusal: someone who has since allowed Gigl in
+    // site settings gets an answer straight away.
     request(radiusMiles)
   }, [request, radiusMiles])
 

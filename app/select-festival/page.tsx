@@ -154,8 +154,10 @@ function SelectShowInner() {
           />
         </label>
 
-        {/* Tapping Near me is what triggers the browser's permission prompt;
-            nothing asks for a location on load. See lib/useNearby.ts. */}
+        {/* Location is requested on arrival, so this chip reports the
+            filter rather than starting it. Turning it off is remembered and
+            stops the asking; tapping it back on is also the retry after a
+            refusal. See lib/useNearby.ts. */}
         <div className="pt-2.5 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
