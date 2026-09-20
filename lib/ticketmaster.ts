@@ -144,40 +144,24 @@ function toShow(event: TMEvent): Show {
   }
 }
 
-// keyword omitted/blank -> browse mode (no filter beyond country + segment),
-// used for the page's initial "nothing typed yet" trending list.
-export async function searchShows(keyword: string): Promise<Show[]> {
-  const params = new URLSearchParams({
-    apikey:            TICKETMASTER_API_KEY,
-    countryCode:       'US',
-    classificationName: 'music',
-    size:              '20',
-    sort:              keyword.trim() ? 'relevance,desc' : 'date,asc',
-  })
-  if (keyword.trim()) params.set('keyword', keyword.trim())
-
-  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params}`, {
-    // Next.js Data Cache - identical querystrings within the window reuse
-    // the cached response instead of hitting Ticketmaster again, which is
-    // what keeps repeated/overlapping searches (and the trending list,
-    // fetched by every visitor) well under the 5000/day, 5/sec free-tier cap.
-    next: { revalidate: keyword.trim() ? 300 : 600 },
-  })
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Ticketmaster search failed (${res.status}): ${text}`)
-  }
-
-  const data: TMEventSearchResponse = await res.json()
-  return (data._embedded?.events ?? []).map(toShow)
-}
-
 // ─── Nightly sync path ──────────────────────────────────────────────────────
-// searchShows() above is the live per-request path, kept as the cold-start
-// fallback for when the shows table hasn't been populated yet. Everything
-// below feeds app/api/cron/sync-shows, which walks SYNC_CITIES and upserts
-// into Postgres so that normal traffic never touches Ticketmaster at all.
+// Everything below feeds app/api/cron/sync-shows, which walks SYNC_CITIES and
+// upserts into Postgres. It is the only path that talks to Ticketmaster:
+// normal search traffic reads the `shows` table and never comes here.
+//
+// **Discovery has no past events, so the sync is a capture, not a lookup.**
+// Gigl's catalogue serves the past week (lib/dates.ts), but an event drops
+// out of Ticketmaster's index the moment it's over - an explicit past
+// `startDateTime`/`endDateTime` returns zero results, verified against a
+// range that returns 800 upcoming events for the same city. There is no
+// archive to ask. So the sync keeps pulling *upcoming* listings, banking each
+// show days or weeks before it happens, and the catalogue earns its past week
+// by keeping those rows once their date passes rather than by fetching them
+// back. The retention rule lives in prunePastShows(); breaking it would empty
+// the search list with no way to refill it.
+//
+// This is also why the row for a show happening tonight must survive tomorrow
+// even though nothing upstream mentions it any more.
 
 import type { SyncCity } from './shows/cities'
 
@@ -240,6 +224,10 @@ export async function fetchCityShowsPage(city: SyncCity, page: number): Promise<
     stateCode:          city.stateCode,
     size:               String(TM_MAX_PAGE_SIZE),
     page:               String(page),
+    // Soonest first. A metro busy enough to hit the 1000-result deep paging
+    // ceiling keeps the shows about to happen, which are the ones due to
+    // enter the catalogue's past week within days; a listing nine months out
+    // has many more nights to be captured on.
     sort:               'date,asc',
   })
 

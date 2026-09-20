@@ -16,8 +16,8 @@ import type { Coords } from './geo'
 //    first, so a browser that has already been told no is not put through
 //    another request it would only reject.
 // 3. **The list doesn't wait on the dialog.** While the prompt is up, the
-//    unfiltered "Coming up" list loads behind it, and re-filters once the
-//    answer arrives. Only when permission is already granted (or a recent
+//    unfiltered "This past week" list loads behind it, and re-filters once
+//    the answer arrives. Only when permission is already granted (or a recent
 //    fix is cached) does the first search hold for coordinates, because
 //    then they're milliseconds away and the flash would be pointless.
 

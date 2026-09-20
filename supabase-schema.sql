@@ -547,3 +547,36 @@ alter table public.profiles add column if not exists avatar_url text;
 -- they can't be placed, and inventing a location for them would be worse
 -- than leaving them out of a local list.
 create index if not exists shows_lat_lng_idx on public.shows (lat, lng);
+
+-- The catalogue is a record of shows that HAPPENED, not a what's-on listing.
+--
+-- Gigl is a log of gigs you went to, so a row you couldn't have attended yet
+-- is nothing anyone can rate, and it buries the one they opened the app to
+-- log. Show search therefore returns only the past week: PAST_WINDOW_DAYS in
+-- lib/dates.ts defines the window, and the query filters show_date to it at
+-- both ends, newest first.
+--
+-- The table itself holds more than that window, and has to. Ticketmaster's
+-- Discovery API has no past events - an explicit past date range returns
+-- nothing, while the same query without one returns hundreds of upcoming
+-- listings - so there is no archive to sync a past week from. Instead the
+-- nightly job keeps capturing upcoming listings, and a row ages in place:
+-- upcoming, then inside the search window, then deleted.
+--
+-- This changes the pruning rule described further up in one respect only.
+-- The cutoff moves from "show_date < today" to "show_date < today minus
+-- PAST_WINDOW_DAYS": a row now survives its own show date by a week, because
+-- for that week it is the only evidence the show ever existed and nothing
+-- can fetch it back once deleted. The rest of that rule is unchanged and now
+-- matters more than before - future-dated rows are still never deleted, both
+-- because an event missing from one night's results is as likely to be a
+-- partial upstream failure as a cancellation, and because every future row
+-- is the advance capture of a show about to enter the search window.
+--
+-- Rows with a null show_date are matched by neither the window filter nor the
+-- prune, so they linger while staying invisible to search. Ticketmaster
+-- rarely omits a date; worth a sweep of its own if user-submitted rows ever
+-- land without one.
+--
+-- shows_show_date_idx already serves the range scan, and a btree reads in
+-- either direction, so newest-first needs no new index.

@@ -8,7 +8,7 @@
 
 import { supabase } from '../supabase'
 import { supabaseAdmin } from '../supabaseAdmin'
-import { formatShowDate } from '../dates'
+import { formatShowDate, windowEndIso, windowStartIso } from '../dates'
 import { boundingBox, distanceInMiles, type Coords } from '../geo'
 import type { Show, SyncShow } from '../ticketmaster'
 
@@ -65,10 +65,6 @@ function escapeForOrFilter(input: string): string {
   return input.replace(/[,()\\%_]/g, ' ').trim()
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 export interface NearbyFilter {
   centre:      Coords
   radiusMiles: number
@@ -88,21 +84,28 @@ export interface SearchOptions {
   nearby?: NearbyFilter | null
 }
 
-// Blank keyword -> browse mode: the soonest upcoming shows, which is what the
-// page renders before anything is typed. Ordering is by date either way,
-// including with a nearby filter: "what's on around me" reads as a date list
-// that happens to be local, not as a proximity ranking that jumps between
-// next week and next spring.
+// Blank keyword -> browse mode: the past week's shows, most recent first,
+// which is what the page renders before anything is typed. Ordering is by
+// date either way, including with a nearby filter: "what happened around me"
+// reads as a date list that happens to be local, not as a proximity ranking
+// that jumps between last night and last Tuesday.
+//
+// Newest first, unlike the old upcoming list's ascending order: the show
+// someone is most likely to be logging is the one they went to last night,
+// so it belongs at the top rather than seven days down.
 export async function searchStoredShows(keyword: string, options: SearchOptions = {}): Promise<Show[]> {
   const { limit = DEFAULT_LIMIT, nearby } = options
 
   let query = supabase
     .from('shows')
     .select(SHOW_COLUMNS)
-    // Past shows are pruned nightly, but a row can still go stale during the
-    // day, so filter here too rather than trusting the sync's timing.
-    .gte('show_date', todayIso())
-    .order('show_date', { ascending: true })
+    // Rows outside the window are pruned nightly, but a row can fall out of it
+    // during the day, so filter here too rather than trusting the sync's
+    // timing. The upper bound matters as much as the lower one now: a show
+    // that hasn't happened yet is not something anyone can have been to.
+    .gte('show_date', windowStartIso())
+    .lte('show_date', windowEndIso())
+    .order('show_date', { ascending: false })
     .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
 
   if (nearby) {
@@ -135,18 +138,6 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
   return rows
     .filter(show => show.distanceMiles != null && show.distanceMiles <= nearby.radiusMiles)
     .slice(0, limit)
-}
-
-// Whether the catalogue has been populated at all. Used only to decide
-// whether to fall back to a live Ticketmaster call - see the search route.
-export async function storedShowCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from('shows')
-    .select('id', { count: 'exact', head: true })
-    .gte('show_date', todayIso())
-
-  if (error) throw new Error(`shows count failed: ${error.message}`)
-  return count ?? 0
 }
 
 // Supabase rejects very large payloads, and a 50-city sync can produce well
@@ -202,16 +193,33 @@ export async function upsertShows(shows: SyncShow[]): Promise<UpsertResult> {
   return { upserted, failed }
 }
 
-// Drops shows whose date has passed. Only past-dated rows - see the pruning
-// rationale in supabase-schema.sql for why a future show that stopped
-// appearing upstream is deliberately left alone.
+// Drops shows that have fallen out the back of the catalogue window - only
+// those, and this is the load-bearing part of the whole feature.
+//
+// A show is deleted PAST_WINDOW_DAYS after it happened, not the morning
+// after. Ticketmaster has no past events (see the sync note in
+// lib/ticketmaster.ts), so these rows are the *only* record that the show
+// existed: once one is deleted nothing can fetch it back, and the past-week
+// list would be empty of it for good. The old cutoff was `< today`, which
+// threw away precisely the week that search now serves.
+//
+// Future-dated rows are still never deleted, for two reasons that now stack.
+// The original one: an event missing from one night's API results is at
+// least as likely to be a partial upstream failure as a real cancellation,
+// and dropping a valid show is worse than briefly keeping a cancelled one.
+// The new one: a future-dated row is the catalogue's advance capture of a
+// show that will enter the past week in a few days' time. Deleting it would
+// mean the show is never logged by anyone.
+//
+// Rows with a null show_date are matched by neither this nor the search
+// filter, so they linger while staying invisible. Ticketmaster rarely omits
+// a date; worth its own sweep if user-submitted rows ever land without one.
 export async function prunePastShows(): Promise<number> {
-  const { data, error } = await supabaseAdmin()
+  const { count, error } = await supabaseAdmin()
     .from('shows')
-    .delete()
-    .lt('show_date', todayIso())
-    .select('id')
+    .delete({ count: 'exact' })
+    .lt('show_date', windowStartIso())
 
   if (error) throw new Error(`shows prune failed: ${error.message}`)
-  return data?.length ?? 0
+  return count ?? 0
 }

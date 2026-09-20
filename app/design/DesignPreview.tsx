@@ -306,9 +306,9 @@ function LogShowScreen() {
 
 const RESULTS = [
   { artist: 'Phoebe Bridgers',    place: 'The Greek Theatre, Berkeley, CA',       date: '2026-09-19' },
-  { artist: 'Turnstile',          place: 'Hollywood Palladium, Los Angeles, CA',  date: '2026-09-24' },
-  { artist: 'Japanese Breakfast', place: 'The Fillmore, San Francisco, CA',       date: '2026-10-02' },
-  { artist: 'Mitski',             place: 'Shrine Auditorium, Los Angeles, CA',    date: '2026-10-09' },
+  { artist: 'Turnstile',          place: 'Hollywood Palladium, Los Angeles, CA',  date: '2026-09-18' },
+  { artist: 'Japanese Breakfast', place: 'The Fillmore, San Francisco, CA',       date: '2026-09-16' },
+  { artist: 'Mitski',             place: 'Shrine Auditorium, Los Angeles, CA',    date: '2026-09-14' },
 ]
 
 function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: () => void }) {
@@ -337,7 +337,7 @@ function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: ()
         </label>
       </div>
 
-      <Label className="px-5 pt-4 pb-2">{q ? `${results.length} matches` : 'Coming up'}</Label>
+      <Label className="px-5 pt-4 pb-2">{q ? `${results.length} matches` : 'This past week'}</Label>
 
       <main className="mx-5 rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
         {results.map((r, i) => (

@@ -9,6 +9,19 @@ import { saveHeadlinerImages, fillLoggedArtistImages } from '@/lib/shows/artistI
 // normal search traffic reads Postgres instead of costing an upstream API
 // call per visitor. Scheduled from vercel.json.
 //
+// Search serves the *past* week (PAST_WINDOW_DAYS in lib/dates.ts) while this
+// job fetches what's upcoming, and that is not a contradiction: Ticketmaster
+// drops an event from its index once it's over, so the only way to have last
+// night's shows is to have banked them beforehand. Every run re-upserts the
+// listings it can still see and prunes only what has aged a full week past;
+// a row therefore ages in place from "upcoming" to "in the past week" to
+// deleted, without ever being re-fetched. See the sync note in
+// lib/ticketmaster.ts and prunePastShows() in lib/shows/repository.ts.
+//
+// Consequence worth remembering: a missed run is not just a stale day, it is
+// a permanent hole. Any show that takes place while the job is broken and
+// wasn't captured on an earlier night can never be logged.
+//
 // Runs long by design (tens of seconds of deliberately paced HTTP), so it
 // needs the extended duration rather than the default.
 export const maxDuration = 300
@@ -74,8 +87,8 @@ export async function GET(req: NextRequest) {
   const shows = Array.from(collected.values())
   const { upserted, failed } = await upsertShows(shows)
 
-  // Pruned after the upsert so a show that moved to a later date is refreshed
-  // before the cutoff is applied, rather than being deleted and re-added.
+  // Pruned after the upsert so a show whose date moved is refreshed before
+  // the window is applied, rather than being deleted and re-added.
   let pruned = 0
   try {
     pruned = await prunePastShows()

@@ -197,7 +197,7 @@ function SelectShowInner() {
       <Label className="px-5 pt-4 pb-2">
         {trimmedQuery
           ? <>Results for &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` · within ${nearby.radiusMiles} mi` : ''}</>
-          : nearby.active ? `Coming up within ${nearby.radiusMiles} mi` : 'Coming up'}
+          : nearby.active ? `This past week within ${nearby.radiusMiles} mi` : 'This past week'}
       </Label>
 
       <main className="px-5 space-y-3">
@@ -231,10 +231,10 @@ function SelectShowInner() {
         {!loading && !error && results.length === 0 && (
           <EmptyState>
             {trimmedQuery
-              ? <>No shows matched &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` within ${nearby.radiusMiles} miles` : ''} yet.</>
+              ? <>Nothing in the past week matched &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` within ${nearby.radiusMiles} miles` : ''}.</>
               : nearby.active
-              ? `Nothing coming up within ${nearby.radiusMiles} miles. Try a wider radius.`
-              : 'No upcoming shows to show right now.'}
+              ? `No shows in the past week within ${nearby.radiusMiles} miles. Try a wider radius.`
+              : 'No shows from the past week to show right now.'}
           </EmptyState>
         )}
 

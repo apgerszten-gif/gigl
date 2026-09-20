@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchShows } from '@/lib/ticketmaster'
-import { searchStoredShows, storedShowCount, type NearbyFilter } from '@/lib/shows/repository'
+import { searchStoredShows, type NearbyFilter } from '@/lib/shows/repository'
 
 // GET /api/shows/search?q=turnstile — searches the `shows` catalogue table,
 // which the nightly job at /api/cron/sync-shows keeps populated. `q` blank or
-// omitted returns the soonest upcoming shows (the page's initial browse list).
+// omitted returns the most recent shows (the page's initial browse list).
+//
+// Everything this route can return already happened: the catalogue only
+// covers the past week (PAST_WINDOW_DAYS in lib/dates.ts). Gigl logs shows
+// you went to, so an on-sale listing is not a thing anyone can rate, and
+// showing one just buries the show they came here to log.
 //
 // Optional `lat`, `lng` and `radius` (miles) narrow that to shows near a
 // point, each result carrying its `distanceMiles`. The browser supplies the
@@ -15,13 +19,16 @@ import { searchStoredShows, storedShowCount, type NearbyFilter } from '@/lib/sho
 // cost an upstream call against a 5000/day cap. Reading Postgres makes that a
 // fixed nightly cost instead, and lets search be fuzzy across artist *and*
 // venue rather than whatever Ticketmaster's relevance sort returns.
+//
+// There is no live-Ticketmaster fallback any more. It used to cover a cold
+// catalogue, but Discovery only indexes upcoming events, so the one thing it
+// could return is the one thing this route must not: shows that haven't
+// happened. An empty table now answers empty, and the page says so.
 
 // Next 14 puts any fetch without explicit cache options into the Data Cache
 // with no expiry, and that includes supabase-js's requests. Without this the
 // catalogue reads froze on whatever they first returned - an empty table
-// before the first sync - so search kept falling back to Ticketmaster after
-// the table had filled. The Ticketmaster fallback sets its own revalidate,
-// so it stays cached.
+// before the first sync - and never noticed the table filling up.
 export const fetchCache = 'default-no-store'
 
 // A radius the client didn't send, or sent as nonsense. The ceiling exists so
@@ -52,25 +59,10 @@ export async function GET(req: NextRequest) {
   const nearby = readNearby(req.nextUrl.searchParams)
 
   try {
+    // An empty result is returned as-is, whether it means "no matches" or
+    // "the catalogue hasn't captured a week yet". Nothing upstream can fill
+    // that gap, so there is nothing to fall back to.
     const shows = await searchStoredShows(q, { nearby })
-    if (shows.length > 0) return NextResponse.json({ shows })
-
-    // Empty result is usually a genuine "no matches" and should be returned
-    // as-is. But before the first sync has ever run the table is empty, and
-    // every search would look broken - so distinguish the two with a count,
-    // and only fall back to a live Ticketmaster call for a cold catalogue.
-    // Once the table has rows this branch stops being reachable, which is
-    // what keeps the fallback from quietly reintroducing per-visitor API
-    // calls.
-    //
-    // Never for a nearby search: searchShows() has no location filter, so
-    // falling back there would answer "what's on near me" with shows from
-    // across the country. An empty nearby result stays empty.
-    if (!nearby && await storedShowCount() === 0) {
-      console.warn('[shows/search] shows table is empty; falling back to live Ticketmaster. Has the sync run?')
-      return NextResponse.json({ shows: await searchShows(q) })
-    }
-
     return NextResponse.json({ shows })
   } catch (err) {
     console.error('shows/search failed:', err)
