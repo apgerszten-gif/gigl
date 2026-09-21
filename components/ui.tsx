@@ -51,9 +51,13 @@ export function Label({ children, className = '', tone = 'muted' }: {
   )
 }
 
-export function Chip({ children, active = false }: { children: React.ReactNode; active?: boolean }) {
+export function Chip({ children, active = false, compact = false }: {
+  children: React.ReactNode; active?: boolean; compact?: boolean
+}) {
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-label border-1.5 whitespace-nowrap ${
+    <span className={`inline-block rounded font-semibold uppercase tracking-label border-1.5 whitespace-nowrap ${
+      compact ? 'px-1.5 py-0 text-[8.5px]' : 'px-2 py-0.5 text-[10px]'
+    } ${
       active ? 'bg-accent/10 border-accent/30 text-accent' : 'border-ink/15 text-ink-muted'
     }`}>
       {children}
@@ -61,9 +65,11 @@ export function Chip({ children, active = false }: { children: React.ReactNode; 
   )
 }
 
-export function PullQuote({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function PullQuote({ children, className = '', compact = false }: {
+  children: React.ReactNode; className?: string; compact?: boolean
+}) {
   return (
-    <blockquote className={`border-l-2 border-accent pl-3 font-display text-[15px] leading-snug ${className}`}>
+    <blockquote className={`border-l-2 border-accent ${compact ? 'pl-2.5 text-[12.75px]' : 'pl-3 text-[15px]'} font-display leading-snug ${className}`}>
       &ldquo;{children}&rdquo;
     </blockquote>
   )
@@ -151,10 +157,16 @@ export function PersonPhoto({ name, src, className }: { name: string; src?: stri
 }
 
 // A place (venue and city, a stage, or just a city) behind a small sienna pin.
-export function Place({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+// `compact` is the feed's density: every size in a review tile is 15% down
+// on the default so more of them fit on screen. It's a prop rather than a
+// smaller default because the same component sets the place line on
+// rankings, profiles and the artist page, which aren't list-dense.
+export function Place({ children, className = '', compact = false }: {
+  children: React.ReactNode; className?: string; compact?: boolean
+}) {
   return (
-    <p className={`flex items-center gap-1 text-[12px] text-ink-muted min-w-0 ${className}`}>
-      <MapPin className="w-3 h-3 flex-shrink-0 text-accent" strokeWidth={2.25} />
+    <p className={`flex items-center gap-1 ${compact ? 'text-[10.2px]' : 'text-[12px]'} text-ink-muted min-w-0 ${className}`}>
+      <MapPin className={`${compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} flex-shrink-0 text-accent`} strokeWidth={2.25} />
       <span className="truncate">{children}</span>
     </p>
   )

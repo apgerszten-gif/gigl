@@ -19,10 +19,14 @@ export type DockTab = 'feed' | 'log' | 'profile'
 // Rankings moved to a view on Feed rather than a destination of its own:
 // both are the same logs read two ways, activity and aggregate. See
 // components/FeedTabs.tsx.
-const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon }[] = [
-  { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper },
+
+// `nudge` pulls the outer two tabs in towards Log. Padding rather than a
+// translate, so it shifts where the icon and label sit without moving the
+// tap target off them: each tab still spans its full third of the bar.
+const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon; nudge?: string }[] = [
+  { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper,  nudge: 'pl-7' },
   { id: 'log',     label: 'Log',  href: '/select-festival',  Icon: Plus },
-  { id: 'profile', label: 'You',  href: '/profile',          Icon: CircleUser },
+  { id: 'profile', label: 'You',  href: '/profile',          Icon: CircleUser, nudge: 'pr-7' },
 ]
 
 interface Props {
@@ -65,21 +69,23 @@ export function DockBar({
   return (
     <nav className={`${contained ? 'absolute' : 'fixed'} bottom-0 inset-x-0 z-40`}>
       <div className="max-w-md mx-auto bg-cream border-t-1.5 border-ink flex safe-bottom">
-        {TABS.map(({ id, label, href, Icon }) => {
+        {TABS.map(({ id, label, href, Icon, nudge }) => {
           const isActive = active === id
-          const labelClass = `text-[9px] font-bold uppercase tracking-label ${isActive ? 'text-accent' : 'text-ink-faint'}`
+          const labelClass = `text-[11px] font-bold uppercase tracking-label ${isActive ? 'text-accent' : 'text-ink-faint'}`
 
           if (id === 'log') {
             return (
               <div key={id} className="relative flex-1 flex flex-col items-center">
                 {logTip ?? (showLogTip && <LogTip onDismiss={onDismissLogTip} />)}
                 <Tab {...tab} id={id} href={href} className="flex flex-col items-center gap-1 pb-1">
-                  {/* -18px lifts the button while keeping its label level with the other tabs' labels. */}
+                  {/* The lift keeps this label level with the other tabs'.
+                      It is (circle height - 34px), so it has to move whenever
+                      the circle or the icon size does. */}
                   <span
                     style={logButtonStyle}
-                    className="relative -mt-[18px] w-12 h-12 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center"
+                    className="relative -mt-[22px] w-14 h-14 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center"
                   >
-                    <Icon className="w-6 h-6" strokeWidth={2.5} />
+                    <Icon className="w-7 h-7" strokeWidth={2.5} />
                     {logExtras}
                   </span>
                   <span className={labelClass}>{label}</span>
@@ -89,8 +95,8 @@ export function DockBar({
           }
 
           return (
-            <Tab key={id} {...tab} id={id} href={href} className="flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1">
-              <Icon className={`w-5 h-5 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
+            <Tab key={id} {...tab} id={id} href={href} className={`flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1 ${nudge ?? ''}`}>
+              <Icon className={`w-6 h-6 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
               <span className={labelClass}>{label}</span>
             </Tab>
           )

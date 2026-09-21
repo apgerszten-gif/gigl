@@ -54,7 +54,7 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
   2. **Log** (`Plus`), shown as a raised sienna circle with an ink border and a riso shadow
   3. **You** (`CircleUser`), the profile
 
-  The dock is cream with a 1.5px ink top border. Labels are 9px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. One tab either side of Log puts it at true centre without a filler tab.
+  The dock is cream with a 1.5px ink top border. Icons are 24px, labels 11px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. Log is a 56px circle whose negative top margin is always (circle height − 34px), so its label stays level with the other two — change the circle and that number moves with it. Feed and You carry an inward padding nudge so they sit nearer the Log button rather than centred in their thirds.
 
   It used to be five. **Search** was removed because it opened the same screen as Log — both went to `/select-festival`, differing only in a heading — and once search returned only shows that had already happened, "find a show" stopped being a separate idea from "log a show". **Rankings** became a view on Feed rather than a destination: it is the same logged shows read as an aggregate instead of as a stream.
 
@@ -116,7 +116,7 @@ Where the photos come from:
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
 - Two stacked segmented controls: **All activity / Following** on top, then **Artist rankings** below. The first two filter the stream in place; Artist rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. They're stacked rather than a row of three because "whose logs" and "the aggregate view" are different questions, and because a three-up row crushes the longer label. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
-- Review cards, each with:
+- Review cards, at **85% of the default component scale** so more fit on screen — `Place`, `PullQuote` and `Chip` take a `compact` prop for this rather than shrinking everywhere, since the same pieces set a slower density on rankings, profiles and the artist page. Each card has:
   - any photos or videos the reviewer attached, full-bleed at the top
   - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
   - the reviewer's photo, handle (`text-[12.6px] font-semibold`) and timestamp, with the star rating on the right

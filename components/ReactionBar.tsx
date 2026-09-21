@@ -32,7 +32,7 @@ export function ReactionBar({
   onToggleLike, onToggleReaction, onOpenComments,
 }: ReactionBarProps) {
   return (
-    <div className="px-3 py-2 flex items-center gap-1 border-t border-ink/10">
+    <div className="px-2.5 py-1.5 flex items-center gap-1 border-t border-ink/10">
       {REACTIONS.map(({ emoji, Icon, isLike }) => {
         const count  = isLike ? likeCount : (reactionCounts[emoji] ?? 0)
         const active = isLike ? likedByMe : myReactions.includes(emoji)
@@ -43,12 +43,12 @@ export function ReactionBar({
             type="button"
             onClick={onClick}
             aria-label={isLike ? (active ? 'Unlike' : 'Like') : `React ${emoji}`}
-            className={`flex items-center gap-1 rounded-full px-2 py-1 border-1.5 ${
+            className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 border-1.5 ${
               active ? 'bg-accent/10 border-accent/30 text-accent' : 'border-transparent text-ink-muted'
             }`}
           >
             <Icon active={active} />
-            {count > 0 && <span className="text-[11px] font-semibold">{count}</span>}
+            {count > 0 && <span className="text-[9.4px] font-semibold">{count}</span>}
           </button>
         )
       })}
@@ -59,8 +59,8 @@ export function ReactionBar({
         aria-label="Comments"
         className="ml-auto flex items-center gap-1 px-1 text-ink-muted"
       >
-        <MessageCircle className="w-4 h-4" strokeWidth={2} />
-        {commentCount > 0 && <span className="text-[11px] font-semibold">{commentCount}</span>}
+        <MessageCircle className="w-3.5 h-3.5" strokeWidth={2} />
+        {commentCount > 0 && <span className="text-[9.4px] font-semibold">{commentCount}</span>}
       </button>
     </div>
   )

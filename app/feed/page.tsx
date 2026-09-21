@@ -314,43 +314,43 @@ function FeedInner() {
             <Card key={item.id || `${item.user_id}-${item.artist_id}-${i}`} className="overflow-hidden">
               {mediaUrls.length > 0 && (
                 <div className="border-b-1.5 border-ink">
-                  <MediaGrid urls={mediaUrls} maxHeight={200} />
+                  <MediaGrid urls={mediaUrls} maxHeight={170} />
                 </div>
               )}
 
-              <div className="px-4 pt-3 pb-3 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Link href={isMe ? '/profile' : `/u/${username}`} className="flex items-center gap-2.5 min-w-0">
-                    <PersonPhoto name={username} src={item.avatar_url} className="w-8 h-8 text-sm border border-ink/15" />
+              <div className="px-3.5 pt-2.5 pb-2.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-2.5">
+                  <Link href={isMe ? '/profile' : `/u/${username}`} className="flex items-center gap-2 min-w-0">
+                    <PersonPhoto name={username} src={item.avatar_url} className="w-7 h-7 text-xs border border-ink/15" />
                     <div className="min-w-0">
-                      <p className={`text-[12.6px] font-semibold truncate ${isMe ? 'text-accent' : 'text-ink'}`}>@{username}</p>
-                      <p className="text-[11px] text-ink-muted">{timeAgo(item.created_at)}</p>
+                      <p className={`text-[10.7px] font-semibold truncate ${isMe ? 'text-accent' : 'text-ink'}`}>@{username}</p>
+                      <p className="text-[9.4px] text-ink-muted">{timeAgo(item.created_at)}</p>
                     </div>
                   </Link>
-                  {score !== null && <Stars score={score} size={15} />}
+                  {score !== null && <Stars score={score} size={13} />}
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <Link href={`/artist/${item.artist_id}`} className="block font-display text-xl font-bold tracking-tight leading-tight">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <Link href={`/artist/${item.artist_id}`} className="block font-display text-[17px] font-bold tracking-tight leading-tight">
                       {name}
                     </Link>
                     {place && (item.stage
-                      ? <Link href={`/stage/${encodeURIComponent(item.stage)}`} className="block"><Place>{place}</Place></Link>
-                      : <Place>{place}</Place>)}
+                      ? <Link href={`/stage/${encodeURIComponent(item.stage)}`} className="block"><Place compact>{place}</Place></Link>
+                      : <Place compact>{place}</Place>)}
                   </div>
                   <Link href={`/artist/${item.artist_id}`} aria-label={name} className="flex-shrink-0">
-                    <ArtistPhoto name={name} src={artistImage(name)} className="w-[68px] h-[68px]" iconSize={23}>
+                    <ArtistPhoto name={name} src={artistImage(name)} className="w-[58px] h-[58px]" iconSize={20}>
                       <DateTag isoDate={item.show_date} />
                     </ArtistPhoto>
                   </Link>
                 </div>
 
-                {item.review && <PullQuote>{item.review}</PullQuote>}
+                {item.review && <PullQuote compact>{item.review}</PullQuote>}
 
                 {hasTags && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {item.tags!.map(tag => <Chip key={tag}>{tag}</Chip>)}
+                  <div className="flex flex-wrap gap-1">
+                    {item.tags!.map(tag => <Chip key={tag} compact>{tag}</Chip>)}
                   </div>
                 )}
               </div>

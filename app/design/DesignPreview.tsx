@@ -130,32 +130,32 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
       <main className="px-5 pt-4 space-y-4">
         {REVIEWS.map(review => (
           <Card key={review.handle} className="overflow-hidden">
-            <div className="px-4 pt-3 pb-3 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <PersonPhoto name={review.handle} className="w-8 h-8 text-sm border border-ink/15" />
+            <div className="px-3.5 pt-2.5 pb-2.5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <PersonPhoto name={review.handle} className="w-7 h-7 text-xs border border-ink/15" />
                   <div className="min-w-0">
-                    <p className="text-[12.6px] font-semibold truncate">@{review.handle}</p>
-                    <p className="text-[11px] text-ink-muted">{review.when}</p>
+                    <p className="text-[10.7px] font-semibold truncate">@{review.handle}</p>
+                    <p className="text-[9.4px] text-ink-muted">{review.when}</p>
                   </div>
                 </div>
-                <Stars score={review.score} size={15} />
+                <Stars score={review.score} size={13} />
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 min-w-0 space-y-1">
-                  <h3 className="font-display text-xl font-bold tracking-tight leading-tight">{review.artist}</h3>
-                  <Place>{review.place}</Place>
+              <div className="flex items-center gap-2.5">
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <h3 className="font-display text-[17px] font-bold tracking-tight leading-tight">{review.artist}</h3>
+                  <Place compact>{review.place}</Place>
                 </div>
-                <ArtistPhoto name={review.artist} className="w-[68px] h-[68px]" iconSize={23}>
+                <ArtistPhoto name={review.artist} className="w-[58px] h-[58px]" iconSize={20}>
                   <DateTag isoDate={review.date} />
                 </ArtistPhoto>
               </div>
 
-              <PullQuote>{review.quote}</PullQuote>
+              <PullQuote compact>{review.quote}</PullQuote>
 
-              <div className="flex flex-wrap gap-1.5">
-                {review.tags.map(tag => <Chip key={tag}>{tag}</Chip>)}
+              <div className="flex flex-wrap gap-1">
+                {review.tags.map(tag => <Chip key={tag} compact>{tag}</Chip>)}
               </div>
             </div>
           </Card>
