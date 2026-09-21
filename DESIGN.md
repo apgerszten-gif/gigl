@@ -45,7 +45,7 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 
 ## 3. Logo & app chrome
 
-- **Logo** (`components/Logo.tsx`): `Gigl` with a capital G, followed by a sienna slash, nothing else. It is set in Space Grotesk bold, 21px, with `-0.5px` tracking, in ink.
+- **Logo** (`components/Logo.tsx`): `Gigl` with a capital G, followed by a sienna slash, nothing else. It is set in Space Grotesk bold, 21px, with `-0.5px` tracking, in ink. On Feed and You it takes an `href` and links home; it stays inert on sign-in, choose-username, the intro demo and the style guide, where there is nowhere to go or navigating would break the demo. Headers with a back control pass it to `BackHeader`, which already routes to the feed.
 - **Header**: Sticky, `bg-paper/90` with a backdrop blur and a `border-ink/10` bottom rule. The logo or page title sits on the left, and any page actions (such as a share icon button) sit to its right.
   - On Feed, Rankings and Search, **your profile photo sits at the far right**. The header is sticky, so the photo stays in view while scrolling. Tapping it opens You.
   - Leave the photo off on You itself, which has a share button instead, and in the Log flow.

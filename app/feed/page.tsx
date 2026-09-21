@@ -272,7 +272,7 @@ function FeedInner() {
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
-        <Logo />
+        <Logo href="/feed" />
       </AppHeader>
 
       <div className="px-5 pt-3">

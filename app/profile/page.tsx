@@ -270,7 +270,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-paper text-ink pb-28">
       {/* Your own profile, so the header carries a share button rather than your photo. */}
       <AppHeader showProfile={false}>
-        <Logo />
+        <Logo href="/feed" />
         <button
           type="button"
           onClick={copyLink}
