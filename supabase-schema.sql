@@ -580,3 +580,34 @@ create index if not exists shows_lat_lng_idx on public.shows (lat, lng);
 --
 -- shows_show_date_idx already serves the range scan, and a btree reads in
 -- either direction, so newest-first needs no new index.
+
+-- User-submitted shows: "Can't find your show? Add it yourself."
+--
+-- shows.source has distinguished these since the table was created
+-- ('ticketmaster' today; 'user' once manual submissions land). This is that.
+-- It exists because the gap is permanent rather than a coverage problem to
+-- throw more APIs at: house shows, local bills and DIY spaces are in no
+-- aggregator at any price, and the person who was there is the only source
+-- there will ever be.
+--
+-- No insert policy is added, deliberately. public.shows still has zero client
+-- write grants, and submissions go through /api/shows/submit under the
+-- service role, so the validation and duplicate checks there cannot be
+-- skipped by talking to PostgREST directly with an anon key.
+alter table public.shows add column if not exists submitted_by uuid references public.profiles(id) on delete set null;
+
+-- Note "on delete set null" rather than a cascade. If somebody deletes their
+-- account the show they contributed stays: other people may have logged it,
+-- and it is very likely the only record anywhere that the gig happened. The
+-- submitter is forgotten, the show is not.
+--
+-- For the same reason the nightly prune skips source = 'user' entirely. A
+-- Ticketmaster row can always be re-fetched while it is still upcoming; a
+-- hand-typed one cannot be recovered from anywhere. See prunePastShows() in
+-- lib/shows/repository.ts.
+create index if not exists shows_source_idx on public.shows (source);
+
+-- Duplicate detection on submit looks up everything already on the submitted
+-- date and compares artist names in JS, because a date is exact where names
+-- are not. This is the index that keeps that lookup cheap.
+create index if not exists shows_date_source_idx on public.shows (show_date, source);

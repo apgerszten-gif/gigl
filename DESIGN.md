@@ -132,6 +132,13 @@ Where the photos come from:
 - Ranked cards: a sienna rank number, the artist photo with its date sticker, the artist with stars, the place line, a rating-count chip and any battle record.
 - The style guide also shows a milestone callout and a "View gig map" pill *(mockup)*.
 
+### Add a show (`/add-show`)
+- `BackHeader` titled "Add a show", no dock — it's part of the log flow.
+- Four `Field` inputs: **Artist**, **Date**, **Venue**, and an optional **City** that accepts "San Francisco, CA".
+- Under Artist, up to five tappable suggestions of names already in the catalogue, and a "Did you mean …?" line when what's typed is a near miss for one of them. Neither blocks a new name — a band nobody has logged yet is the reason the page exists.
+- The date input is capped at today. A show you haven't been to isn't one you can log.
+- Submitting goes straight into logging the new show rather than back to search. If the show turns out to already exist, a card offers to log that one instead.
+
 ### Log a show (`/log-show`)
 - Title bar ("Log a show" or "Update log") with a close button. There's no dock or profile photo in this flow.
 - Selected-show card: the artist photo, the date as a sienna label, the artist and the place line.
@@ -146,7 +153,7 @@ Where the photos come from:
 - A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and while it's on, radius chips for 10 / 50 / 100 mi. Location is asked for on arrival, so the chip reports the filter rather than starting it; it reads "Locating…" and is disabled while the browser answers. Turning it off is remembered. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
 - A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on. The catalogue only holds shows that have already happened — you log what you went to — so results run newest first, last night at the top.
 - One card of result rows, alternating `cream` / `cream-alt`. Each row has the artist photo with a date sticker, the artist, the place line, any support acts and a "+ Log" button. With Near me on, the distance ("4.2 mi") sits above that button in the same 10px uppercase `ink-faint` style. Tapping a row goes straight into logging.
-- A dashed "Can't find your show?" tile *(mockup: adding your own show)*.
+- A dashed "Can't find your show?" tile, linking to **Add a show**.
 
 ### You (`/profile`)
 - `AppHeader` with the logo and a share button, which shares or copies your public profile link. There's no profile photo in the header, since this page is your profile.

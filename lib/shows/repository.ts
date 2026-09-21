@@ -9,6 +9,7 @@
 import { supabase } from '../supabase'
 import { supabaseAdmin } from '../supabaseAdmin'
 import { formatShowDate, windowEndIso, windowStartIso } from '../dates'
+import { artistKey } from '../artistImages'
 import { boundingBox, distanceInMiles, type Coords } from '../geo'
 import type { Show, SyncShow } from '../ticketmaster'
 
@@ -219,7 +220,107 @@ export async function prunePastShows(): Promise<number> {
     .from('shows')
     .delete({ count: 'exact' })
     .lt('show_date', windowStartIso())
+    // Never a user submission. A Ticketmaster row can always be re-fetched
+    // while it is still upcoming; a row somebody typed in by hand cannot be
+    // recovered from anywhere, and it is very likely the only record of a gig
+    // no aggregator carries. Keeping them is the entire point of having them.
+    .neq('source', 'user')
 
   if (error) throw new Error(`shows prune failed: ${error.message}`)
   return count ?? 0
+}
+
+// -- User-submitted shows ----------------------------------------------------
+// "Can't find your show? Add it yourself." The aggregators miss house shows,
+// local bills and DIY spaces entirely, and no amount of extra API coverage
+// reaches them - the person who was there is the only available source.
+
+// Distinct artist names already in the catalogue, for the suggestion list on
+// the add-a-show form. Read through the anon client: this is public data, and
+// the suggestions are the main defence against one band being typed in four
+// different ways.
+export async function searchArtistNames(keyword: string, limit = 8): Promise<string[]> {
+  const trimmed = escapeForOrFilter(keyword)
+  if (trimmed.length < 2) return []
+
+  // Over-fetched because one artist appears on many rows and the distinct-ing
+  // happens here - PostgREST has no DISTINCT.
+  const { data, error } = await supabase
+    .from('shows')
+    .select('artist')
+    .ilike('artist', `%${trimmed}%`)
+    .limit(limit * 25)
+
+  if (error) throw new Error(`artist search failed: ${error.message}`)
+
+  const seen = new Map<string, string>()
+  for (const row of data ?? []) {
+    const name = (row as { artist: string }).artist
+    const key = artistKey(name)
+    if (!seen.has(key)) seen.set(key, name)
+  }
+
+  // Shortest first: "Turnstile" should beat "Turnstile and Friends" when both
+  // match, since the bare name is what someone typing it usually means.
+  return Array.from(seen.values()).sort((a, b) => a.length - b.length).slice(0, limit)
+}
+
+// Every show already on a given date, for duplicate detection at submit time.
+// The date is exact where names are not, so it is the cheap way to narrow
+// before comparing artist and venue in JS.
+export async function showsOnDate(isoDate: string): Promise<Show[]> {
+  const { data, error } = await supabase
+    .from('shows')
+    .select(SHOW_COLUMNS)
+    .eq('show_date', isoDate)
+    .limit(500)
+
+  if (error) throw new Error(`shows-on-date lookup failed: ${error.message}`)
+  return (data ?? []).map(row => toShow(row))
+}
+
+export interface UserShowInput {
+  artist:  string
+  venue:   string
+  city:    string
+  state:   string
+  isoDate: string
+  userId:  string
+}
+
+// Inserted through the service role, like every other write to this table.
+// `shows` has no client write grants at all, so a submission cannot skip the
+// checks in /api/shows/submit by talking to PostgREST directly.
+//
+// The id carries its origin the way 'tm-' does, so a user row stays legible
+// as one wherever an id turns up later.
+export async function insertUserShow(input: UserShowInput): Promise<Show> {
+  const row = {
+    id:           `user-${crypto.randomUUID()}`,
+    source:       'user',
+    artist:       input.artist,
+    venue:        input.venue,
+    city:         input.city,
+    state:        input.state,
+    show_date:    input.isoDate,
+    emoji:        '🎵',
+    // No coordinates: nothing here has been geocoded, and inventing a point
+    // would put the show into nearby searches it has no business being in.
+    // A null lat/lng already drops it from those - see lib/geo.ts.
+    lat:          null,
+    lng:          null,
+    metro:        null,
+    image_url:    null,
+    submitted_by: input.userId,
+    last_seen_at: new Date().toISOString(),
+  }
+
+  const { data, error } = await supabaseAdmin()
+    .from('shows')
+    .insert(row)
+    .select(SHOW_COLUMNS)
+    .single()
+
+  if (error) throw new Error(`user show insert failed: ${error.message}`)
+  return toShow(data as ShowRow)
 }
