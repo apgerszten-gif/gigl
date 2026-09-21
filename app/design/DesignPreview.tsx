@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Pencil, Search, Share2 } from 'lucide-react'
+import { Pencil, Plus, Search, Share2 } from 'lucide-react'
 import { DockBar } from '@/components/BottomNav'
+import { SuggestField } from '@/components/SuggestField'
 import { Logo } from '@/components/Logo'
 import {
-  ArtistPhoto, Card, Chip, DateTag, HeaderPhoto, Label, PersonPhoto, Place, PullQuote, Segmented, Stars, Stat, TopBar,
-  btnPrimary, btnSecondary, headerClass, iconBtn, inputBox,
+  ArtistPhoto, Card, Chip, DateTag, Field, HeaderPhoto, Label, PersonPhoto, Place, PullQuote, Segmented, Stars, Stat, TopBar,
+  btnPrimary, btnSecondary, fieldInput, headerClass, iconBtn, inputBox,
 } from '@/components/ui'
 
 // Sample-data renderings of the core screens in DESIGN.md, built from the same
@@ -18,7 +19,7 @@ import {
 
 // 'pick' is the show picker the Log button opens; 'log' is the rating form
 // it leads to. There is no 'search' any more - see components/BottomNav.tsx.
-type Screen = 'feed' | 'rankings' | 'pick' | 'log' | 'profile'
+type Screen = 'feed' | 'rankings' | 'pick' | 'add' | 'log' | 'profile'
 
 const ME = { name: 'Alex Gerszten', handle: 'gers_tunes' }
 
@@ -39,13 +40,14 @@ export function DesignPreview() {
       {screen === 'feed'     && <FeedScreen onProfile={openProfile} onRankings={() => setScreen('rankings')} />}
       {screen === 'rankings' && <RankingsScreen onProfile={openProfile} onFeed={() => setScreen('feed')} />}
       {screen === 'log'      && <LogShowScreen />}
-      {screen === 'pick'     && <PickShowScreen onProfile={openProfile} onPick={() => setScreen('log')} />}
+      {screen === 'pick'     && <PickShowScreen onProfile={openProfile} onPick={() => setScreen('log')} onAdd={() => setScreen('add')} />}
+      {screen === 'add'      && <AddShowScreen />}
       {screen === 'profile'  && <ProfileScreen />}
 
       {/* Rankings is a view of Feed and the picker belongs to Log, so both
           map onto the three real tabs rather than getting one each. */}
       <DockBar
-        active={screen === 'rankings' ? 'feed' : screen === 'pick' ? 'log' : screen}
+        active={screen === 'rankings' ? 'feed' : screen === 'pick' || screen === 'add' ? 'log' : screen}
         mode="buttons"
         onSelect={tab => setScreen(tab === 'log' ? 'pick' : tab)}
       />
@@ -342,7 +344,7 @@ const RESULTS = [
   { artist: 'Mitski',             place: 'Shrine Auditorium, Los Angeles, CA',    date: '2026-09-14' },
 ]
 
-function PickShowScreen({ onProfile, onPick }: { onProfile: () => void; onPick: () => void }) {
+function PickShowScreen({ onProfile, onPick, onAdd }: { onProfile: () => void; onPick: () => void; onAdd: () => void }) {
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const results = RESULTS.filter(r => !q || r.artist.toLowerCase().includes(q) || r.place.toLowerCase().includes(q))
@@ -351,8 +353,8 @@ function PickShowScreen({ onProfile, onPick }: { onProfile: () => void; onPick: 
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
         <div className="min-w-0">
-          <Label>Search</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Find a show</h1>
+          <Label>Log a show</Label>
+          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">What did you see<span className="text-accent">?</span></h1>
         </div>
       </DemoHeader>
 
@@ -387,6 +389,20 @@ function PickShowScreen({ onProfile, onPick }: { onProfile: () => void; onPick: 
           <p className="px-3.5 py-6 text-center text-xs text-ink-muted">No shows match &ldquo;{query}&rdquo;</p>
         )}
       </main>
+
+      <button
+        type="button"
+        onClick={onAdd}
+        className="mt-3 mx-5 w-[calc(100%-40px)] flex items-center gap-3 rounded-card border-1.5 border-dashed border-ink/30 px-3.5 py-3 text-left"
+      >
+        <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
+          <Plus className="w-4 h-4" strokeWidth={2} />
+        </span>
+        <div className="min-w-0">
+          <p className="font-display text-[15px] font-bold leading-tight">Can&apos;t find your show?</p>
+          <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Add it yourself</p>
+        </div>
+      </button>
     </div>
   )
 }
@@ -471,6 +487,39 @@ function ProfileScreen() {
           </div>
           <span className="p-1.5 text-ink-faint"><Pencil className="w-4 h-4" /></span>
         </Card>
+      </div>
+    </div>
+  )
+}
+
+// -- Screen: Add a show ------------------------------------------------------
+// Uses the real SuggestField rather than a mock, so the suggestion chips and
+// the "did you mean" prompt here are the same code the app runs - and can be
+// seen working without a sign-in, which the real /add-show needs.
+
+function AddShowScreen() {
+  const [artist, setArtist] = useState('')
+  const [venue, setVenue]   = useState('')
+  const [city, setCity]     = useState('')
+  const [date, setDate]     = useState('')
+
+  return (
+    <div className="pb-28">
+      <div className={`${headerClass} px-5 py-3`}>
+        <h1 className="font-display text-lg font-bold tracking-tight">Add a show</h1>
+      </div>
+
+      <div className="px-5 pt-4 space-y-3">
+        <SuggestField field="artist" label="Artist" hint="who you saw" placeholder="Turnstile" value={artist} onChange={setArtist} />
+
+        <Field label="Date" hint="when it happened">
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className={fieldInput} />
+        </Field>
+
+        <SuggestField field="venue" label="Venue" hint="where it was" placeholder="Bottom of the Hill" value={venue} onChange={setVenue} />
+        <SuggestField field="city" label="City" hint="optional" placeholder="San Francisco, CA" value={city} onChange={setCity} />
+
+        <button type="button" className={`${btnPrimary} w-full py-3.5 text-xs`}>Add show and log it</button>
       </div>
     </div>
   )
