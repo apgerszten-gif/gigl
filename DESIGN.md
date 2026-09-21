@@ -115,7 +115,7 @@ Where the photos come from:
 
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
-- Segmented view switch: All activity / Following / Rankings. The first two filter the stream in place; Rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
+- Two stacked segmented controls: **All activity / Following** on top, then **Artist rankings** below. The first two filter the stream in place; Artist rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. They're stacked rather than a row of three because "whose logs" and "the aggregate view" are different questions, and because a three-up row crushes the longer label. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
 - Review cards, each with:
   - any photos or videos the reviewer attached, full-bleed at the top
   - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
@@ -125,10 +125,10 @@ Where the photos come from:
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
 
-### Rankings (`/rankings`)
+### Artist rankings (`/rankings`)
 - Reached from the Feed view switch, not the dock. Its own route, so the segmented control navigates rather than toggling state.
-- `AppHeader` with an "Everyone's ratings" label and the title, then the same view switch as Feed with Rankings selected.
-- Underline day tabs, only when the logged shows span more than one day.
+- `AppHeader` with an "Everyone's ratings" label and the title, then the same two controls as Feed with Artist rankings selected.
+- One list, no day tabs. Splitting by day made sense when every logged show came from a festival lineup and "Saturday" named a real section of the event; with search covering the whole Ticketmaster catalogue it would slice a year of unrelated gigs by weekday. `day` still shows in the place line on festival-sourced rows.
 - Ranked cards: a sienna rank number, the artist photo with its date sticker, the artist with stars, the place line, a rating-count chip and any battle record.
 - The style guide also shows a milestone callout and a "View gig map" pill *(mockup)*.
 

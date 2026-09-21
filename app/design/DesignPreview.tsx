@@ -37,7 +37,7 @@ export function DesignPreview() {
       </div>
 
       {screen === 'feed'     && <FeedScreen onProfile={openProfile} onRankings={() => setScreen('rankings')} />}
-      {screen === 'rankings' && <RankingsScreen onProfile={openProfile} />}
+      {screen === 'rankings' && <RankingsScreen onProfile={openProfile} onFeed={() => setScreen('feed')} />}
       {screen === 'log'      && <LogShowScreen />}
       {screen === 'pick'     && <PickShowScreen onProfile={openProfile} onPick={() => setScreen('log')} />}
       {screen === 'profile'  && <ProfileScreen />}
@@ -94,7 +94,7 @@ const REVIEWS = [
 ]
 
 function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankings: () => void }) {
-  const [filter, setFilter] = useState<'all' | 'following' | 'rankings'>('all')
+  const [filter, setFilter] = useState<string>('all')
   return (
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
@@ -102,14 +102,21 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
       </DemoHeader>
 
       <div className="px-5 pt-3 space-y-2.5">
+        {/* Two tiers: whose logs, then the separate aggregate view. The real
+            one is components/FeedTabs.tsx - inlined here because the style
+            guide must not actually navigate. */}
         <Segmented
           options={[
             { value: 'all', label: 'All activity' },
             { value: 'following', label: 'Following' },
-            { value: 'rankings', label: 'Rankings' },
           ]}
           value={filter}
-          onChange={next => (next === 'rankings' ? onRankings() : setFilter(next))}
+          onChange={setFilter}
+        />
+        <Segmented
+          options={[{ value: 'rankings', label: 'Artist rankings' }]}
+          value=""
+          onChange={onRankings}
         />
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <Chip active>This weekend</Chip>
@@ -164,15 +171,31 @@ const RANKED = [
   { artist: 'Mitski',       place: 'The Wiltern, Los Angeles, CA', date: '2026-09-02', count: 17, score: 14 / 3 },
 ]
 
-function RankingsScreen({ onProfile }: { onProfile: () => void }) {
+function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: () => void }) {
   return (
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
         <div className="min-w-0">
           <Label>Everyone&apos;s ratings</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Rankings</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Artist rankings</h1>
         </div>
       </DemoHeader>
+
+      <div className="px-5 pt-3 space-y-2.5">
+        <Segmented
+          options={[
+            { value: 'all', label: 'All activity' },
+            { value: 'following', label: 'Following' },
+          ]}
+          value=""
+          onChange={onFeed}
+        />
+        <Segmented
+          options={[{ value: 'rankings', label: 'Artist rankings' }]}
+          value="rankings"
+          onChange={() => {}}
+        />
+      </div>
 
       <div className="mx-5 mt-4 p-3 rounded-card bg-accent/10 border-1.5 border-accent/30 flex items-center justify-between gap-3">
         <div>
