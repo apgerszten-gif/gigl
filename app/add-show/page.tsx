@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { artistKey } from '@/lib/artistImages'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { setActiveShow } from '@/lib/activeShow'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/AuthProvider'
+import { SuggestField } from '@/components/SuggestField'
 import { BackHeader, ErrorNote, Field, btnPrimary, btnSecondary, fieldInput } from '@/components/ui'
 
 interface Show {
@@ -19,31 +19,6 @@ interface Show {
   imageUrl: string | null
 }
 
-const SUGGEST_DEBOUNCE_MS = 300
-
-// A typo won't substring-match the right spelling - "turnstyle" never finds
-// "Turnstile" - so a query that comes back empty is retried on its first few
-// characters, which usually still match. The near-miss check below then does
-// the rest.
-const FUZZY_PREFIX = 4
-
-// Levenshtein, as in lib/smsMatching.ts. Duplicated rather than exported from
-// there because that module is about matching SMS replies to a festival
-// lineup, and this needs the distance alone.
-function levenshtein(a: string, b: string): number {
-  const dp: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0))
-  for (let i = 0; i <= a.length; i++) dp[i][0] = i
-  for (let j = 0; j <= b.length; j++) dp[0][j] = j
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1])
-    }
-  }
-  return dp[a.length][b.length]
-}
-
 // Adding a show the catalogue doesn't have.
 //
 // Ticketmaster covers ticketed rooms, and every other aggregator worth having
@@ -51,11 +26,13 @@ function levenshtein(a: string, b: string): number {
 // bills and DIY spaces are in none of them at any price - the person who was
 // there is the only source there will ever be.
 //
-// The artist field is the part that matters. A show typed in under a
-// misspelled name is invisible to everyone who spells it correctly later, so
-// the form works hard to offer the spelling already in the catalogue before
-// accepting a new one. It never blocks a new name: a band nobody has logged
-// yet is exactly what this page is for.
+// Artist, venue and city all fragment on spelling the same way - a show
+// typed in as "fillmore sf" is a different room from "The Fillmore" as far as
+// every future search is concerned, and the person typing has no way to know
+// that. So all three offer the spelling already in the catalogue before
+// accepting a new one; see components/SuggestField.tsx. None of them ever
+// blocks a new value, because a band or a basement nobody has logged yet is
+// exactly what this page is for.
 export default function AddShowPage() {
   const router   = useRouter()
   const supabase = createClient()
@@ -66,14 +43,9 @@ export default function AddShowPage() {
   const [city, setCity]     = useState('')
   const [date, setDate]     = useState('')
 
-  const [suggestions, setSuggestions] = useState<string[]>([])
   const [submitting, setSubmitting]   = useState(false)
   const [error, setError]             = useState<string | null>(null)
   const [duplicate, setDuplicate]     = useState<Show | null>(null)
-
-  // Set when a suggestion is tapped, so the "did you mean" hint doesn't come
-  // straight back for the name the person just accepted.
-  const acceptedRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/')
@@ -83,56 +55,6 @@ export default function AddShowPage() {
   // later is a mistake - almost always a mistyped year - because a show you
   // haven't been to yet isn't one you can log.
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
-
-  useEffect(() => {
-    const trimmed = artist.trim()
-    if (trimmed.length < 2) { setSuggestions([]); return }
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(async () => {
-      try {
-        const ask = async (q: string) => {
-          const res = await fetch(`/api/artists/search?q=${encodeURIComponent(q)}`, { signal: controller.signal })
-          if (!res.ok) return []
-          return (await res.json()).artists as string[]
-        }
-
-        let found = await ask(trimmed)
-        if (found.length === 0 && trimmed.length > FUZZY_PREFIX) {
-          found = await ask(trimmed.slice(0, FUZZY_PREFIX))
-        }
-        setSuggestions(found)
-      } catch (err) {
-        // A failed lookup must not break the form - typing a brand new name
-        // is a legitimate outcome and needs no suggestions at all.
-        if ((err as Error).name !== 'AbortError') setSuggestions([])
-      }
-    }, SUGGEST_DEBOUNCE_MS)
-
-    return () => { clearTimeout(timeoutId); controller.abort() }
-  }, [artist])
-
-  const typedKey = artistKey(artist.trim())
-  const isKnown  = suggestions.some(name => artistKey(name) === typedKey)
-
-  // The closest existing spelling, when the typed one isn't already it. The
-  // threshold scales with length so short names don't collect false hits -
-  // "Muse" and "Mura" are two apart and are not each other.
-  const nearMiss = useMemo(() => {
-    if (!typedKey || isKnown || acceptedRef.current === artist.trim()) return null
-    const limit = Math.max(1, Math.floor(typedKey.length * 0.34))
-    let best: { name: string; distance: number } | null = null
-    for (const name of suggestions) {
-      const distance = levenshtein(typedKey, artistKey(name))
-      if (distance <= limit && (!best || distance < best.distance)) best = { name, distance }
-    }
-    return best?.name ?? null
-  }, [suggestions, typedKey, isKnown, artist])
-
-  function accept(name: string) {
-    acceptedRef.current = name
-    setArtist(name)
-  }
 
   // Straight into logging rather than back to search: the show was just
   // created, and for any date older than the past week the search list
@@ -183,44 +105,14 @@ export default function AddShowPage() {
       <BackHeader title="Add a show" href="/select-festival" />
 
       <form onSubmit={submit} className="px-5 pt-4 space-y-3">
-        <Field label="Artist" hint="who you saw">
-          <input
-            value={artist}
-            onChange={e => setArtist(e.target.value)}
-            placeholder="Turnstile"
-            autoComplete="off"
-            className={fieldInput}
-          />
-        </Field>
-
-        {suggestions.length > 0 && !isKnown && (
-          <div className="flex flex-wrap gap-1.5 -mt-1">
-            {suggestions.slice(0, 5).map(name => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => accept(name)}
-                className="rounded-card border-1.5 border-ink/25 bg-cream px-2.5 py-1 text-[11px] text-ink-muted"
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {nearMiss && (
-          <p className="-mt-1 text-[11px] leading-snug text-ink-muted">
-            Did you mean{' '}
-            <button type="button" onClick={() => accept(nearMiss)} className="font-bold text-accent underline">
-              {nearMiss}
-            </button>
-            ? Using the spelling already listed keeps your log with everyone else&apos;s.
-          </p>
-        )}
-
-        {isKnown && artist.trim() && (
-          <p className="-mt-1 text-[11px] text-ink-faint">Matches an artist already in Gigl.</p>
-        )}
+        <SuggestField
+          field="artist"
+          label="Artist"
+          hint="who you saw"
+          placeholder="Turnstile"
+          value={artist}
+          onChange={setArtist}
+        />
 
         <Field label="Date" hint="when it happened">
           <input
@@ -232,25 +124,23 @@ export default function AddShowPage() {
           />
         </Field>
 
-        <Field label="Venue" hint="where it was">
-          <input
-            value={venue}
-            onChange={e => setVenue(e.target.value)}
-            placeholder="Bottom of the Hill"
-            autoComplete="off"
-            className={fieldInput}
-          />
-        </Field>
+        <SuggestField
+          field="venue"
+          label="Venue"
+          hint="where it was"
+          placeholder="Bottom of the Hill"
+          value={venue}
+          onChange={setVenue}
+        />
 
-        <Field label="City" hint="optional">
-          <input
-            value={city}
-            onChange={e => setCity(e.target.value)}
-            placeholder="San Francisco, CA"
-            autoComplete="off"
-            className={fieldInput}
-          />
-        </Field>
+        <SuggestField
+          field="city"
+          label="City"
+          hint="optional"
+          placeholder="San Francisco, CA"
+          value={city}
+          onChange={setCity}
+        />
 
         {error && <ErrorNote>{error}</ErrorNote>}
 

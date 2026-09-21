@@ -135,7 +135,8 @@ Where the photos come from:
 ### Add a show (`/add-show`)
 - `BackHeader` titled "Add a show", no dock — it's part of the log flow.
 - Four `Field` inputs: **Artist**, **Date**, **Venue**, and an optional **City** that accepts "San Francisco, CA".
-- Under Artist, up to five tappable suggestions of names already in the catalogue, and a "Did you mean …?" line when what's typed is a near miss for one of them. Neither blocks a new name — a band nobody has logged yet is the reason the page exists.
+- Artist, Venue and City are all `SuggestField`s: up to five tappable chips of values already in the catalogue, and a "Did you mean …?" line when what's typed is a near miss for one of them. Venues and cities fragment on spelling exactly as artists do — "fillmore sf" is a different room from "The Fillmore" as far as every future search is concerned.
+- The matching tolerates dropped articles ("fillmore" → "The Fillmore"), ordinary typos, and names typed short ("brick and morter" → "Brick and Mortar Music Hall"). It never blocks a new value — a band or a basement nobody has logged yet is the reason the page exists.
 - The date input is capped at today. A show you haven't been to isn't one you can log.
 - Submitting goes straight into logging the new show rather than back to search. If the show turns out to already exist, a card offers to log that one instead.
 

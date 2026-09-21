@@ -9,7 +9,7 @@
 import { supabase } from '../supabase'
 import { supabaseAdmin } from '../supabaseAdmin'
 import { formatShowDate, windowEndIso, windowStartIso } from '../dates'
-import { artistKey } from '../artistImages'
+import { nameKey } from '../nameKey'
 import { boundingBox, distanceInMiles, type Coords } from '../geo'
 import type { Show, SyncShow } from '../ticketmaster'
 
@@ -235,29 +235,52 @@ export async function prunePastShows(): Promise<number> {
 // local bills and DIY spaces entirely, and no amount of extra API coverage
 // reaches them - the person who was there is the only available source.
 
-// Distinct artist names already in the catalogue, for the suggestion list on
-// the add-a-show form. Read through the anon client: this is public data, and
-// the suggestions are the main defence against one band being typed in four
-// different ways.
-export async function searchArtistNames(keyword: string, limit = 8): Promise<string[]> {
+// Distinct values already in the catalogue, for the suggestion lists on the
+// add-a-show form. Its job is spelling, not discovery: a show typed in under
+// a name nobody else will reproduce is invisible to everyone who spells it
+// correctly later, and offering the existing spelling is the cheapest moment
+// to prevent that.
+//
+// Read through the anon client - this is public data, and the form has to
+// keep working whether or not the service role key is configured.
+export type SuggestField = 'artist' | 'venue' | 'city'
+
+// Whitelisted rather than interpolated: the value picks a column name, and a
+// column name cannot be parameterised.
+const SUGGEST_COLUMNS: Record<SuggestField, string> = {
+  artist: 'artist',
+  venue:  'venue',
+  city:   'city, state',
+}
+
+export async function suggestValues(field: SuggestField, keyword: string, limit = 8): Promise<string[]> {
   const trimmed = escapeForOrFilter(keyword)
   if (trimmed.length < 2) return []
 
-  // Over-fetched because one artist appears on many rows and the distinct-ing
-  // happens here - PostgREST has no DISTINCT.
+  // Cities are stored split but typed whole ("San Francisco, CA"), so the
+  // match runs against the city alone and the state is re-attached below.
+  const matchColumn = field === 'city' ? 'city' : field
+
+  // Over-fetched because one artist or venue appears on many rows and the
+  // distinct-ing happens here - PostgREST has no DISTINCT.
   const { data, error } = await supabase
     .from('shows')
-    .select('artist')
-    .ilike('artist', `%${trimmed}%`)
+    .select(SUGGEST_COLUMNS[field])
+    .ilike(matchColumn, `%${trimmed}%`)
     .limit(limit * 25)
 
-  if (error) throw new Error(`artist search failed: ${error.message}`)
+  if (error) throw new Error(`${field} suggestions failed: ${error.message}`)
 
   const seen = new Map<string, string>()
-  for (const row of data ?? []) {
-    const name = (row as { artist: string }).artist
-    const key = artistKey(name)
-    if (!seen.has(key)) seen.set(key, name)
+  // Cast through unknown: the select list is chosen at runtime, so
+  // supabase-js can't infer the row shape and widens it to its error type.
+  for (const row of (data ?? []) as unknown as Record<string, string | null>[]) {
+    const value = field === 'city'
+      ? [row.city, row.state].filter(Boolean).join(', ')
+      : row[field]
+    if (!value) continue
+    const key = nameKey(value)
+    if (!seen.has(key)) seen.set(key, value)
   }
 
   // Shortest first: "Turnstile" should beat "Turnstile and Friends" when both
