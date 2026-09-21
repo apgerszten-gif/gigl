@@ -34,6 +34,12 @@ export function SuggestField({ field, label, hint, placeholder, value, onChange 
   onChange: (value: string) => void
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([])
+  // 'idle' until enough has been typed to look anything up, 'checking' while
+  // a lookup is in flight, 'done' once one has returned. Without this a field
+  // with no matches looks identical to a field that isn't working - which is
+  // exactly how it read for venues, where the catalogue often genuinely has
+  // nothing, while cities nearly always match and so always looked fine.
+  const [status, setStatus] = useState<'idle' | 'checking' | 'done'>('idle')
 
   // Set when a suggestion is accepted, so the "did you mean" line doesn't
   // come straight back for the value the person just chose.
@@ -41,7 +47,9 @@ export function SuggestField({ field, label, hint, placeholder, value, onChange 
 
   useEffect(() => {
     const trimmed = value.trim()
-    if (trimmed.length < 2) { setSuggestions([]); return }
+    if (trimmed.length < 2) { setSuggestions([]); setStatus('idle'); return }
+
+    setStatus('checking')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(async () => {
@@ -60,10 +68,11 @@ export function SuggestField({ field, label, hint, placeholder, value, onChange 
           found = await ask(trimmed.slice(0, FUZZY_PREFIX))
         }
         setSuggestions(found)
+        setStatus('done')
       } catch (err) {
         // A failed lookup must not break the form - typing something brand
         // new is a legitimate outcome that needs no suggestions at all.
-        if ((err as Error).name !== 'AbortError') setSuggestions([])
+        if ((err as Error).name !== 'AbortError') { setSuggestions([]); setStatus('done') }
       }
     }, DEBOUNCE_MS)
 
@@ -125,6 +134,18 @@ export function SuggestField({ field, label, hint, placeholder, value, onChange 
 
       {isKnown && typed && (
         <p className="text-[11px] text-ink-faint">Already in Gigl.</p>
+      )}
+
+      {status === 'checking' && !isKnown && suggestions.length === 0 && (
+        <p className="text-[11px] text-ink-faint">Checking…</p>
+      )}
+
+      {/* The case that made this look broken. Silence reads as "nothing
+          happened"; saying so reads as "checked, and it's new" - which is a
+          perfectly good answer on a form whose purpose is adding what isn't
+          there. */}
+      {status === 'done' && !isKnown && suggestions.length === 0 && (
+        <p className="text-[11px] text-ink-faint">Not in Gigl yet — this will add it.</p>
       )}
     </div>
   )
