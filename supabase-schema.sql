@@ -611,3 +611,24 @@ create index if not exists shows_source_idx on public.shows (source);
 -- date and compares artist names in JS, because a date is exact where names
 -- are not. This is the index that keeps that lookup cheap.
 create index if not exists shows_date_source_idx on public.shows (show_date, source);
+
+-- Being findable by phone number is a separate question from having linked
+-- one.
+--
+-- profiles.phone_number was collected for SMS show scoring (see /api/sms/*).
+-- /api/friends/match uses it for something different: telling a new user
+-- which of their contacts is already here. That is a purpose the original
+-- consent didn't cover, so it gets its own flag rather than being assumed.
+--
+-- Defaults to true because the matching is one-directional and reveals
+-- nothing a profile doesn't already show publicly - someone who has your
+-- number learns only that the account exists. Set it false to disappear from
+-- contact matching while keeping SMS scoring.
+alter table public.profiles add column if not exists discoverable_by_phone boolean not null default true;
+
+-- Contacts themselves are never stored. /api/friends/match takes SHA-256
+-- hashes of E.164 numbers, computed on the device, and intersects them with
+-- hashes of its own users' numbers in memory. There is no contacts table and
+-- no edge is recorded for a phone number that doesn't belong to an account:
+-- people who never signed up leave no trace of having been in someone's
+-- address book.

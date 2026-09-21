@@ -46,8 +46,12 @@ export default function ChooseUsernamePage() {
     if (upsertError) { setError(upsertError.message); setLoading(false); return }
 
     setLoading(false)
+
+    // Straight on to finding people you know, unless this is a returning
+    // account that already picked a show - then the feed is what they came
+    // back for. /find-friends is skippable and leads to the same place.
     const hasFestival = localStorage.getItem(LOCAL_STORAGE_KEY)
-    router.push(hasFestival ? '/feed' : '/select-festival')
+    router.push(hasFestival ? '/feed' : '/find-friends')
   }
 
   if (checking) return null
