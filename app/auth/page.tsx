@@ -80,8 +80,8 @@ export default function AuthPage() {
         <Card className="absolute left-10 right-0 top-[92px] rotate-[1.5deg] p-3 space-y-2">
           <PullQuote>The pit never stopped moving.</PullQuote>
           <div className="flex items-center gap-1.5">
-            <PersonPhoto name="sam_hears" className="w-5 h-5 text-[10px] border border-ink/15" />
-            <span className="text-[11px] text-ink-muted">@sam_hears</span>
+            <PersonPhoto name="mauricio_pochettino" className="w-5 h-5 text-[10px] border border-ink/15" />
+            <span className="text-[11px] text-ink-muted">@mauricio_pochettino</span>
           </div>
         </Card>
       </div>

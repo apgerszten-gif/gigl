@@ -25,10 +25,10 @@ const DURATION_MS = 14000
 const SCENE_STARTS_MS = [0, 3400, 7000, 10600]
 
 const CAPTIONS = [
-  { label: 'The feed',   title: "See what everyone's seeing" },
+  { label: 'The feed',   title: "See what everyone's rating" },
   { label: 'Log a show', title: 'Find the show you saw' },
   { label: 'Rate it',    title: 'Stars in a few taps' },
-  { label: 'Rankings',   title: 'Watch the rankings move' },
+  { label: 'Rankings',   title: 'See what everyone thinks about your favorite artists' },
 ]
 
 const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'
