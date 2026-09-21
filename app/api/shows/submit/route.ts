@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/apiAuth'
-import { artistKey } from '@/lib/artistImages'
+import { nameKey } from '@/lib/nameKey'
 import { windowEndIso } from '@/lib/dates'
-import { insertUserShow, searchArtistNames, showsOnDate } from '@/lib/shows/repository'
+import { insertUserShow, showsOnDate, suggestValues, type SuggestField } from '@/lib/shows/repository'
 
 // POST /api/shows/submit — add a show the catalogue doesn't have.
 //
@@ -74,13 +74,13 @@ export async function POST(req: NextRequest) {
   const artist = cleanText(body.artist)
   const venue  = cleanText(body.venue)
   const date   = cleanText(body.date)
-  const place  = splitCity(cleanText(body.city))
+  const city   = cleanText(body.city)
 
   if (!artist) return NextResponse.json({ error: 'Who did you see?' }, { status: 400 })
   if (!venue)  return NextResponse.json({ error: 'Where was it?' }, { status: 400 })
   if (!date)   return NextResponse.json({ error: 'When was it?' }, { status: 400 })
 
-  if (artist.length > MAX_LEN || venue.length > MAX_LEN || place.city.length > MAX_LEN) {
+  if (artist.length > MAX_LEN || venue.length > MAX_LEN || city.length > MAX_LEN) {
     return NextResponse.json({ error: 'That is longer than we can store.' }, { status: 400 })
   }
 
@@ -99,13 +99,26 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Canonicalise the spelling. If the catalogue already knows this artist,
-    // store its version of the name so the submission joins the existing
-    // artist rather than starting a near-duplicate beside it. Matching is on
-    // the normalised key, so this only ever changes case and punctuation -
-    // a genuinely new name is stored exactly as typed.
-    const known = await searchArtistNames(artist, 25)
-    const canonical = known.find(name => artistKey(name) === artistKey(artist)) ?? artist
+    // Canonicalise the spelling of all three. If the catalogue already knows
+    // this artist, venue or city, store its version so the submission joins
+    // what's there rather than starting a near-duplicate beside it. Matching
+    // is on the normalised key, so this only ever changes case, accents and
+    // whitespace - a genuinely new value is stored exactly as typed.
+    //
+    // Done server-side as well as in the form because the form's suggestions
+    // are a courtesy, not a gate: a slow lookup, a dismissed prompt or a
+    // direct POST all land here.
+    const canonicalise = async (field: SuggestField, value: string) => {
+      if (!value) return value
+      const known = await suggestValues(field, value, 25)
+      return known.find(name => nameKey(name) === nameKey(value)) ?? value
+    }
+
+    const canonical = await canonicalise('artist', artist)
+    const canonicalVenue = await canonicalise('venue', venue)
+    // Canonicalised whole ("San Francisco, CA") and split afterwards, so the
+    // state code comes from the catalogue's spelling rather than the typing.
+    const place = splitCity(await canonicalise('city', city))
 
     // Already listed? A date is exact where names aren't, so it narrows
     // cheaply, and artist-on-a-date is a strong enough signal on its own -
@@ -113,7 +126,7 @@ export async function POST(req: NextRequest) {
     // enough not to design around, and the caller is shown the match either
     // way rather than being told no.
     const sameDay = await showsOnDate(date)
-    const existing = sameDay.find(show => artistKey(show.artist) === artistKey(canonical))
+    const existing = sameDay.find(show => nameKey(show.artist) === nameKey(canonical))
     if (existing) {
       return NextResponse.json(
         { error: 'That show is already listed.', show: existing },
@@ -123,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     const show = await insertUserShow({
       artist:  canonical,
-      venue,
+      venue:   canonicalVenue,
       city:    place.city,
       state:   place.state,
       isoDate: date,
