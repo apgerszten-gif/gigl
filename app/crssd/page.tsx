@@ -11,7 +11,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
-import { ArtistPhoto, EmptyState, Label, Place, Segmented, Stars, inputBox } from '@/components/ui'
+import { ArtistPhoto, DjDecks, EmptyState, Label, Place, Segmented, Stars, inputBox } from '@/components/ui'
 
 interface Show {
   id: string
@@ -232,7 +232,7 @@ export default function CrssdPage() {
                     i > 0 ? 'border-t border-ink/10' : ''
                   } ${locked ? 'opacity-50 cursor-default' : 'hover:bg-accent/5'}`}
                 >
-                  <ArtistPhoto name={s.artist} src={s.imageUrl} className="w-12 h-12" iconSize={16} />
+                  <ArtistPhoto name={s.artist} src={s.imageUrl} className="w-12 h-12" iconSize={36} icon={DjDecks} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display text-[15px] font-bold leading-tight truncate">{s.artist}</h3>
                     <Place className="mt-0.5">{dayLabel}</Place>

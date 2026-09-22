@@ -121,11 +121,40 @@ function tintFor(name: string) {
   return PHOTO_TINTS[sum % PHOTO_TINTS.length]
 }
 
-// Square artist photo with a riso border, or the halftone-and-mic
-// placeholder when there's no photo. `children` (e.g. a DateTag) sits
-// outside the clipped frame so it can overhang the corner.
-export function ArtistPhoto({ name, src, className, iconSize = 20, children }: {
-  name: string; src?: string | null; className: string; iconSize?: number; children?: React.ReactNode
+// What ArtistPhoto's placeholder icon is called with. Matches the slice of
+// lucide's props actually used, so a lucide icon and a hand-drawn one are
+// interchangeable here.
+interface IconProps { size?: string | number; strokeWidth?: string | number }
+
+// A DJ behind the decks, for bills where nobody is holding a microphone.
+// Drawn rather than imported: lucide has turntables, headphones and vinyl,
+// but nobody standing behind them, and the point of the placeholder is that
+// somebody played.
+export function DjDecks({ size = 20, strokeWidth = 1.75 }: IconProps) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    >
+      <circle cx="12" cy="4.25" r="2.25" />
+      <path d="M6.5 13.5 L9 9.25 A3.6 3.6 0 0 1 15 9.25 L17.5 13.5" />
+      <rect x="2" y="13.5" width="20" height="7" rx="1.5" />
+      <circle cx="7" cy="17" r="1.6" />
+      <circle cx="17" cy="17" r="1.6" />
+    </svg>
+  )
+}
+
+// Square artist photo with a riso border, or the halftone placeholder when
+// there's no photo. `children` (e.g. a DateTag) sits outside the clipped
+// frame so it can overhang the corner.
+//
+// `icon` swaps what the placeholder draws. It stays a microphone everywhere
+// by default; an all-DJ bill passes DjDecks (see app/crssd).
+export function ArtistPhoto({ name, src, className, iconSize = 20, icon: Icon = MicVocal, children }: {
+  name: string; src?: string | null; className: string; iconSize?: number
+  icon?: React.ComponentType<IconProps>
+  children?: React.ReactNode
 }) {
   return (
     <div className={`relative flex-shrink-0 ${className}`}>
@@ -134,7 +163,7 @@ export function ArtistPhoto({ name, src, className, iconSize = 20, children }: {
           <img src={src} alt={name} className="w-full h-full object-cover" />
         ) : (
           <div className="halftone w-full h-full flex items-center justify-center text-ink/45" aria-label={`${name} (no photo)`}>
-            <MicVocal size={iconSize} strokeWidth={1.75} />
+            <Icon size={iconSize} strokeWidth={1.75} />
           </div>
         )}
       </div>

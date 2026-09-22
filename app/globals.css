@@ -21,6 +21,22 @@ body {
   background-size: 5px 5px;
 }
 
+/* CRSSD Fest's Fall '26 sunset, sampled down the middle of the gradient wash
+   on crssdfest.com and rebuilt in CSS rather than shipped as their 145KB
+   JPEG - nobody standing in a field on festival wifi should pay for a
+   decoration. Three layers: the riso halftone on top so it reads as print
+   rather than photography, a cream wash so ink text clears 6:1 on every
+   band including the orange one, and their sunset underneath. */
+.crssd-sunset {
+  background-image:
+    radial-gradient(rgba(74, 53, 40, 0.22) 1px, transparent 1.3px),
+    linear-gradient(rgba(250, 243, 226, 0.45), rgba(250, 243, 226, 0.45)),
+    linear-gradient(180deg,
+      #F2D6CA 0%, #F1D5C9 12%, #9399B8 30%, #CC9A88 45%,
+      #F4852D 60%, #B78571 70%, #8A90A9 80%, #DBC6C1 95%, #DEC6B8 100%);
+  background-size: 5px 5px, auto, auto;
+}
+
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
