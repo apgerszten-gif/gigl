@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -14,8 +15,9 @@ import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
+import { SignUpSheet } from '@/components/SignUpSheet'
 import {
-  ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars,
+  ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary,
 } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
@@ -81,6 +83,9 @@ function FeedInner() {
   const [followingIds, setFollowingIds]   = useState<Set<string>>(new Set())
   const [interactions, setInteractions]   = useState<Record<string, Interactions>>({})
   const [activeComments, setActiveComments] = useState<string | null>(null)
+  // Signed-out visitors can read everything here. Reacting, commenting or
+  // filtering to Following opens the sign-up sheet in this mode instead.
+  const [signUpMode, setSignUpMode]       = useState<'signup' | 'signin' | null>(null)
 
   // Stale-while-revalidate: show whatever we last fetched immediately, so a
   // repeat visit never has to sit on a blank spinner while the real fetch
@@ -95,11 +100,13 @@ function FeedInner() {
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) { router.push('/'); return }
-    fetchFeed(user.id)
+    fetchFeed(user?.id ?? null)
   }, [authLoading, user])
 
-  async function fetchFeed(userId: string) {
+  // `userId` is null for someone who hasn't signed up: the logs, names and
+  // reaction counts are all public, and only the per-person lookups (your
+  // profile flags, who you follow, what you've reacted to) are skipped.
+  async function fetchFeed(userId: string | null) {
     const loadStart = Date.now()
     console.log(`[perf] feed:load start userId=${userId}`)
 
@@ -109,10 +116,17 @@ function FeedInner() {
       .order('created_at', { ascending: false })
       .limit(200)
 
+    // Stands in for the per-person queries when nobody is signed in.
+    const nothing = Promise.resolve({ data: null, error: null })
+
     const [{ data: profileRow, error: tipError }, { data: logs }, { data: followRows }] = await Promise.all([
-      timeQuery('feed:profiles', supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single()),
+      userId
+        ? timeQuery('feed:profiles', supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single())
+        : nothing,
       timeQuery('feed:logged_shows', logsQuery),
-      timeQuery('feed:follows', supabase.from('follows').select('following_id').eq('follower_id', userId)),
+      userId
+        ? timeQuery('feed:follows', supabase.from('follows').select('following_id').eq('follower_id', userId))
+        : nothing,
     ])
 
     setFollowingIds(new Set((followRows ?? []).map(r => r.following_id)))
@@ -159,7 +173,7 @@ function FeedInner() {
     setInteractions(interactionMap)
   }
 
-  async function loadInteractions(showIds: string[], userId: string): Promise<Record<string, Interactions>> {
+  async function loadInteractions(showIds: string[], userId: string | null): Promise<Record<string, Interactions>> {
     if (showIds.length === 0) return {}
 
     const [{ data: likeRows }, { data: reactionRows }, { data: commentRows }] = await Promise.all([
@@ -187,7 +201,7 @@ function FeedInner() {
   }
 
   async function toggleLike(showId: string) {
-    if (!user) return
+    if (!user) { setSignUpMode('signup'); return }
     const current = interactions[showId] ?? EMPTY_INTERACTIONS
     const next = !current.likedByMe
 
@@ -210,7 +224,7 @@ function FeedInner() {
   }
 
   async function toggleReaction(showId: string, emoji: string) {
-    if (!user) return
+    if (!user) { setSignUpMode('signup'); return }
     const current = interactions[showId] ?? EMPTY_INTERACTIONS
     const alreadyReacted = current.myReactions.includes(emoji)
 
@@ -263,7 +277,11 @@ function FeedInner() {
     return day.charAt(0).toUpperCase() + day.slice(1)
   }
 
-  const visibleFeed = filterMode === 'following'
+  // Following means nothing without an account, even if ?filter= (from
+  // Rankings) asked for it.
+  const activeFilter = user ? filterMode : 'all'
+
+  const visibleFeed = activeFilter === 'following'
     ? globalFeed.filter(item => item.user_id === user?.id || followingIds.has(item.user_id))
     : globalFeed
 
@@ -275,8 +293,40 @@ function FeedInner() {
         <Logo href="/feed" />
       </AppHeader>
 
-      <div className="px-5 pt-3">
-        <FeedTabs value={filterMode} onFilterChange={setFilterMode} />
+      <div className="px-5 pt-3 space-y-3">
+        {/* The front door for someone who scanned a code: what this is, and
+            that writing a log doesn't need an account until it's posted. */}
+        {!authLoading && !user && (
+          <div className="rounded-card bg-accent/10 border-1.5 border-accent/30 px-4 py-3.5">
+            <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
+              Rate the sets you saw<span className="text-accent">.</span>
+            </h2>
+            <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+              See what everyone thought, then add your own. You only need an account when you post.
+            </p>
+            <div className="mt-3 flex items-center gap-4">
+              <Link href="/log-menu" className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
+                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                Log a show
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSignUpMode('signin')}
+                className="text-[12px] font-semibold text-ink-muted underline underline-offset-[3px]"
+              >
+                I have an account
+              </button>
+            </div>
+          </div>
+        )}
+
+        <FeedTabs
+          value={activeFilter}
+          onFilterChange={next => {
+            if (next === 'following' && !user) { setSignUpMode('signup'); return }
+            setFilterMode(next)
+          }}
+        />
       </div>
 
       <main className="px-5 pt-4 space-y-4">
@@ -288,7 +338,7 @@ function FeedInner() {
 
         {!loading && visibleFeed.length === 0 && (
           <EmptyState>
-            {filterMode === 'following'
+            {activeFilter === 'following'
               ? 'No activity yet from people you follow.'
               : 'No ratings yet. Be the first to log a show.'}
           </EmptyState>
@@ -377,6 +427,19 @@ function FeedInner() {
           loggedShowId={activeComments}
           onClose={() => setActiveComments(null)}
           onCountChange={delta => bumpCommentCount(activeComments, delta)}
+          onNeedAccount={() => setSignUpMode('signup')}
+        />
+      )}
+
+      {/* Nothing to finish on sign-in: the feed refetches as the signed-in
+          user on its own, which is enough to light up their reactions. */}
+      {signUpMode && (
+        <SignUpSheet
+          title={signUpMode === 'signin' ? 'Good to have you back' : 'Join in'}
+          blurb="Make an account to react, comment and follow people. It's also how you post your own logs."
+          initialMode={signUpMode}
+          onClose={() => setSignUpMode(null)}
+          onSignedIn={() => setSignUpMode(null)}
         />
       )}
     </div>

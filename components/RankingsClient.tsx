@@ -19,7 +19,7 @@ export type { ArtistRow }
 export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const router   = useRouter()
   const supabase = createClient()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
 
   const [rows, setRows]         = useState<ArtistRow[]>(initialRows)
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
@@ -66,13 +66,6 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       void supabase.from('profiles').update({ battle_card_dismissed: true }).eq('id', user.id)
     }
   }
-
-  // The rows already arrived pre-computed from the server component — this
-  // check only exists to bounce unauthenticated visitors, it never gates
-  // the data itself.
-  useEffect(() => {
-    if (!authLoading && !user) router.push('/')
-  }, [authLoading, user, router])
 
   // All-time record per artist, aggregated across every user's battles - a
   // public consensus view, same treatment as Feed, never any one user's own

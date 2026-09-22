@@ -48,7 +48,7 @@ export default function AddShowPage() {
   const [duplicate, setDuplicate]     = useState<Show | null>(null)
 
   useEffect(() => {
-    if (!authLoading && !user) router.replace('/')
+    if (!authLoading && !user) router.replace('/auth')
   }, [authLoading, user, router])
 
   // Today in UTC, matching the server's bound in /api/shows/submit. Anything

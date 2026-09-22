@@ -13,7 +13,11 @@ import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
 import { TagFriendsModal, type TaggedFriend } from '@/components/TagFriendsModal'
 import { useAuth } from '@/components/AuthProvider'
 import { ArtistPhoto, Card, Chip, Label, PersonPhoto, Place, Stars, btnPrimary, headerClass, inputBox } from '@/components/ui'
-import { enqueuePendingLog, getPendingLogForArtist, flushPendingLogs } from '@/lib/pendingLogs'
+import { SignUpSheet } from '@/components/SignUpSheet'
+import {
+  enqueuePendingLog, getPendingLogForArtist, flushPendingLogs,
+  saveGuestDraft, getGuestDraftForArtist, clearGuestDraft, type GuestDraft,
+} from '@/lib/pendingLogs'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
 import { useArtistImages } from '@/lib/useArtistImages'
 
@@ -192,12 +196,35 @@ function LogShowInner() {
   const [saving, setSaving] = useState(false)
   const [celebration, setCelebration] = useState<{ username: string | null } | null>(null)
   const [battleUnlock, setBattleUnlock] = useState(false)
+  const [signUpOpen, setSignUpOpen]     = useState(false)
+
+  // Ratings, review and tags from a log that hasn't reached the server yet:
+  // a queued save, or a draft written before signing up.
+  function applyDraft(draft: GuestDraft | null) {
+    if (!draft) return
+    setPerformance(draft.performance_rating)
+    setVenue(draft.venue_rating)
+    setCrowd(draft.crowd_rating)
+    setThoughts(draft.review ?? '')
+    if (draft.tags && draft.tags.length > 0) {
+      setSelectedTags(draft.tags)
+      setTagOptions(prev => Array.from(new Set([...prev, ...draft.tags!])))
+    }
+  }
 
   // Prefill from an existing log for this artist, if one exists.
   useEffect(() => {
     if (!artistId) { setLoadingExisting(false); return }
     if (authLoading) return
-    if (!user) { router.push('/'); return }
+
+    // Signed out, nothing on the server is theirs. The only thing to bring
+    // back is a draft they already tried to post, e.g. before the page
+    // reloaded while they were signing up.
+    if (!user) {
+      applyDraft(getGuestDraftForArtist(artistId))
+      setLoadingExisting(false)
+      return
+    }
 
     async function load(userId: string) {
       const loadStart = Date.now()
@@ -260,17 +287,10 @@ function LogShowInner() {
       // synced (e.g. the connection dropped right after saving) — prefer it
       // over the server row above since it reflects the user's most recent
       // intent.
-      const pending = getPendingLogForArtist(userId, artistId)
-      if (pending) {
-        setPerformance(pending.performance_rating)
-        setVenue(pending.venue_rating)
-        setCrowd(pending.crowd_rating)
-        setThoughts(pending.review ?? '')
-        if (pending.tags && pending.tags.length > 0) {
-          setSelectedTags(pending.tags)
-          setTagOptions(prev => Array.from(new Set([...prev, ...pending.tags!])))
-        }
-      }
+      applyDraft(getPendingLogForArtist(userId, artistId))
+      // Newer still: a draft written while signed out that never got posted
+      // (they signed in some other way, or the page reloaded mid sign-up).
+      applyDraft(getGuestDraftForArtist(artistId))
 
       setLoadingExisting(false)
       timeMark('log-show:prefill total', loadStart)
@@ -351,20 +371,9 @@ function LogShowInner() {
   const mediaPhotoCount = media.filter(m => !m.isVideo).length
   const mediaFull = mediaVideoCount >= MAX_VIDEOS && mediaPhotoCount >= MAX_PHOTOS
 
-  async function handleSave() {
-    if (!canSave || saving) return
-    if (!user) { router.push('/'); return }
-    setSaving(true)
-    const saveStart = Date.now()
-    console.log('[perf] log-show:save start')
-
-    const score = computeShowScore(performance, venue, crowd)
-
-    // Queue the rating locally before anything else touches the network.
-    // From this line on, the rating itself can't be lost to a dropped
-    // connection — everything below is best-effort.
-    enqueuePendingLog({
-      user_id:            user.id,
+  // The log as it stands on screen, minus who wrote it and any media.
+  function currentDraft(): GuestDraft {
+    return {
       artist_id:          artistId,
       artist_name:        artistName,
       stage:              stage || null,
@@ -376,10 +385,44 @@ function LogShowInner() {
       crowd_rating:        crowd,
       review:              thoughts.trim() || null,
       tags:                selectedTags.length > 0 ? selectedTags : null,
-      photo_url:           null,
-      media_urls:          null,
-      emoji:               deriveLegacyEmoji(score),
+    }
+  }
+
+  function handleSave() {
+    if (!canSave || saving) return
+
+    // Signed out: park the log on this phone, then ask for an account. The
+    // sheet opens over this screen rather than navigating away, so attached
+    // photos are still here to upload once it hands back a user id.
+    if (!user) {
+      saveGuestDraft(currentDraft())
+      setSignUpOpen(true)
+      return
+    }
+    void save(user.id)
+  }
+
+  async function save(userId: string) {
+    setSaving(true)
+    const saveStart = Date.now()
+    console.log('[perf] log-show:save start')
+
+    const draft = currentDraft()
+    const score = computeShowScore(performance, venue, crowd)
+
+    // Queue the rating locally before anything else touches the network.
+    // From this line on, the rating itself can't be lost to a dropped
+    // connection — everything below is best-effort.
+    enqueuePendingLog({
+      ...draft,
+      user_id:    userId,
+      photo_url:  null,
+      media_urls: null,
+      emoji:      deriveLegacyEmoji(score),
     })
+    // Safely queued under a real account now, so a signed-out draft of it
+    // has nothing left to do.
+    clearGuestDraft()
 
     // Best-effort media upload — if this fails, the rating above is already
     // safe; the show just gets logged without its photo/video for now.
@@ -388,7 +431,7 @@ function LogShowInner() {
       if (item.file) {
         try {
           const ext = item.file.name.split('.').pop()
-          const path = `${user.id}/${artistId}-${Date.now()}-${mediaUrls.length}.${ext}`
+          const path = `${userId}/${artistId}-${Date.now()}-${mediaUrls.length}.${ext}`
           const { error: uploadError } = await timeQuery(`log-show:media-upload(${item.file.size}b)`, supabase.storage
             .from('show-photos')
             .upload(path, item.file, { upsert: true }))
@@ -404,21 +447,11 @@ function LogShowInner() {
     }
     if (mediaUrls.length > 0) {
       enqueuePendingLog({
-        user_id:            user.id,
-        artist_id:          artistId,
-        artist_name:        artistName,
-        stage:              stage || null,
-        day:                day || null,
-        venue:              showVenue || null,
-        show_date:          showDate || null,
-        performance_rating: performance,
-        venue_rating:        venue,
-        crowd_rating:        crowd,
-        review:              thoughts.trim() || null,
-        tags:                selectedTags.length > 0 ? selectedTags : null,
-        photo_url:           mediaUrls[0],
-        media_urls:          mediaUrls,
-        emoji:               deriveLegacyEmoji(score),
+        ...draft,
+        user_id:    userId,
+        photo_url:  mediaUrls[0],
+        media_urls: mediaUrls,
+        emoji:      deriveLegacyEmoji(score),
       })
     }
 
@@ -428,8 +461,8 @@ function LogShowInner() {
     if (!existingId) {
       try {
         const [{ count }, { data: profileBefore }] = await Promise.all([
-          timeQuery('log-show:count-logged_shows', supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
-          timeQuery('log-show:profiles', supabase.from('profiles').select('battle_mode_unlocked').eq('id', user.id).single()),
+          timeQuery('log-show:count-logged_shows', supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', userId)),
+          timeQuery('log-show:profiles', supabase.from('profiles').select('battle_mode_unlocked').eq('id', userId).single()),
         ])
         priorCount = count ?? 0
         isFirstShow = priorCount === 0
@@ -455,7 +488,7 @@ function LogShowInner() {
       try {
         await flushPendingLogs()
         const { data: row } = await timeQuery('log-show:show_tags-lookup', supabase
-          .from('logged_shows').select('id').eq('user_id', user.id).eq('artist_id', artistId).single())
+          .from('logged_shows').select('id').eq('user_id', userId).eq('artist_id', artistId).single())
         if (row) await persistShowTags(row.id)
       } catch {
         // best-effort — the rating itself is already safely queued regardless
@@ -474,7 +507,7 @@ function LogShowInner() {
     const battleModeJustUnlocked = !existingId && !wasUnlocked && (priorCount + 1) >= 10
 
     if (isFirstShow) {
-      const { data: profileRow } = await timeQuery('log-show:profiles-username', supabase.from('profiles').select('username').eq('id', user.id).single())
+      const { data: profileRow } = await timeQuery('log-show:profiles-username', supabase.from('profiles').select('username').eq('id', userId).single())
       setCelebration({ username: profileRow?.username ?? null })
       setSaving(false)
       timeMark('log-show:save total (first show)', saveStart)
@@ -595,7 +628,9 @@ function LogShowInner() {
           </div>
         </section>
 
-        <section className="space-y-1.5">
+        {/* Tagging searches the people you follow, so it needs an account.
+            Someone posting their first log can tag friends afterwards. */}
+        {user && <section className="space-y-1.5">
           <Label tone="ink">Went with</Label>
           <button type="button" onClick={() => setTagModalOpen(true)} className="block w-full text-left">
             <Card flat className="flex items-center gap-2.5 px-3 py-2.5">
@@ -623,7 +658,7 @@ function LogShowInner() {
               <ChevronRight className="w-4 h-4 flex-shrink-0 text-ink-faint" />
             </Card>
           </button>
-        </section>
+        </section>}
 
         <section className="space-y-1.5">
           <Label tone="ink">
@@ -676,7 +711,24 @@ function LogShowInner() {
         >
           {saving ? 'Saving...' : 'Save log'}
         </button>
+        {!user && (
+          <p className="-mt-2 text-center text-[11px] text-ink-faint">
+            Posting asks you to make an account. What you&apos;ve written is kept.
+          </p>
+        )}
       </div>
+
+      {signUpOpen && (
+        <SignUpSheet
+          title="Post your log"
+          blurb="It's saved on this phone. Make an account and it goes up on the feed."
+          signUpLabel="Create account & post"
+          signInLabel="Sign in & post"
+          finishLabel="Post"
+          onClose={() => setSignUpOpen(false)}
+          onSignedIn={userId => { setSignUpOpen(false); void save(userId) }}
+        />
+      )}
 
       {tagModalOpen && (
         <TagFriendsModal

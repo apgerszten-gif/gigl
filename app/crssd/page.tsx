@@ -34,7 +34,7 @@ interface Show {
 export default function CrssdPage() {
   const router   = useRouter()
   const supabase = createClient()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
 
   const [shows, setShows]     = useState<Show[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,10 +47,6 @@ export default function CrssdPage() {
   // artist_id -> score, so a set you've already rated shows its stars
   // instead of pretending to be unlogged.
   const [scores, setScores] = useState<Map<string, number>>(new Map())
-
-  useEffect(() => {
-    if (!authLoading && !user) router.replace('/')
-  }, [authLoading, user, router])
 
   // Open on the day that is actually happening, so somebody arriving on the
   // Sunday doesn't land on a tab of locked Saturday sets.

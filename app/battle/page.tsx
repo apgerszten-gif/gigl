@@ -40,7 +40,7 @@ function BattleInner() {
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/'); return }
+    if (!user) { router.push('/auth'); return }
     userIdRef.current = user.id
 
     const { data } = await supabase

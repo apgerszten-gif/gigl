@@ -98,7 +98,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) { router.push('/'); return }
+    if (!user) { router.push('/auth'); return }
 
     async function load(userId: string) {
       const loadStart = Date.now()

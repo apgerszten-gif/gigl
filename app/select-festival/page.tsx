@@ -46,7 +46,7 @@ const COORD_PRECISION = 2
 export default function SelectShowPage() {
   const router   = useRouter()
   const supabase = createClient()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
 
   const [query, setQuery] = useState('')
   const nearby = useNearby()
@@ -61,10 +61,6 @@ export default function SelectShowPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(false)
   const [retryToken, setRetryToken] = useState(0)
-
-  useEffect(() => {
-    if (!authLoading && !user) router.replace('/')
-  }, [authLoading, user, router])
 
   // Debounced so typing doesn't fire a request per keystroke — a cleared or
   // empty query still fetches (the trending/browse list), but fires

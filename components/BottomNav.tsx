@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { CircleUser, Newspaper, Plus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useAuth } from '@/components/AuthProvider'
 
 export type DockTab = 'feed' | 'log' | 'profile'
 
@@ -40,6 +41,7 @@ interface Props {
 // apart from the Search tab by `?mode=log`, and neither survives.
 export default function BottomNav(props: Props) {
   const pathname = usePathname()
+  const { user, loading } = useAuth()
 
   let active: DockTab | null = null
   // /rankings lights Feed, because Rankings is one of Feed's views now.
@@ -48,18 +50,24 @@ export default function BottomNav(props: Props) {
   // /log-menu and /log-show are both caught by the /log prefix.
   else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log') || pathname.startsWith('/crssd')) active = 'log'
 
-  return <DockBar active={active} mode="links" {...props} />
+  // Someone who hasn't signed up has no profile to open, so You is where
+  // they sign up or sign in.
+  const profileHref = !loading && !user ? '/auth' : undefined
+
+  return <DockBar active={active} mode="links" profileHref={profileHref} {...props} />
 }
 
 // The dock itself, without routing. `mode` picks what the tabs are: links
 // (the app), buttons calling onSelect (the style guide), or inert (the intro
 // demo, which sits it inside a mock phone with `contained`).
 export function DockBar({
-  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle,
+  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle, profileHref,
 }: Props & {
   active: DockTab | null
   mode: 'links' | 'buttons' | 'static'
   onSelect?: (tab: DockTab) => void
+  // Where You goes instead of /profile (sign-in, when signed out).
+  profileHref?: string
   contained?: boolean
   logTip?: React.ReactNode
   logExtras?: React.ReactNode
@@ -96,7 +104,7 @@ export function DockBar({
           }
 
           return (
-            <Tab key={id} {...tab} id={id} href={href} className={`flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1 ${nudge ?? ''}`}>
+            <Tab key={id} {...tab} id={id} href={id === 'profile' && profileHref ? profileHref : href} className={`flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1 ${nudge ?? ''}`}>
               <Icon className={`w-6 h-6 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
               <span className={labelClass}>{label}</span>
             </Tab>

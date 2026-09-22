@@ -58,7 +58,7 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 
   It used to be five. **Search** was removed because it opened the same screen as Log — both went to `/select-festival`, differing only in a heading — and once search returned only shows that had already happened, "find a show" stopped being a separate idea from "log a show". **Rankings** became a view on Feed rather than a destination: it is the same logged shows read as an aggregate instead of as a stream.
 
-  Log opens `/select-festival`. `/rankings` lights the Feed tab.
+  Log opens `/select-festival`. `/rankings` lights the Feed tab. Signed out, You opens sign-in (`/auth`), since there's no profile to show.
 - **Focused pages** (artist, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
 
 ---
@@ -124,6 +124,7 @@ Where the photos come from:
   - the review as a pull quote, then its tags as chips
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
+- Signed out, a callout card above the controls: "Rate the sets you saw.", a line saying an account is only needed to post, a small "Log a show" primary button and an "I have an account" link. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
 
 ### Artist rankings (`/rankings`)
 - Reached from the Feed view switch, not the dock. Its own route, so the segmented control navigates rather than toggling state.
@@ -146,6 +147,7 @@ Where the photos come from:
 - Rating card: the overall stars once all three are set, then tappable Performance / Venue / Crowd star rows.
 - Field notes (the review), highlight tags (presets plus custom ones), "Went with" (friend tagging) and "Photos & video" (up to 1 video and 2 photos).
 - Full-width primary button: "Save log".
+- Signed out, the whole screen works except "Went with", which needs someone to follow and is hidden. An 11px `ink-faint` line under Save says posting asks for an account, and Save opens the sign-up sheet over the log rather than leaving it.
 - `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
 
 ### Pick a show (`/select-festival`)
@@ -175,5 +177,6 @@ Where the photos come from:
   - a Performance / Venue / Crowd breakdown
   - review cards
 - **Stage** (`/stage/[name]`), **Battle** (`/battle`), the follower lists, sign-in, username and legal pages all use the same pieces.
-- **Landing** (`/`, `components/IntroDemo.tsx`): a 14-second tour played in a mock phone (ink bezel, `shadow-riso-lg`) and built from the real components. It has four scenes: the feed with the Log tip and a tap, show search with a pick, star rating, and rankings. A "1 of 4" label and caption above the phone and progress dots below follow the scenes. Tapping or swiping anywhere, Skip, or the end of the tour goes to sign-up.
+- **Landing** (`/`): forwards straight to the feed, signed in or not (or to Choose username for an account without one). It used to play the intro tour in `components/IntroDemo.tsx`, a 14-second tour in a mock phone (ink bezel, `shadow-riso-lg`) with four scenes (the feed with the Log tip and a tap, show search with a pick, star rating, and rankings) that ended at sign-up. The tour is no longer shown but is kept in case it's wanted back.
+- **Sign-up sheet** (`components/SignUpSheet.tsx`): asks for an account in place, over the page, when someone signed out tries to post, react, comment or follow. A bottom sheet on a `bg-ink/55` scrim: `bg-paper`, a 1.5px ink border on the top and sides, `rounded-t-card`. A `text-2xl` display title with the accent full stop, a one-line reason in `ink-muted`, a close button, then the Sign up / Sign in toggle and the same `Field`s as sign-in, and a full-width primary button named for what happens next ("Create account & post"). An account without a username gets one more step for it.
 - **Sign-in** (`/auth`): logo header, a slightly rotated collage of two app cards (an artist card with its date sticker and stars, and a review quote), the headline, a Sign up / Sign in segmented toggle, then the fields and button in a card. **Choose username** follows the same layout, with a feed-card preview that shows your handle as you type.

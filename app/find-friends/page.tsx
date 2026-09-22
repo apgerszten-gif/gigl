@@ -40,7 +40,7 @@ export default function FindFriendsPage() {
   const [error, setError]           = useState<string | null>(null)
 
   useEffect(() => {
-    if (!authLoading && !user) router.replace('/')
+    if (!authLoading && !user) router.replace('/auth')
   }, [authLoading, user, router])
 
   // Read on mount rather than during render: it touches navigator, and the

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Send } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import { BackHeader, LoadingLabel, PersonPhoto } from '@/components/ui'
+import { BackHeader, LoadingLabel, PersonPhoto, btnSecondary } from '@/components/ui'
 
 interface CommentRow {
   id:           string
@@ -29,11 +29,14 @@ function timeAgo(dateStr: string) {
 // Slide-up sheet mirroring TagFriendsModal's animation/layout conventions.
 // Flat comment list (no threading/editing) scoped to one logged_shows row.
 export function CommentsModal({
-  loggedShowId, onClose, onCountChange,
+  loggedShowId, onClose, onCountChange, onNeedAccount,
 }: {
   loggedShowId: string
   onClose: () => void
   onCountChange: (delta: number) => void
+  // Signed-out visitors can read comments; the reply box becomes a button
+  // that calls this to ask for an account.
+  onNeedAccount?: () => void
 }) {
   const supabase = createClient()
   const { user } = useAuth()
@@ -135,22 +138,30 @@ export function CommentsModal({
       </div>
 
       <div className="flex-shrink-0 border-t border-ink/10 px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] flex gap-2 items-center">
-        <input
-          value={body}
-          onChange={e => setBody(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') post() }}
-          placeholder="Add a comment..."
-          className="flex-1 min-w-0 rounded-full border-1.5 border-ink bg-cream px-4 py-2.5 text-base text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
-        />
-        <button
-          type="button"
-          onClick={post}
-          disabled={!body.trim() || posting}
-          aria-label="Post comment"
-          className="w-10 h-10 flex-shrink-0 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center disabled:opacity-50"
-        >
-          <Send className="w-4 h-4" strokeWidth={2.25} />
-        </button>
+        {!user && onNeedAccount ? (
+          <button type="button" onClick={onNeedAccount} className={`${btnSecondary} w-full py-3 text-xs`}>
+            Sign up to comment
+          </button>
+        ) : (
+          <>
+            <input
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') post() }}
+              placeholder="Add a comment..."
+              className="flex-1 min-w-0 rounded-full border-1.5 border-ink bg-cream px-4 py-2.5 text-base text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
+            />
+            <button
+              type="button"
+              onClick={post}
+              disabled={!body.trim() || posting}
+              aria-label="Post comment"
+              className="w-10 h-10 flex-shrink-0 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center disabled:opacity-50"
+            >
+              <Send className="w-4 h-4" strokeWidth={2.25} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

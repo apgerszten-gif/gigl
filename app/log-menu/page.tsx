@@ -1,12 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ChevronRight, Search } from 'lucide-react'
 import { CRSSD } from '@/lib/crssd'
 import { CrssdMark } from '@/components/CrssdMark'
-import { useAuth } from '@/components/AuthProvider'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { Label } from '@/components/ui'
@@ -20,6 +17,9 @@ import { Label } from '@/components/ui'
 // nationwide search is a worse first thirty seconds than showing them the
 // lineup they are already looking at. Everything behind both doors is
 // unchanged - see app/crssd and app/select-festival.
+//
+// Open to people who haven't signed up, like everything up to the Save
+// button: the account is asked for when they post (components/SignUpSheet).
 //
 // To retire it after the weekend: point the dock's Log tab and the sign-up
 // redirect back at /select-festival and delete this route.
@@ -45,13 +45,6 @@ const OPTIONS = [
 ]
 
 export default function LogMenuPage() {
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-
-  useEffect(() => {
-    if (!authLoading && !user) router.replace('/')
-  }, [authLoading, user, router])
-
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
