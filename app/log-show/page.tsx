@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Lock, Plus, UserPlus, X } from 'lucide-react'
+import { Lock, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getFestival, hasDayOccurred, formatSetTime, LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { formatShowDate } from '@/lib/dates'
@@ -10,9 +10,8 @@ import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
-import { TagFriendsModal, type TaggedFriend } from '@/components/TagFriendsModal'
 import { useAuth } from '@/components/AuthProvider'
-import { ArtistPhoto, Card, Chip, Label, PersonPhoto, Place, Stars, btnPrimary, headerClass, inputBox } from '@/components/ui'
+import { ArtistPhoto, Card, Label, Place, Stars, btnPrimary, headerClass, inputBox } from '@/components/ui'
 import { SignUpSheet } from '@/components/SignUpSheet'
 import {
   enqueuePendingLog, getPendingLogForArtist, flushPendingLogs,
@@ -23,12 +22,6 @@ import { useArtistImages } from '@/lib/useArtistImages'
 
 const MAX_VIDEOS = 1
 const MAX_PHOTOS = 2
-
-const PRESET_TAGS = [
-  'Surprise guest', 'Crowd surf', 'Sing along', 'Unreleased music',
-  'Cool lighting', 'Emotional', 'Packed crowd', 'Acoustic moment',
-  'Pyro/effects', 'Dancey',
-]
 
 const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'
 
@@ -181,17 +174,12 @@ function LogShowInner() {
 
   const [thoughts, setThoughts] = useState('')
 
-  const [tagOptions, setTagOptions]     = useState<string[]>(PRESET_TAGS)
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [addingTag, setAddingTag]       = useState(false)
-  const [customTagValue, setCustomTagValue] = useState('')
-  const customTagInputRef = useRef<HTMLInputElement>(null)
+  // Highlight tags aren't on this screen any more, but a log re-rated here
+  // keeps the ones it already has rather than being saved over with none.
+  const [existingTags, setExistingTags] = useState<string[]>([])
 
   const [media, setMedia] = useState<MediaItem[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const [taggedFriends, setTaggedFriends] = useState<TaggedFriend[]>([])
-  const [tagModalOpen, setTagModalOpen]   = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [celebration, setCelebration] = useState<{ username: string | null } | null>(null)
@@ -206,10 +194,7 @@ function LogShowInner() {
     setVenue(draft.venue_rating)
     setCrowd(draft.crowd_rating)
     setThoughts(draft.review ?? '')
-    if (draft.tags && draft.tags.length > 0) {
-      setSelectedTags(draft.tags)
-      setTagOptions(prev => Array.from(new Set([...prev, ...draft.tags!])))
-    }
+    if (draft.tags && draft.tags.length > 0) setExistingTags(draft.tags)
   }
 
   // Prefill from an existing log for this artist, if one exists.
@@ -245,41 +230,10 @@ function LogShowInner() {
         if (data.venue_rating) setVenue(data.venue_rating)
         if (data.crowd_rating) setCrowd(data.crowd_rating)
         if (data.review) setThoughts(data.review)
-        if (data.tags && data.tags.length > 0) {
-          setSelectedTags(data.tags)
-          setTagOptions(prev => Array.from(new Set([...prev, ...data.tags])))
-        }
+        if (data.tags && data.tags.length > 0) setExistingTags(data.tags)
         const existingUrls = resolveMediaUrls(data)
         if (existingUrls.length > 0) {
           setMedia(existingUrls.map(url => ({ url, isVideo: isVideoUrl(url) })))
-        }
-
-        const { data: tagRows } = await timeQuery('log-show:show_tags', supabase
-          .from('show_tags')
-          .select('tagged_user_id, pending_invite, invite_contact')
-          .eq('logged_show_id', data.id))
-
-        if (tagRows && tagRows.length > 0) {
-          const confirmedIds = tagRows.filter(r => !r.pending_invite && r.tagged_user_id).map(r => r.tagged_user_id as string)
-          const profileMap = new Map<string, { username: string; display_name: string; avatar_url: string | null }>()
-          if (confirmedIds.length > 0) {
-            const { data: profs } = await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', confirmedIds)
-            profs?.forEach(p => profileMap.set(p.id, p))
-          }
-          setTaggedFriends(tagRows.map(r => {
-            if (r.pending_invite) {
-              return { userId: null, username: null, displayName: r.invite_contact ?? 'Invited', pendingInvite: true, inviteContact: r.invite_contact }
-            }
-            const prof = r.tagged_user_id ? profileMap.get(r.tagged_user_id) : undefined
-            return {
-              userId: r.tagged_user_id,
-              username: prof?.username ?? null,
-              displayName: prof?.display_name ?? prof?.username ?? 'Friend',
-              avatarUrl: prof?.avatar_url ?? null,
-              pendingInvite: false,
-              inviteContact: null,
-            }
-          }))
         }
       }
 
@@ -297,24 +251,6 @@ function LogShowInner() {
     }
     load(user.id)
   }, [artistId, authLoading, user, router])
-
-  useEffect(() => {
-    if (addingTag) customTagInputRef.current?.focus()
-  }, [addingTag])
-
-  function toggleTag(tag: string) {
-    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  }
-
-  function commitCustomTag() {
-    const cleaned = customTagValue.trim()
-    if (cleaned) {
-      setTagOptions(prev => prev.includes(cleaned) ? prev : [...prev, cleaned])
-      setSelectedTags(prev => prev.includes(cleaned) ? prev : [...prev, cleaned])
-    }
-    setCustomTagValue('')
-    setAddingTag(false)
-  }
 
   async function handleMediaSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
@@ -345,27 +281,6 @@ function LogShowInner() {
     setMedia(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Deletes and re-inserts every show_tags row for this show — simpler than
-  // diffing against what's already there, and cheap since a show is tagged
-  // with at most a handful of friends. Best-effort: the rating itself is
-  // already safely queued by the time this runs, so a failure here just
-  // means tags can be re-added later from the edit screen.
-  async function persistShowTags(loggedShowId: string) {
-    try {
-      await supabase.from('show_tags').delete().eq('logged_show_id', loggedShowId)
-      if (taggedFriends.length > 0) {
-        await supabase.from('show_tags').insert(taggedFriends.map(f => ({
-          logged_show_id: loggedShowId,
-          tagged_user_id: f.userId,
-          pending_invite: f.pendingInvite,
-          invite_contact: f.inviteContact,
-        })))
-      }
-    } catch {
-      // best-effort, see comment above
-    }
-  }
-
   const canSave = performance > 0 && venue > 0 && crowd > 0
   const mediaVideoCount = media.filter(m => m.isVideo).length
   const mediaPhotoCount = media.filter(m => !m.isVideo).length
@@ -384,7 +299,7 @@ function LogShowInner() {
       venue_rating:        venue,
       crowd_rating:        crowd,
       review:              thoughts.trim() || null,
-      tags:                selectedTags.length > 0 ? selectedTags : null,
+      tags:                existingTags.length > 0 ? existingTags : null,
     }
   }
 
@@ -472,30 +387,11 @@ function LogShowInner() {
       }
     }
 
-    if (existingId) {
-      // Fire-and-forget — PendingLogsSync retries this in the background
-      // regardless (on foreground/reconnect) if it fails here. Never await
-      // this on the critical path; festival wifi is exactly the case this
-      // queue exists for.
-      void flushPendingLogs()
-      void persistShowTags(existingId)
-    } else if (taggedFriends.length > 0) {
-      // Unlike the rating itself, tags can't ride along in the pending-log
-      // queue entry above — they need the row's real id, which only exists
-      // once it's actually synced. Only take this slower, awaited path when
-      // there's something to tag; the untagged case stays fully
-      // fire-and-forget like before.
-      try {
-        await flushPendingLogs()
-        const { data: row } = await timeQuery('log-show:show_tags-lookup', supabase
-          .from('logged_shows').select('id').eq('user_id', userId).eq('artist_id', artistId).single())
-        if (row) await persistShowTags(row.id)
-      } catch {
-        // best-effort — the rating itself is already safely queued regardless
-      }
-    } else {
-      void flushPendingLogs()
-    }
+    // Fire-and-forget — PendingLogsSync retries this in the background
+    // regardless (on foreground/reconnect) if it fails here. Never await
+    // this on the critical path; festival wifi is exactly the case this
+    // queue exists for.
+    void flushPendingLogs()
 
     // Optimistic: this save is about to push shows_logged_count past the
     // trigger's threshold, so we celebrate immediately from data already in
@@ -587,80 +483,6 @@ function LogShowInner() {
         </section>
 
         <section className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label tone="ink">Highlights</Label>
-            {selectedTags.length > 0 && (
-              <span className="text-[10px] font-semibold text-accent">{selectedTags.length} selected</span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {tagOptions.map(tag => {
-              const active = selectedTags.includes(tag)
-              return (
-                <button key={tag} type="button" onClick={() => toggleTag(tag)}>
-                  <Chip active={active}>{active ? `${tag} ✓` : `+ ${tag}`}</Chip>
-                </button>
-              )
-            })}
-
-            {addingTag ? (
-              <input
-                ref={customTagInputRef}
-                value={customTagValue}
-                onChange={e => setCustomTagValue(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); commitCustomTag() }
-                  if (e.key === 'Escape') { setCustomTagValue(''); setAddingTag(false) }
-                }}
-                onBlur={commitCustomTag}
-                placeholder="Tag name"
-                className="w-28 rounded border-1.5 border-accent bg-transparent px-2 py-0.5 text-base text-ink focus:outline-none"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAddingTag(true)}
-                className="rounded border-1.5 border-dashed border-ink/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-label text-ink-muted"
-              >
-                + Custom
-              </button>
-            )}
-          </div>
-        </section>
-
-        {/* Tagging searches the people you follow, so it needs an account.
-            Someone posting their first log can tag friends afterwards. */}
-        {user && <section className="space-y-1.5">
-          <Label tone="ink">Went with</Label>
-          <button type="button" onClick={() => setTagModalOpen(true)} className="block w-full text-left">
-            <Card flat className="flex items-center gap-2.5 px-3 py-2.5">
-              {taggedFriends.length > 0 ? (
-                <div className="flex items-center flex-shrink-0">
-                  {taggedFriends.slice(0, 3).map((f, i) => (
-                    <PersonPhoto
-                      key={f.userId ?? f.inviteContact ?? i}
-                      name={f.displayName}
-                      src={f.avatarUrl}
-                      className={`w-7 h-7 text-[11px] border-2 border-cream ${i > 0 ? '-ml-2.5' : ''}`}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <UserPlus className="w-4 h-4 flex-shrink-0 text-accent" strokeWidth={2} />
-              )}
-              <span className="flex-1 min-w-0 truncate text-[13px] font-semibold">
-                {taggedFriends.length === 0
-                  ? 'Tag friends who were there'
-                  : taggedFriends.length <= 3
-                  ? taggedFriends.map(f => f.displayName).join(', ')
-                  : `${taggedFriends.slice(0, 2).map(f => f.displayName).join(', ')} +${taggedFriends.length - 2} more`}
-              </span>
-              <ChevronRight className="w-4 h-4 flex-shrink-0 text-ink-faint" />
-            </Card>
-          </button>
-        </section>}
-
-        <section className="space-y-1.5">
           <Label tone="ink">
             Photos &amp; video{' '}
             <span className="normal-case tracking-normal font-medium text-ink-faint">· up to 1 video + 2 photos</span>
@@ -727,14 +549,6 @@ function LogShowInner() {
           finishLabel="Post"
           onClose={() => setSignUpOpen(false)}
           onSignedIn={userId => { setSignUpOpen(false); void save(userId) }}
-        />
-      )}
-
-      {tagModalOpen && (
-        <TagFriendsModal
-          initialSelected={taggedFriends}
-          onClose={() => setTagModalOpen(false)}
-          onDone={friends => { setTaggedFriends(friends); setTagModalOpen(false) }}
         />
       )}
 

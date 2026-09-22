@@ -145,9 +145,9 @@ Where the photos come from:
 - Title bar ("Log a show" or "Update log") with a close button. There's no dock or profile photo in this flow.
 - Selected-show card: the artist photo, the date as a sienna label, the artist and the place line.
 - Rating card: the overall stars once all three are set, then tappable Performance / Venue / Crowd star rows.
-- Field notes (the review), highlight tags (presets plus custom ones), "Went with" (friend tagging) and "Photos & video" (up to 1 video and 2 photos).
+- Field notes (the review) and "Photos & video" (up to 1 video and 2 photos). Highlight tags and "Went with" (friend tagging) were taken off to keep logging quick; a log re-rated here keeps any tags it already had, and tags still show on feed cards and can be edited from You.
 - Full-width primary button: "Save log".
-- Signed out, the whole screen works except "Went with", which needs someone to follow and is hidden. An 11px `ink-faint` line under Save says posting asks for an account, and Save opens the sign-up sheet over the log rather than leaving it.
+- Signed out, the whole screen works. An 11px `ink-faint` line under Save says posting asks for an account, and Save opens the sign-up sheet over the log rather than leaving it.
 - `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
 
 ### Pick a show (`/select-festival`)
