@@ -25,7 +25,7 @@ export type DockTab = 'feed' | 'log' | 'profile'
 // tap target off them: each tab still spans its full third of the bar.
 const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon; nudge?: string }[] = [
   { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper,  nudge: 'pl-7' },
-  { id: 'log',     label: 'Log',  href: '/select-festival',  Icon: Plus },
+  { id: 'log',     label: 'Log',  href: '/log-menu',         Icon: Plus },
   { id: 'profile', label: 'You',  href: '/profile',          Icon: CircleUser, nudge: 'pr-7' },
 ]
 
@@ -45,7 +45,8 @@ export default function BottomNav(props: Props) {
   // /rankings lights Feed, because Rankings is one of Feed's views now.
   if (pathname.startsWith('/feed') || pathname.startsWith('/rankings')) active = 'feed'
   else if (pathname.startsWith('/profile')) active = 'profile'
-  else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log')) active = 'log'
+  // /log-menu and /log-show are both caught by the /log prefix.
+  else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log') || pathname.startsWith('/crssd')) active = 'log'
 
   return <DockBar active={active} mode="links" {...props} />
 }

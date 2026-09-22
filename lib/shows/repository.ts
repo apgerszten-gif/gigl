@@ -141,6 +141,32 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
     .slice(0, limit)
 }
 
+// Every set from one imported festival lineup, whichever day it falls on.
+//
+// Deliberately *not* windowed the way searchStoredShows is. That filter
+// exists so nobody is offered a show they cannot have been to yet, and it is
+// right for a search over the whole catalogue. A festival page is the other
+// case: on the Saturday of a two-day weekend the Sunday sets still belong on
+// screen, or the lineup looks half-missing. The page shows them locked
+// instead - see hasHappened in lib/crssd.ts - so the same rule is enforced,
+// just visibly rather than by omission.
+//
+// `idPrefix` reaches a LIKE pattern, so callers must pass a known constant
+// rather than anything a visitor typed. /api/shows/festival whitelists it.
+export async function festivalShows(idPrefix: string): Promise<Show[]> {
+  const { data, error } = await supabase
+    .from('shows')
+    .select(SHOW_COLUMNS)
+    .like('id', `${idPrefix}%`)
+    .order('show_date', { ascending: true })
+    .order('artist', { ascending: true })
+    // A lineup is tens of rows, not thousands; the cap is a guard, not paging.
+    .limit(500)
+
+  if (error) throw new Error(`festival lineup failed: ${error.message}`)
+  return (data ?? []).map(row => toShow(row))
+}
+
 // Supabase rejects very large payloads, and a 50-city sync can produce well
 // over 10k rows, so upserts go up in batches rather than one request.
 const UPSERT_BATCH_SIZE = 500
