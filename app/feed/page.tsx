@@ -121,13 +121,20 @@ function FeedInner() {
 
     const [{ data: profileRow, error: tipError }, { data: logs }, { data: followRows }] = await Promise.all([
       userId
-        ? timeQuery('feed:profiles', supabase.from('profiles').select('has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single())
+        ? timeQuery('feed:profiles', supabase.from('profiles').select('username_set, has_seen_log_tip, battle_mode_unlocked, battle_card_dismissed').eq('id', userId).single())
         : nothing,
       timeQuery('feed:logged_shows', logsQuery),
       userId
         ? timeQuery('feed:follows', supabase.from('follows').select('following_id').eq('follower_id', userId))
         : nothing,
     ])
+
+    // An account that never picked a username does that first. This used to
+    // happen on `/`, which is now a plain redirect here (next.config.js).
+    if (profileRow && profileRow.username_set === false) {
+      router.replace('/choose-username')
+      return
+    }
 
     setFollowingIds(new Set((followRows ?? []).map(r => r.following_id)))
 
