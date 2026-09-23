@@ -58,7 +58,7 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 
   It used to be five. **Search** was removed because it opened the same screen as Log — both went to `/select-festival`, differing only in a heading — and once search returned only shows that had already happened, "find a show" stopped being a separate idea from "log a show". **Rankings** became a view on Feed rather than a destination: it is the same logged shows read as an aggregate instead of as a stream.
 
-  Log opens `/select-festival`. `/rankings` lights the Feed tab. Signed out, You opens sign-in (`/auth`), since there's no profile to show.
+  Log opens `/select-festival`, except for the CRSSD weekend, when it opens the CRSSD lineup (`/crssd`) directly. A small "Not at CRSSD?" link above the lineup leads to `/select-festival`. `/rankings` lights the Feed tab. Signed out, You opens sign-in (`/auth`), since there's no profile to show.
 - **Focused pages** (artist, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
 
 ---
@@ -125,8 +125,8 @@ Where the photos come from:
   - the review as a pull quote, then its tags as chips
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
-- Signed out, a card above the controls in the CRSSD sunset skin (`crssd-sunset`, as on the festival door on `/log-menu`, with an ink border and riso shadow): "At CRSSD? Rate the sets you saw", a line saying an account is only needed to post, a small "Log a show" primary button and an "I have an account" link, all in full ink since `ink-muted` gets lost against the bands. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
-- For the CRSSD weekend the header reads Gigl × CRSSD: the logo, a × in `ink-muted`, then `CrssdMark` at 15px tall. Retire it with `/log-menu`.
+- Signed out, a card above the controls in the CRSSD sunset skin (`crssd-sunset`, with an ink border and riso shadow): "At CRSSD? Rate the sets you saw", a line saying an account is only needed to post, a small "Log a show" primary button (straight to `/crssd`) and an "I have an account" link. In the bottom-right corner sits a small cream button with an ink border, "I'm rating a show from somewhere else", which leads to `/select-festival`. All the text is full ink, since `ink-muted` gets lost against the bands. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
+- For the CRSSD weekend the header reads Gigl × CRSSD: the logo, a × in `ink-muted`, then `CrssdMark` at 15px tall. Retire it along with the CRSSD Log button.
 
 ### Artist rankings (`/rankings`)
 - Reached from the Feed view switch, not the dock. Its own route, so the segmented control navigates rather than toggling state.
@@ -153,7 +153,7 @@ Where the photos come from:
 - `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
 
 ### Pick a show (`/select-festival`)
-- The first step of logging, and the only thing the Log button opens. `AppHeader` titled "What did you see?" under a "Log a show" label.
+- The first step of logging, and what the Log button opens. For the CRSSD weekend Log opens `/crssd` instead, and this screen is reached from there or from the feed's sunset card. `AppHeader` titled "What did you see?" under a "Log a show" label.
 - Search input for artist, venue or city.
 - A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and while it's on, radius chips for 10 / 50 / 100 mi. Location is asked for on arrival, so the chip reports the filter rather than starting it; it reads "Locating…" and is disabled while the browser answers. Turning it off is remembered. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
 - A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on. The catalogue only holds shows that have already happened — you log what you went to — so results run newest first, last night at the top.

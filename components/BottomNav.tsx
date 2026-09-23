@@ -24,9 +24,15 @@ export type DockTab = 'feed' | 'log' | 'profile'
 // `nudge` pulls the outer two tabs in towards Log. Padding rather than a
 // translate, so it shifts where the icon and label sit without moving the
 // tap target off them: each tab still spans its full third of the bar.
+//
+// For the CRSSD weekend Log opens the festival lineup directly; other shows
+// are one tap away from there ("Not at CRSSD?") and from the feed's sunset
+// card. To retire it, point Log, that card and the sign-up redirect in
+// app/auth back at /select-festival, and drop the /log-menu redirect in
+// next.config.js.
 const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon; nudge?: string }[] = [
   { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper,  nudge: 'pl-7' },
-  { id: 'log',     label: 'Log',  href: '/log-menu',         Icon: Plus },
+  { id: 'log',     label: 'Log',  href: '/crssd',            Icon: Plus },
   { id: 'profile', label: 'You',  href: '/profile',          Icon: CircleUser, nudge: 'pr-7' },
 ]
 
@@ -47,7 +53,7 @@ export default function BottomNav(props: Props) {
   // /rankings lights Feed, because Rankings is one of Feed's views now.
   if (pathname.startsWith('/feed') || pathname.startsWith('/rankings')) active = 'feed'
   else if (pathname.startsWith('/profile')) active = 'profile'
-  // /log-menu and /log-show are both caught by the /log prefix.
+  // /log and /log-show are both caught by the /log prefix.
   else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log') || pathname.startsWith('/crssd')) active = 'log'
 
   // Someone who hasn't signed up has no profile to open, so You is where

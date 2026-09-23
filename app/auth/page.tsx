@@ -50,10 +50,9 @@ export default function AuthPage() {
 
     setLoading(false)
     const hasFestival = typeof window !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_KEY)
-    // A brand new account lands on the two-door menu rather than straight
-    // into search: this weekend most of them are signing up at CRSSD and
-    // the lineup is one tap away. See app/log-menu.
-    router.push(hasFestival ? '/feed' : '/log-menu')
+    // A brand new account lands on the CRSSD lineup rather than in search:
+    // this weekend most of them are signing up at the festival. See app/crssd.
+    router.push(hasFestival ? '/feed' : '/crssd')
   }
 
   function switchMode(next: Mode) {

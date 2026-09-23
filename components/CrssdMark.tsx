@@ -1,8 +1,8 @@
 // The CRSSD Fest wordmark, from the festival's own site
 // (crssdfest.com, CF-S26-Logo-WM-Dark.svg), inlined so it can take the riso
 // palette: the source had a single flat grey, swapped here for currentColor.
-// Used to badge the festival's door on /log-menu. CRSSD's mark, used to
-// point at CRSSD - drop the file if that ever needs to stop.
+// Used in the feed's Gigl × CRSSD header. CRSSD's mark, used to point at
+// CRSSD - drop the file if that ever needs to stop.
 
 export function CrssdMark({ className = '' }: { className?: string }) {
   return (

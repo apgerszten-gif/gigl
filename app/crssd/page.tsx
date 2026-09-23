@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Lock, Search } from 'lucide-react'
 import { CRSSD, hasHappened } from '@/lib/crssd'
@@ -25,7 +26,8 @@ interface Show {
 
 // The CRSSD lineup as its own screen: 53 sets across two days, which is more
 // than the general search is built to hand back (it stops at 20 results) and
-// more than anybody wants to find by typing. Reached from /log-menu.
+// more than anybody wants to find by typing. For the weekend it's what the
+// dock's Log button, the feed's sunset card and a fresh sign-up all open.
 //
 // Every row here is an ordinary `shows` row, so picking one goes through
 // exactly the same handoff as picking a search result - active show into
@@ -166,11 +168,23 @@ export default function CrssdPage() {
         )}
       </div>
 
-      <Label className="px-5 pt-4 pb-2">
-        {trimmed
-          ? <>Results for &ldquo;{search.trim()}&rdquo;</>
-          : `${visible.length} ${visible.length === 1 ? 'set' : 'sets'}`}
-      </Label>
+      {/* Log opens this screen directly for the weekend, so it carries the
+          way out to every other show. The feed's sunset card has one too,
+          but only signed-out visitors see that. */}
+      <div className="px-5 pt-4 pb-2 flex items-center justify-between gap-3">
+        <Label className="min-w-0 truncate">
+          {trimmed
+            ? <>Results for &ldquo;{search.trim()}&rdquo;</>
+            : `${visible.length} ${visible.length === 1 ? 'set' : 'sets'}`}
+        </Label>
+        <Link
+          href="/select-festival"
+          className="flex-shrink-0 inline-flex items-center gap-0.5 text-[11px] font-semibold text-ink-muted underline underline-offset-[3px] hover:text-accent"
+        >
+          Not at CRSSD?
+          <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
+        </Link>
+      </div>
 
       <main className="px-5">
         {loading && (

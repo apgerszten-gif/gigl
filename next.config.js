@@ -5,8 +5,15 @@ const nextConfig = {
   // a blank page that then forwards itself in the browser. Temporary (307),
   // so phones don't cache it if the front door changes again. Query strings
   // (?src=, ?ref= from share links) carry through.
+  //
+  // /log-menu was the CRSSD-or-elsewhere picker the Log button used to open.
+  // Log now goes straight to the lineup, so a tab still holding the old link
+  // follows it there too.
   async redirects() {
-    return [{ source: '/', destination: '/feed', permanent: false }]
+    return [
+      { source: '/',         destination: '/feed',  permanent: false },
+      { source: '/log-menu', destination: '/crssd', permanent: false },
+    ]
   },
   images: {
     remotePatterns: [

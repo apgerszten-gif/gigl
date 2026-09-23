@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -298,8 +298,9 @@ function FeedInner() {
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
-        {/* Gigl × CRSSD for the festival weekend. Retire it with /log-menu:
-            put the bare Logo back and drop the sunset from the card below. */}
+        {/* Gigl × CRSSD for the festival weekend. Retire it with the CRSSD
+            Log button (see BottomNav): put the bare Logo back and drop the
+            sunset from the card below. */}
         <div className="flex items-center gap-2">
           <Logo href="/feed" />
           <span className="font-display text-[15px] font-bold text-ink-muted" aria-hidden>&times;</span>
@@ -310,8 +311,9 @@ function FeedInner() {
       <div className="px-5 pt-3 space-y-3">
         {/* The front door for someone who scanned a code: what this is, and
             that writing a log doesn't need an account until it's posted.
-            Wears the CRSSD sunset from the festival's door on /log-menu, so
-            text sits in full ink - ink-muted gets lost against the bands. */}
+            "Log a show" goes straight to the CRSSD lineup; the small button
+            in the bottom corner is the way out to every other show. In full
+            ink throughout - ink-muted gets lost against the sunset's bands. */}
         {!authLoading && !user && (
           <div className="crssd-sunset rounded-card border-1.5 border-ink shadow-riso px-4 py-3.5">
             <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
@@ -321,7 +323,7 @@ function FeedInner() {
               See what everyone thought, then add your own. You only need an account when you post.
             </p>
             <div className="mt-3 flex items-center gap-4">
-              <Link href="/log-menu" className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
+              <Link href="/crssd" className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                 Log a show
               </Link>
@@ -332,6 +334,15 @@ function FeedInner() {
               >
                 I have an account
               </button>
+            </div>
+            <div className="mt-3 flex justify-end">
+              <Link
+                href="/select-festival"
+                className="inline-flex items-center gap-1 rounded-card border-1.5 border-ink bg-cream px-2.5 py-1 text-[11px] font-semibold text-ink hover:bg-accent/5"
+              >
+                I&apos;m rating a show from somewhere else
+                <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
+              </Link>
             </div>
           </div>
         )}
