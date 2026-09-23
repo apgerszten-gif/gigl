@@ -15,6 +15,7 @@ import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
+import { CrssdMark } from '@/components/CrssdMark'
 import { SignUpSheet } from '@/components/SignUpSheet'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary,
@@ -297,18 +298,26 @@ function FeedInner() {
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
-        <Logo href="/feed" />
+        {/* Gigl × CRSSD for the festival weekend. Retire it with /log-menu:
+            put the bare Logo back and drop the sunset from the card below. */}
+        <div className="flex items-center gap-2">
+          <Logo href="/feed" />
+          <span className="font-display text-[15px] font-bold text-ink-muted" aria-hidden>&times;</span>
+          <CrssdMark className="h-[15px] w-auto text-ink" />
+        </div>
       </AppHeader>
 
       <div className="px-5 pt-3 space-y-3">
         {/* The front door for someone who scanned a code: what this is, and
-            that writing a log doesn't need an account until it's posted. */}
+            that writing a log doesn't need an account until it's posted.
+            Wears the CRSSD sunset from the festival's door on /log-menu, so
+            text sits in full ink - ink-muted gets lost against the bands. */}
         {!authLoading && !user && (
-          <div className="rounded-card bg-accent/10 border-1.5 border-accent/30 px-4 py-3.5">
+          <div className="crssd-sunset rounded-card border-1.5 border-ink shadow-riso px-4 py-3.5">
             <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
-              Rate the sets you saw<span className="text-accent">.</span>
+              At CRSSD? Rate the sets you saw
             </h2>
-            <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+            <p className="mt-1 text-[13px] leading-snug text-ink">
               See what everyone thought, then add your own. You only need an account when you post.
             </p>
             <div className="mt-3 flex items-center gap-4">
@@ -319,7 +328,7 @@ function FeedInner() {
               <button
                 type="button"
                 onClick={() => setSignUpMode('signin')}
-                className="text-[12px] font-semibold text-ink-muted underline underline-offset-[3px]"
+                className="text-[12px] font-semibold text-ink underline underline-offset-[3px]"
               >
                 I have an account
               </button>
