@@ -194,10 +194,107 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const REQUEST_SPACING_MS = 250
 
 // ── Photos ───────────────────────────────────────────────────────────────────
-// Two passes, cheapest first. public.artist_images is the library the nightly
-// sync has already built from Ticketmaster, so most well-known acts are
-// answered without a request. Only the misses go upstream, and whatever they
-// find is written back so the next festival import gets it for free.
+// Three passes, cheapest first. public.artist_images is the library the
+// nightly sync has already built from Ticketmaster, so most well-known acts
+// are answered without a request. The misses go to Ticketmaster's attraction
+// search, and whatever is still blank after that comes from CRSSD's own
+// artist pages. Everything found upstream is written back to artist_images,
+// so the next festival import - and every screen that shows a logged set -
+// gets it for free.
+
+// CRSSD's CMS has a press photo for every act on the bill: acf.vc_artist_photo
+// on each fc_em_artists post, a 700x560 crop. For Fall '26 that covered all
+// 28 acts Ticketmaster has no photo of. It is the last pass only because the
+// Ticketmaster photos were already in use when it was added.
+const CRSSD_ARTISTS_URL = 'https://crssdfest.com/wp-json/wp/v2/fc_em_artists'
+
+// The photos are copied into our own storage rather than hotlinked, so a
+// set's photo doesn't depend on the festival's server, or on it keeping a
+// past edition's uploads. Public read; only the service role writes, the
+// same arrangement as public.artist_images itself.
+const PHOTO_BUCKET = 'artist-photos'
+const PHOTO_FOLDER = ID_PREFIX.replace(/-$/, '')
+const PHOTO_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+
+// CMS titles come back HTML-encoded and styled their own way ("Kas:st"), so
+// they are matched on letters and digits alone. That is loose, but only this
+// festival's own bill is searched, so unlike a Ticketmaster keyword search it
+// can't land on a different act.
+function looseKey(name) {
+  const decoded = name
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(/&amp;/g, '&')
+  return nameKey(decoded).replace(/[^a-z0-9]/g, '')
+}
+
+async function fetchCrssdPhotos() {
+  const photos = new Map()
+  for (let page = 1, pages = 1; page <= pages; page++) {
+    const res = await fetch(`${CRSSD_ARTISTS_URL}?per_page=100&page=${page}`)
+    if (!res.ok) throw new Error(`CRSSD artist list failed (${res.status})`)
+    pages = Number(res.headers.get('x-wp-totalpages') ?? 1)
+    for (const artist of await res.json()) {
+      // ACF gives false, not null, for an empty image field.
+      const url = artist.acf?.vc_artist_photo?.url
+      if (url) photos.set(looseKey(artist.title?.rendered ?? ''), url)
+    }
+  }
+  return photos
+}
+
+async function ensurePhotoBucket() {
+  const { error } = await write.storage.getBucket(PHOTO_BUCKET)
+  if (!error) return
+  const { error: createError } = await write.storage.createBucket(PHOTO_BUCKET, {
+    public: true,
+    fileSizeLimit: '2MB',
+    allowedMimeTypes: Object.keys(PHOTO_EXTENSIONS),
+  })
+  if (createError) throw new Error(`creating the ${PHOTO_BUCKET} bucket failed: ${createError.message}`)
+}
+
+async function copyPhoto(name, sourceUrl) {
+  const res = await fetch(sourceUrl)
+  if (!res.ok) throw new Error(`downloading ${sourceUrl} failed (${res.status})`)
+  const contentType = (res.headers.get('content-type') ?? '').split(';')[0].trim()
+  const extension = PHOTO_EXTENSIONS[contentType]
+  if (!extension) throw new Error(`${sourceUrl} is ${contentType || 'untyped'}, not a photo`)
+
+  const objectPath = `${PHOTO_FOLDER}/${slugify(name)}.${extension}`
+  const { error } = await write.storage.from(PHOTO_BUCKET)
+    .upload(objectPath, Buffer.from(await res.arrayBuffer()), { contentType, upsert: true })
+  if (error) throw new Error(`uploading ${objectPath} failed: ${error.message}`)
+  return write.storage.from(PHOTO_BUCKET).getPublicUrl(objectPath).data.publicUrl
+}
+
+// On --dry-run this only finds the photos; nothing is copied.
+async function crssdPass(names, byKey) {
+  let photos
+  try {
+    photos = await fetchCrssdPhotos()
+    if (!dryRun) await ensurePhotoBucket()
+  } catch (err) {
+    console.warn(`  ! skipping CRSSD's artist pages: ${err.message}`)
+    return []
+  }
+
+  const found = []
+  for (const name of names) {
+    const sourceUrl = lookupNames(name).map(n => photos.get(looseKey(n))).find(Boolean)
+    if (!sourceUrl) continue
+    try {
+      const url = dryRun ? sourceUrl : await copyPhoto(name, sourceUrl)
+      byKey.set(nameKey(name), url)
+      found.push({ artist_key: nameKey(name), artist_name: name, image_url: url, source: 'crssd' })
+    } catch (err) {
+      console.warn(`  ! ${name}: ${err.message}`)
+    }
+    await sleep(REQUEST_SPACING_MS)
+  }
+  console.log(`photos: ${found.length} from CRSSD's artist pages${dryRun ? ' (found, not copied)' : ', copied to storage'}`)
+  return found
+}
 
 async function resolvePhotos(names) {
   const keys = Array.from(new Set(names.map(nameKey)))
@@ -222,7 +319,7 @@ async function resolvePhotos(names) {
         const url = await lookupSetImage(name)
         if (url) {
           byKey.set(nameKey(name), url)
-          discovered.push({ artist_key: nameKey(name), artist_name: name, image_url: url })
+          discovered.push({ artist_key: nameKey(name), artist_name: name, image_url: url, source: 'ticketmaster' })
         }
       } catch (err) {
         // A lookup that fails is a missing photo, not a failed import.
@@ -230,10 +327,14 @@ async function resolvePhotos(names) {
       }
       await sleep(REQUEST_SPACING_MS)
     }
-    console.log(`photos: ${discovered.length} found upstream, ${missing.length - discovered.length} left blank`)
+    console.log(`photos: ${discovered.length} found on Ticketmaster`)
   } else {
-    console.log('photos: no TICKETMASTER_API_KEY, skipping the upstream pass')
+    console.log('photos: no TICKETMASTER_API_KEY, skipping the Ticketmaster pass')
   }
+
+  const blank = missing.filter(name => !byKey.has(nameKey(name)))
+  if (blank.length > 0) discovered.push(...await crssdPass(blank, byKey))
+  console.log(`photos: ${missing.length - discovered.length} left blank`)
 
   return { byKey, discovered }
 }
@@ -303,7 +404,7 @@ async function main() {
   if (discovered.length > 0) {
     const { error: imagesError } = await write
       .from('artist_images')
-      .upsert(discovered.map(d => ({ ...d, source: 'ticketmaster', checked_at: new Date().toISOString() })),
+      .upsert(discovered.map(d => ({ ...d, checked_at: new Date().toISOString() })),
         { onConflict: 'artist_key' })
     // The photos are already on the shows rows; failing to cache them is not
     // worth failing the import over.
