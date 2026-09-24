@@ -632,3 +632,83 @@ alter table public.profiles add column if not exists discoverable_by_phone boole
 -- no edge is recorded for a phone number that doesn't belong to an account:
 -- people who never signed up leave no trace of having been in someone's
 -- address book.
+
+-- The QR funnel: how many people scanned a code, how many of them opened the
+-- site, and how many signed up. Written only by app/qr (kind 'scan') and
+-- app/api/visits (kind 'visit'), both with the service role. RLS is on with
+-- no policies, so neither the anon key nor a signed-in user can read or
+-- write it.
+--
+-- visitor_id is a random id: from a cookie on the phone for a scan, from
+-- localStorage for a visit. The two aren't the same id, so a scan can't be
+-- followed into the visit it became - only counted beside it. Nothing else
+-- about the phone or the person is kept.
+create table if not exists public.site_events (
+  id         bigint generated always as identity primary key,
+  created_at timestamp with time zone not null default now(),
+  kind       text not null check (kind in ('scan', 'visit')),
+  visitor_id uuid not null,
+  source     text not null
+);
+alter table public.site_events enable row level security;
+create index if not exists site_events_kind_created_idx on public.site_events (kind, created_at);
+
+-- Sign-ups aren't events: auth.users is already an exact count of them, and
+-- each account made from here on carries raw_user_meta_data->>'signup_source'
+-- ('qr', 'share' or 'direct') - the first door that browser came in by. See
+-- lib/visitor.ts.
+--
+-- The numbers live in their own schema rather than `public`, because
+-- PostgREST serves everything in `public` and these read auth.users. Read
+-- them in the SQL editor:
+--
+--   select * from analytics.funnel_by_day;
+--   select * from analytics.funnel_total;
+create schema if not exists analytics;
+
+-- One row per day, San Diego time. "phones" and "visitors" are distinct ids
+-- within that day, so they can't be summed across days - funnel_total
+-- counts them across the whole run instead.
+create or replace view analytics.funnel_by_day as
+with events as (
+  select (created_at at time zone 'America/Los_Angeles')::date as day,
+         count(*)                   filter (where kind = 'scan')                     as scans,
+         count(distinct visitor_id) filter (where kind = 'scan')                     as phones_scanned,
+         count(*)                   filter (where kind = 'visit')                    as opens,
+         count(distinct visitor_id) filter (where kind = 'visit')                    as visitors,
+         count(distinct visitor_id) filter (where kind = 'visit' and source = 'qr') as visitors_from_qr
+  from public.site_events
+  group by 1
+), signups as (
+  select (created_at at time zone 'America/Los_Angeles')::date as day,
+         count(*)                                                              as signups,
+         count(*) filter (where raw_user_meta_data->>'signup_source' = 'qr') as signups_from_qr
+  from auth.users
+  group by 1
+)
+select coalesce(e.day, s.day)            as day,
+       coalesce(e.scans, 0)              as scans,
+       coalesce(e.phones_scanned, 0)     as phones_scanned,
+       coalesce(e.opens, 0)              as opens,
+       coalesce(e.visitors, 0)           as visitors,
+       coalesce(e.visitors_from_qr, 0)   as visitors_from_qr,
+       coalesce(s.signups, 0)            as signups,
+       coalesce(s.signups_from_qr, 0)    as signups_from_qr
+from events e
+full join signups s on s.day = e.day
+order by 1 desc;
+
+-- Everything since counting began (the first site_events row), so accounts
+-- from before tracking don't pad the sign-ups.
+create or replace view analytics.funnel_total as
+with since as (
+  select min(created_at) as t from public.site_events
+)
+select (select count(*)                   from public.site_events where kind = 'scan')                     as scans,
+       (select count(distinct visitor_id) from public.site_events where kind = 'scan')                     as phones_scanned,
+       (select count(*)                   from public.site_events where kind = 'visit')                    as opens,
+       (select count(distinct visitor_id) from public.site_events where kind = 'visit')                    as visitors,
+       (select count(distinct visitor_id) from public.site_events where kind = 'visit' and source = 'qr') as visitors_from_qr,
+       (select count(*) from auth.users, since where created_at >= since.t)                                as signups,
+       (select count(*) from auth.users, since
+         where created_at >= since.t and raw_user_meta_data->>'signup_source' = 'qr')                     as signups_from_qr;

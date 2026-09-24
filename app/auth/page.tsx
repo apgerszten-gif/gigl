@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
+import { signupMetadata } from '@/lib/visitor'
 import { Logo } from '@/components/Logo'
 import {
   ArtistPhoto, Card, DateTag, ErrorNote, Field, Label, PersonPhoto, Place, PullQuote, Segmented, Stars,
@@ -33,7 +34,9 @@ export default function AuthPage() {
       if (!isValidUsername(cleaned)) { setError(USERNAME_RULES_TEXT); return }
 
       setLoading(true)
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email, password, options: { data: signupMetadata() },
+      })
       if (signUpError) { setError(signUpError.message); setLoading(false); return }
       if (data.user) {
         await supabase.from('profiles').upsert({

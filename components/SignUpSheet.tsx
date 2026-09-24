@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
+import { signupMetadata } from '@/lib/visitor'
 import { ErrorNote, Field, Label, Segmented, btnPrimary, fieldInput } from '@/components/ui'
 
 type Mode = 'signup' | 'signin'
@@ -92,7 +93,9 @@ export function SignUpSheet({
       return
     }
 
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email, password, options: { data: signupMetadata() },
+    })
     if (signUpError || !data.user) {
       setError(signUpError?.message ?? 'Could not create the account. Try again.')
       setLoading(false)

@@ -7,7 +7,7 @@ A Letterboxd-style app for live music. People log shows they've been to (a festi
 - Next.js 14.2 (App Router), React 18, TypeScript, Tailwind CSS 3.4
 - Supabase (Postgres + auth). `supabase-schema.sql` is append-only: new DDL goes at the end and is run by hand in the Supabase SQL editor.
 - Ticketmaster Discovery API (show catalogue), Twilio (SMS)
-- Vercel project `gigl-app`: production deploys from `main` and is served at gigl-review.vercel.app. The separate Vercel project `gigl` is a broken duplicate on the same repo; its failing checks can be ignored.
+- Vercel project `gigl-app`: production deploys from `main` and is served at www.gigl.space (the bare gigl.space redirects there). The old address, gigl-review.vercel.app, is printed on the CRSSD QR codes, so `next.config.js` forwards it to gigl.space and counts a hit on its bare domain as a scan (`app/qr`). The separate Vercel project `gigl` is a broken duplicate on the same repo; its failing checks can be ignored.
 
 ## Commands
 
@@ -28,6 +28,7 @@ A Letterboxd-style app for live music. People log shows they've been to (a festi
   A missed nightly run is therefore a permanent hole, not a stale day: a show that happens while the job is broken and wasn't captured earlier can never be logged. There is no live-Ticketmaster fallback in the search route any more — the only thing it could return is upcoming shows.
 - **User-submitted shows are never pruned, and that is load-bearing.** `/add-show` writes rows with `source = 'user'` through `/api/shows/submit`. A Ticketmaster row can be re-fetched while it's still upcoming; a hand-typed one cannot be recovered from anywhere, so `prunePastShows()` skips them entirely and `submitted_by` is `on delete set null` rather than a cascade — delete the account, keep the show. Writes still go through the service role: `shows` has **no** client insert policy, deliberately, so the validation and duplicate checks in the route can't be bypassed via PostgREST. The route needs `SUPABASE_SERVICE_ROLE_KEY` and returns a clean 503 without it (so it does not work in local dev unless you add the key).
 - **"Near me" search is a bounding box, not PostGIS.** `/api/shows/search` takes optional `lat`/`lng`/`radius`; `lib/geo.ts` turns that into a lat/lng box the query filters on, then trims the corners with a real haversine distance. Coordinates come from `lib/useNearby.ts` in the browser, are rounded to 2 decimal places before going in the URL, and are never stored. Rows with a null `lat`/`lng` never appear in a nearby search, and a nearby search never falls back to live Ticketmaster — that path has no location filter.
+- **Local dev and preview deployments use the production Supabase project.** Anything you do in dev writes real rows. The QR funnel (`site_events`, read through the `analytics` views at the end of `supabase-schema.sql`) only counts requests to the production hosts for this reason — see `isCountedHost` in `lib/visitor.ts`.
 - **Ratings are stars out of 5.** Each log has three 1–5 star sub-ratings (performance, venue, crowd). `lib/rating.ts` averages them into the show score. Never display or store ratings on a 10-point scale.
 
 ## Design system

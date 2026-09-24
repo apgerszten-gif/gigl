@@ -3,6 +3,7 @@ import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 import { AuthProvider } from '@/components/AuthProvider'
 import { PendingLogsSync } from '@/components/PendingLogsSync'
+import { VisitTracker } from '@/components/VisitTracker'
 import { spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <FestivalThemeProvider>
             <PendingLogsSync />
+            <VisitTracker />
             <div className="max-w-md mx-auto min-h-screen">
               {children}
             </div>
