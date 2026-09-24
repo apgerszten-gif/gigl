@@ -125,7 +125,7 @@ Where the photos come from:
   - the review as a pull quote, then its tags as chips
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
-- Signed out, a card above the controls in the CRSSD sunset skin (`crssd-sunset`, with an ink border and riso shadow): "At CRSSD? Rate the sets you saw", a line saying an account is only needed to post, a small "Log a show" primary button (straight to `/crssd`) and an "I have an account" link. In the bottom-right corner sits a small cream button with an ink border, "I'm rating a show from somewhere else", which leads to `/select-festival`. All the text is full ink, since `ink-muted` gets lost against the bands. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
+- Signed out, a card above the controls in the CRSSD sunset skin (`crssd-sunset`, with an ink border and riso shadow): "At CRSSD? Rate the sets you saw", a line saying an account is only needed to post, a small "Log a show" primary button (straight to `/crssd`) and an "I have an account" link. Tucked into the bottom-right corner below them is a small cream button with an ink border, "I'm rating a show / from somewhere else" on two 10px lines, which leads to `/select-festival`. All the text is full ink, since `ink-muted` gets lost against the bands. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
 - For the CRSSD weekend the header reads Gigl × CRSSD: the logo, a × in `ink-muted`, then `CrssdMark` at 15px tall. Retire it along with the CRSSD Log button.
 
 ### Artist rankings (`/rankings`)

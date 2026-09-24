@@ -335,13 +335,13 @@ function FeedInner() {
                 I have an account
               </button>
             </div>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-2 flex justify-end">
               <Link
                 href="/select-festival"
-                className="inline-flex items-center gap-1 rounded-card border-1.5 border-ink bg-cream px-2.5 py-1 text-[11px] font-semibold text-ink hover:bg-accent/5"
+                className="inline-flex items-center gap-1 rounded-card border-1.5 border-ink bg-cream px-2 py-1 text-[10px] leading-tight font-semibold text-ink hover:bg-accent/5"
               >
-                I&apos;m rating a show from somewhere else
-                <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
+                <span>I&apos;m rating a show<br />from somewhere else</span>
+                <ChevronRight className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
               </Link>
             </div>
           </div>
