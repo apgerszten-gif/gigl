@@ -712,3 +712,10 @@ select (select count(*)                   from public.site_events where kind = '
        (select count(*) from auth.users, since where created_at >= since.t)                                as signups,
        (select count(*) from auth.users, since
          where created_at >= since.t and raw_user_meta_data->>'signup_source' = 'qr')                     as signups_from_qr;
+
+-- profiles.city defaulted to 'Coachella' from when Gigl was a Coachella app,
+-- so every account has it, whatever city its owner is in. Nothing reads the
+-- column (the city line on a profile is still a mockup), so clear the stale
+-- value rather than let a future feature show it as fact.
+alter table public.profiles alter column city drop default;
+update public.profiles set city = null where city = 'Coachella';

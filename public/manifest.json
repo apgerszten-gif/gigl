@@ -1,11 +1,11 @@
 {
   "name": "Gigl",
   "short_name": "Gigl",
-  "description": "Rate your Coachella sets",
+  "description": "Log, rate and rank the live shows you've been to",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0c0c0e",
-  "theme_color": "#0c0c0e",
+  "background_color": "#EDE3D0",
+  "theme_color": "#EDE3D0",
   "icons": [
     {
       "src": "/icon-192.png",

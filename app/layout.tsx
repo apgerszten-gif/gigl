@@ -8,7 +8,7 @@ import { spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
   title: 'Gigl — be the critic.',
-  description: 'Log and rank your Coachella sets',
+  description: "Log, rate and rank the live shows you've been to",
   manifest: '/manifest.json',
 }
 
