@@ -17,9 +17,9 @@ export function formatShowDate(isoDate: string | null | undefined): string {
 // logging, short enough that browsing still reads as "what happened around
 // here recently" rather than an archive.
 //
-// Every layer measures the window from here: the nightly sync asks
-// Ticketmaster for exactly this range, search filters to it, and the prune
-// drops whatever falls outside. Widening it is a one-line change in this file.
+// Search filters to this window. The nightly prune keeps far more (see
+// RETAIN_DAYS below), so widening the window only ever reveals rows that
+// are already there. Widening it is a one-line change in this file.
 export const PAST_WINDOW_DAYS = 7
 
 // UTC, which is what the sync and the API routes run in on Vercel. Upstream
@@ -42,5 +42,18 @@ export function windowEndIso(): string {
 export function windowStartIso(): string {
   const start = new Date()
   start.setUTCDate(start.getUTCDate() - PAST_WINDOW_DAYS)
+  return isoDay(start)
+}
+
+// How long a show is kept once it has happened, which is longer than search
+// reaches: people want to look back on shows from months ago, and since
+// Ticketmaster has no past events these rows are the only history of them we
+// will ever have. Keeping a year costs roughly 150k rows (~400 shows a day).
+export const RETAIN_DAYS = 366
+
+// Inclusive lower bound of what the nightly prune keeps.
+export function retainStartIso(): string {
+  const start = new Date()
+  start.setUTCDate(start.getUTCDate() - RETAIN_DAYS)
   return isoDay(start)
 }

@@ -80,8 +80,8 @@ const LNG = -117.172096
 // GENRE_EMOJI in lib/ticketmaster.ts maps dance/edm to this.
 const EMOJI = '🎧'
 
-// prunePastShows() deletes everything whose show_date has fallen out of the
-// catalogue window except source = 'user' - the one value it skips. These
+// prunePastShows() deletes everything more than a year old except
+// source = 'user' - the one value it skips. These
 // rows cannot be re-fetched from anywhere if they go, so they take that
 // value. Changing it to something like 'festival' means widening the
 // .neq('source', 'user') filter in lib/shows/repository.ts first.

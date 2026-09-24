@@ -8,7 +8,7 @@
 
 import { supabase } from '../supabase'
 import { supabaseAdmin } from '../supabaseAdmin'
-import { formatShowDate, windowEndIso, windowStartIso } from '../dates'
+import { formatShowDate, retainStartIso, windowEndIso, windowStartIso } from '../dates'
 import { nameKey } from '../nameKey'
 import { boundingBox, distanceInMiles, type Coords } from '../geo'
 import type { Show, SyncShow } from '../ticketmaster'
@@ -220,15 +220,16 @@ export async function upsertShows(shows: SyncShow[]): Promise<UpsertResult> {
   return { upserted, failed }
 }
 
-// Drops shows that have fallen out the back of the catalogue window - only
-// those, and this is the load-bearing part of the whole feature.
+// Drops shows more than a year old - only those, and this is the
+// load-bearing part of the whole feature.
 //
-// A show is deleted PAST_WINDOW_DAYS after it happened, not the morning
-// after. Ticketmaster has no past events (see the sync note in
-// lib/ticketmaster.ts), so these rows are the *only* record that the show
-// existed: once one is deleted nothing can fetch it back, and the past-week
-// list would be empty of it for good. The old cutoff was `< today`, which
-// threw away precisely the week that search now serves.
+// A show is deleted RETAIN_DAYS after it happened: well after it leaves the
+// search window, never the morning after. Ticketmaster has no past events
+// (see the sync note in lib/ticketmaster.ts), so these rows are the *only*
+// record that the show existed: once one is deleted nothing can fetch it
+// back. The old cutoffs were `< today`, which threw away the week search
+// served, and then the search window itself, which threw away the history
+// people come back to look up.
 //
 // Future-dated rows are still never deleted, for two reasons that now stack.
 // The original one: an event missing from one night's API results is at
@@ -245,7 +246,7 @@ export async function prunePastShows(): Promise<number> {
   const { count, error } = await supabaseAdmin()
     .from('shows')
     .delete({ count: 'exact' })
-    .lt('show_date', windowStartIso())
+    .lt('show_date', retainStartIso())
     // Never a user submission. A Ticketmaster row can always be re-fetched
     // while it is still upcoming; a row somebody typed in by hand cannot be
     // recovered from anywhere, and it is very likely the only record of a gig
