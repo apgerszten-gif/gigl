@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 
 const QUEUE_KEY = 'gigl_pending_logs'
 
@@ -130,4 +131,30 @@ export function clearGuestDraft(): void {
   } catch {
     // nothing to clear
   }
+}
+
+// The sign-up sheet promises "make an account and it goes up on the feed",
+// but people also close it and sign up later from the feed card or the You
+// tab. Then the log screen isn't there to save the draft, so this moves it
+// into the queue under the new account instead (without photos, which the
+// draft never kept). Returns whether there was a draft to move.
+export function queueGuestDraft(userId: string): boolean {
+  let draft: GuestDraft | null = null
+  try {
+    const raw = localStorage.getItem(GUEST_DRAFT_KEY)
+    draft = raw ? JSON.parse(raw) : null
+  } catch {
+    return false
+  }
+  if (!draft?.artist_id || !draft.performance_rating || !draft.venue_rating || !draft.crowd_rating) return false
+
+  enqueuePendingLog({
+    ...draft,
+    user_id:    userId,
+    photo_url:  null,
+    media_urls: null,
+    emoji:      deriveLegacyEmoji(computeShowScore(draft.performance_rating, draft.venue_rating, draft.crowd_rating)),
+  })
+  clearGuestDraft()
+  return true
 }
