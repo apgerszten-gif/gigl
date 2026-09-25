@@ -24,7 +24,7 @@ import { formatShowDate, retainStartIso, windowEndIso } from './dates'
 import { distanceInMiles, type Coords } from './geo'
 import type { Show } from './ticketmaster'
 
-const API = 'https://api.setlist.fm/rest/1.0/search/setlists'
+const API = 'https://api.setlist.fm/rest/1.0'
 
 const MIN_QUERY_LENGTH = 3
 const CACHE_SECONDS    = 6 * 60 * 60
@@ -33,8 +33,13 @@ const CACHE_SECONDS    = 6 * 60 * 60
 // busy tour can fill a page with two months, so later pages are read while
 // they are still inside the year - up to this many.
 const MAX_PAGES = 3
-// Paging one search stays under the 2-a-second limit on its own.
-const PAGE_GAP_MS = 550
+// setlist.fm allows 2 requests a second. Every request this instance makes
+// takes the next slot at least this far after the last one - see call().
+const REQUEST_GAP_MS = 550
+
+// Two acts can share a name exactly ("Temples" is an English psych band and
+// a Finnish doom one); both are searched, up to this many.
+const MAX_ARTISTS = 2
 
 // Shown on every result. setlist.fm has no photo when the artist_images
 // table doesn't either.
@@ -55,60 +60,105 @@ interface Setlist {
   }
 }
 
-type SearchField = 'artistName' | 'venueName'
+interface Artist {
+  mbid: string
+  name: string
+}
 
-// Next's Data Cache only keeps 200s, so a search that matched nothing would
-// otherwise cost a request every time someone typed it. Per instance, which
-// is enough to stop one person's retyping from burning the daily quota.
-const noMatch = new Map<string, number>()
+// Answers kept in memory for CACHE_SECONDS, checked before waiting for a
+// request slot, so a search someone just made comes straight back rather
+// than queueing behind the rate limit. Next's Data Cache sits behind this
+// across instances, but only keeps 200s - an empty answer (setlist.fm's 404)
+// is only ever remembered here. Bounded, oldest out first.
+const MEMO_LIMIT = 500
+const memo = new Map<string, { at: number; body: unknown }>()
+
+function remember(url: string, body: unknown) {
+  memo.delete(url)
+  memo.set(url, { at: Date.now(), body })
+  if (memo.size > MEMO_LIMIT) memo.delete(memo.keys().next().value!)
+}
 
 function isoFromSetlistDate(date: string): string | null {
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(date)
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null
 }
 
+// For telling whether a name is the one typed: letters and digits only, a
+// leading "the" dropped - "the national" is The National.
+function looseName(name: string): string {
+  return nameKey(name).replace(/^the /, '').replace(/[^a-z0-9]/g, '')
+}
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-// One page, or null when setlist.fm couldn't answer (no key, a 429, an
-// outage). null stops the paging; an empty page is a real "no more".
-async function fetchPage(field: SearchField, value: string, page: number): Promise<Setlist[] | null> {
+let nextSlot = 0
+async function waitForSlot() {
+  const now = Date.now()
+  const slot = Math.max(now, nextSlot)
+  nextSlot = slot + REQUEST_GAP_MS
+  if (slot > now) await sleep(slot - now)
+}
+
+// One request. 'empty' is setlist.fm's 404 for "no results"; null means it
+// couldn't answer (no key, a 429, an outage).
+async function call<T>(path: string, params: Record<string, string>): Promise<T | 'empty' | null> {
   const key = process.env.SETLISTFM_API_KEY
   if (!key) return null
 
-  const cacheKey = `${field}:${value}:${page}`
-  const missedAt = noMatch.get(cacheKey)
-  if (missedAt && Date.now() - missedAt < CACHE_SECONDS * 1000) return []
+  const url = `${API}${path}?${new URLSearchParams(params)}`
+  const kept = memo.get(url)
+  if (kept && Date.now() - kept.at < CACHE_SECONDS * 1000) return kept.body as T | 'empty'
 
+  await waitForSlot()
   try {
-    const res = await fetch(`${API}?${new URLSearchParams({ [field]: value, p: String(page) })}`, {
+    const res = await fetch(url, {
       headers: { 'x-api-key': key, Accept: 'application/json', 'Accept-Language': 'en' },
       next: { revalidate: CACHE_SECONDS },
     })
-    // setlist.fm answers an empty search with a 404.
     if (res.status === 404) {
-      noMatch.set(cacheKey, Date.now())
-      return []
+      remember(url, 'empty')
+      return 'empty'
     }
     if (!res.ok) {
-      console.error(`[setlistfm] ${field}="${value}" page ${page}: HTTP ${res.status}`)
+      console.error(`[setlistfm] ${path} ${JSON.stringify(params)}: HTTP ${res.status}`)
       return null
     }
-    const body = await res.json() as { setlist?: Setlist[] }
-    return body.setlist ?? []
+    const body = await res.json() as T
+    remember(url, body)
+    return body
   } catch (err) {
-    console.error(`[setlistfm] ${field}="${value}" page ${page} failed:`, err)
+    console.error(`[setlistfm] ${path} ${JSON.stringify(params)} failed:`, err)
     return null
   }
 }
 
-// Every setlist inside [since, until], newest first, reading pages until
-// they run past `since`, run out, or hit MAX_PAGES.
-async function searchField(field: SearchField, value: string, since: string, until: string): Promise<Setlist[]> {
+// The artists a query names. setlist.fm's own setlist search matches names
+// loosely - "the national" brings back The National Parks and a run of
+// orchestras before any show by The National - so the artist is settled
+// first: every exact match, or failing that the most relevant name that
+// starts with what was typed, for someone who stopped at "justin bieb".
+async function findArtists(query: string): Promise<Artist[]> {
+  const body = await call<{ artist?: Artist[] }>('/search/artists', { artistName: query, sort: 'relevance', p: '1' })
+  if (!body || body === 'empty') return []
+
+  const typed = looseName(query)
+  const artists = (body.artist ?? []).filter(a => a.mbid)
+  const exact = artists.filter(a => looseName(a.name) === typed)
+  if (exact.length > 0) return exact.slice(0, MAX_ARTISTS)
+  const partial = artists.find(a => looseName(a.name).startsWith(typed))
+  return partial ? [partial] : []
+}
+
+// Every setlist from `path` inside [since, until], newest first, reading
+// pages until they run past `since`, run out, or hit MAX_PAGES.
+async function setlistsWithin(path: string, params: Record<string, string>, since: string, until: string, maxPages = MAX_PAGES): Promise<Setlist[]> {
   const found: Setlist[] = []
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    if (page > 1) await sleep(PAGE_GAP_MS)
-    const setlists = await fetchPage(field, value, page)
-    if (!setlists || setlists.length === 0) break
+  for (let page = 1; page <= maxPages; page++) {
+    const body = await call<{ setlist?: Setlist[] }>(path, { ...params, p: String(page) })
+    if (!body || body === 'empty') break
+    const setlists = body.setlist ?? []
+    if (setlists.length === 0) break
 
     for (const s of setlists) {
       const iso = isoFromSetlistDate(s.eventDate)
@@ -133,7 +183,8 @@ export interface PastShowSearch {
 
 // Past shows matching `query` from the last year, as the same Show shape the
 // catalogue search returns. Tried as an artist first, and as a venue when no
-// artist matches - "casbah" is as likely a search as a band. Empty on a
+// artist by that name played this year - "casbah" is as likely a search as a
+// band. Empty on a
 // short query, a missing key, or anything setlist.fm says no to: this only
 // ever adds to what the catalogue found.
 export async function searchPastShows(query: string, options: PastShowSearch = {}): Promise<Show[]> {
@@ -143,8 +194,26 @@ export async function searchPastShows(query: string, options: PastShowSearch = {
   const since = retainStartIso()
   const until = windowEndIso()
 
-  let setlists = await searchField('artistName', value, since, until)
-  if (setlists.length === 0) setlists = await searchField('venueName', value, since, until)
+  let setlists: Setlist[] = []
+  for (const artist of await findArtists(value)) {
+    setlists.push(...await setlistsWithin(`/artist/${artist.mbid}/setlists`, {}, since, until))
+  }
+
+  // Then as a venue: several bands are called Casbah, none of them played
+  // this year, and "casbah" means the one in San Diego. setlist.fm's venue
+  // search is loose too, but it sorts by date, so the room with the most
+  // going on leads - which is the one people mean. Only rooms whose name
+  // starts with what was typed are kept: "wiltern" is the Wiltern Theatre,
+  // not everywhere with a similar word in it.
+  if (setlists.length === 0) {
+    const typed = looseName(value)
+    // A busy room fills a page in weeks; two pages is more than the list
+    // shows, and the search is slow enough already.
+    setlists = (await setlistsWithin('/search/setlists', { venueName: value }, since, until, 2))
+      .filter(s => looseName(s.venue.name).startsWith(typed))
+  }
+  // Two artists' shows arrive one after the other; the list reads by date.
+  setlists.sort((a, b) => isoFromSetlistDate(b.eventDate)!.localeCompare(isoFromSetlistDate(a.eventDate)!))
 
   const seen = new Set<string>()
   const shows: Show[] = []
