@@ -100,8 +100,13 @@ async function waitForSlot() {
   if (slot > now) await sleep(slot - now)
 }
 
+// The slot gate only paces one server instance, and a busy moment runs
+// several, so setlist.fm can still answer 429. It is a per-second limit:
+// one retry, a second later, gets through.
+const RETRY_AFTER_429_MS = 1100
+
 // One request. 'empty' is setlist.fm's 404 for "no results"; null means it
-// couldn't answer (no key, a 429, an outage).
+// couldn't answer (no key, a 429 twice over, an outage).
 async function call<T>(path: string, params: Record<string, string>): Promise<T | 'empty' | null> {
   const key = process.env.SETLISTFM_API_KEY
   if (!key) return null
@@ -110,12 +115,20 @@ async function call<T>(path: string, params: Record<string, string>): Promise<T 
   const kept = memo.get(url)
   if (kept && Date.now() - kept.at < CACHE_SECONDS * 1000) return kept.body as T | 'empty'
 
-  await waitForSlot()
-  try {
-    const res = await fetch(url, {
+  const request = async () => {
+    await waitForSlot()
+    return fetch(url, {
       headers: { 'x-api-key': key, Accept: 'application/json', 'Accept-Language': 'en' },
       next: { revalidate: CACHE_SECONDS },
     })
+  }
+
+  try {
+    let res = await request()
+    if (res.status === 429) {
+      await sleep(RETRY_AFTER_429_MS)
+      res = await request()
+    }
     if (res.status === 404) {
       remember(url, 'empty')
       return 'empty'
