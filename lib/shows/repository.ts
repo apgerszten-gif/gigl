@@ -94,17 +94,21 @@ export interface SearchOptions {
 // Newest first, unlike the old upcoming list's ascending order: the show
 // someone is most likely to be logging is the one they went to last night,
 // so it belongs at the top rather than seven days down.
+//
+// A search reaches back further than browsing: as far as the catalogue keeps
+// shows (RETAIN_DAYS), because someone typing a name is looking for one
+// particular show, however long ago. Browsing stays on the past week, where
+// "what happened around here recently" is still the right reading.
 export async function searchStoredShows(keyword: string, options: SearchOptions = {}): Promise<Show[]> {
   const { limit = DEFAULT_LIMIT, nearby } = options
+  const trimmed = escapeForOrFilter(keyword)
 
   let query = supabase
     .from('shows')
     .select(SHOW_COLUMNS)
-    // Rows outside the window are pruned nightly, but a row can fall out of it
-    // during the day, so filter here too rather than trusting the sync's
-    // timing. The upper bound matters as much as the lower one now: a show
-    // that hasn't happened yet is not something anyone can have been to.
-    .gte('show_date', windowStartIso())
+    // The upper bound matters as much as the lower one: a show that hasn't
+    // happened yet is not something anyone can have been to.
+    .gte('show_date', trimmed ? retainStartIso() : windowStartIso())
     .lte('show_date', windowEndIso())
     .order('show_date', { ascending: false })
     .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
@@ -123,7 +127,6 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
       .gte('lng', box.minLng).lte('lng', box.maxLng)
   }
 
-  const trimmed = escapeForOrFilter(keyword)
   if (trimmed) {
     // Matches artist or venue - "bowery ballroom" is as plausible a search as
     // an artist name, and the trigram indexes cover both columns.

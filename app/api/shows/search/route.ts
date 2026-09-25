@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchStoredShows, type NearbyFilter } from '@/lib/shows/repository'
+import { searchStoredShows } from '@/lib/shows/repository'
+import { readNearby } from '@/lib/shows/nearby'
 
 // GET /api/shows/search?q=turnstile — searches the `shows` catalogue table,
 // which the nightly job at /api/cron/sync-shows keeps populated. `q` blank or
 // omitted returns the most recent shows (the page's initial browse list).
 //
-// Everything this route can return already happened: the catalogue only
-// covers the past week (PAST_WINDOW_DAYS in lib/dates.ts). Gigl logs shows
-// you went to, so an on-sale listing is not a thing anyone can rate, and
-// showing one just buries the show they came here to log.
+// Everything this route can return already happened. Browsing (no `q`)
+// covers the past week (PAST_WINDOW_DAYS in lib/dates.ts); a search reaches
+// back as far as the catalogue keeps (RETAIN_DAYS). Gigl logs shows you went
+// to, so an on-sale listing is not a thing anyone can rate, and showing one
+// just buries the show they came here to log. Anything older than the
+// catalogue comes from /api/shows/past instead.
 //
 // Optional `lat`, `lng` and `radius` (miles) narrow that to shows near a
 // point, each result carrying its `distanceMiles`. The browser supplies the
@@ -30,29 +33,6 @@ import { searchStoredShows, type NearbyFilter } from '@/lib/shows/repository'
 // catalogue reads froze on whatever they first returned - an empty table
 // before the first sync - and never noticed the table filling up.
 export const fetchCache = 'default-no-store'
-
-// A radius the client didn't send, or sent as nonsense. The ceiling exists so
-// a hand-typed `radius=100000` can't turn the bounding box into a table scan.
-const DEFAULT_RADIUS_MILES = 50
-const MAX_RADIUS_MILES     = 500
-
-// Returns null unless there is a complete, in-range coordinate pair: a
-// half-supplied or malformed location is treated as no location at all
-// rather than as a point off the coast of Africa.
-function readNearby(params: URLSearchParams): NearbyFilter | null {
-  const lat = Number(params.get('lat'))
-  const lng = Number(params.get('lng'))
-  if (!params.has('lat') || !params.has('lng')) return null
-  if (!Number.isFinite(lat) || Math.abs(lat) > 90)  return null
-  if (!Number.isFinite(lng) || Math.abs(lng) > 180) return null
-
-  const requested = Number(params.get('radius'))
-  const radiusMiles = Number.isFinite(requested) && requested > 0
-    ? Math.min(requested, MAX_RADIUS_MILES)
-    : DEFAULT_RADIUS_MILES
-
-  return { centre: { lat, lng }, radiusMiles }
-}
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? ''

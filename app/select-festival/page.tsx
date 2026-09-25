@@ -30,6 +30,12 @@ interface Show {
 
 const SEARCH_DEBOUNCE_MS = 350
 
+// setlist.fm allows 1,440 requests a day, so its half of a search waits
+// longer for typing to settle, and doesn't start until a name is plausible.
+// See lib/setlistfm.ts.
+const PAST_DEBOUNCE_MS = 700
+const PAST_MIN_QUERY   = 3
+
 // Two decimal places is about 1km, which is a fraction of even the tightest
 // radius on offer - so the filter behaves identically, but a precise home
 // address never lands in a URL or a server log.
@@ -101,12 +107,47 @@ export default function SelectShowPage() {
     return () => { clearTimeout(timeoutId); controller.abort() }
   }, [query, retryToken, nearby.ready, nearbyLat, nearbyLng, nearbyRadius])
 
+  // Shows from before the catalogue began, from setlist.fm. Fetched beside
+  // the catalogue search rather than inside it, so the catalogue's results
+  // never wait on an outside service; a failure just means none appear.
+  const [past, setPast]               = useState<Show[]>([])
+  const [pastLoading, setPastLoading] = useState(false)
+
+  useEffect(() => {
+    const trimmed = query.trim()
+    setPast([])
+    if (!nearby.ready || trimmed.length < PAST_MIN_QUERY) { setPastLoading(false); return }
+
+    setPastLoading(true)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ q: trimmed })
+        if (nearbyLat && nearbyLng) {
+          params.set('lat', nearbyLat)
+          params.set('lng', nearbyLng)
+          params.set('radius', String(nearbyRadius))
+        }
+        const res = await fetch(`/api/shows/past?${params.toString()}`, { signal: controller.signal })
+        const data = res.ok ? await res.json() : { shows: [] }
+        setPast(data.shows ?? [])
+        setPastLoading(false)
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('past show search failed:', err)
+          setPastLoading(false)
+        }
+      }
+    }, PAST_DEBOUNCE_MS)
+
+    return () => { clearTimeout(timeoutId); controller.abort() }
+  }, [query, nearby.ready, nearbyLat, nearbyLng, nearbyRadius])
+
   function select(show: Show) {
     localStorage.setItem(LOCAL_STORAGE_KEY, show.id)
 
-    // Every result on this page comes from Ticketmaster search now (the
-    // old two-festival picker is gone), so it's always a single
-    // fully-specified show, never a bare festival id. Persisted separately
+    // Every result on this page is a single fully-specified show, from the
+    // catalogue or from setlist.fm, never a bare festival id. Persisted separately
     // from LOCAL_STORAGE_KEY (which only holds the id) so /log can pull the
     // artist/venue/date back out without re-fetching - see lib/activeShow.
     setActiveShow({ id: show.id, artist: show.artist, venue: show.venue, city: show.city, state: show.state, isoDate: show.isoDate, imageUrl: show.imageUrl })
@@ -131,6 +172,7 @@ export default function SelectShowPage() {
   }
 
   const trimmedQuery = query.trim()
+  const showPast = trimmedQuery.length >= PAST_MIN_QUERY && (pastLoading || past.length > 0)
 
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
@@ -201,19 +243,7 @@ export default function SelectShowPage() {
       </Label>
 
       <main className="px-5 space-y-3">
-        {loading && (
-          <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? 'border-t border-ink/10' : ''}`}>
-                <div className="shimmer w-14 h-14 rounded-card flex-shrink-0" />
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div className="shimmer h-3.5 w-3/5 rounded" />
-                  <div className="shimmer h-2.5 w-4/5 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {loading && <ShimmerRows count={4} />}
 
         {!loading && error && (
           <EmptyState>
@@ -228,48 +258,38 @@ export default function SelectShowPage() {
           </EmptyState>
         )}
 
-        {!loading && !error && results.length === 0 && (
+        {/* Held back while setlist.fm is still looking or has found
+            something, so "nothing matched" never sits above a list of
+            matches. */}
+        {!loading && !error && results.length === 0 && !showPast && (
           <EmptyState>
             {trimmedQuery
-              ? <>Nothing in the past week matched &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` within ${nearby.radiusMiles} miles` : ''}.</>
+              ? <>Nothing from the past year matched &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` within ${nearby.radiusMiles} miles` : ''}.</>
               : nearby.active
               ? `No shows in the past week within ${nearby.radiusMiles} miles. Try a wider radius.`
               : 'No shows from the past week to show right now.'}
           </EmptyState>
         )}
 
-        {!loading && !error && results.length > 0 && (
-          <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
-            {results.map((s, i) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => select(s)}
-                className={`w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-accent/5 ${
-                  i % 2 ? 'bg-cream-alt' : ''
-                } ${i > 0 ? 'border-t border-ink/10' : ''}`}
+        {!loading && !error && results.length > 0 && <ShowList shows={results} onSelect={select} />}
+
+        {/* setlist.fm's terms ask for a credit wherever its data appears,
+            with a link search engines can follow - so no rel="nofollow". */}
+        {!loading && showPast && (
+          <section>
+            <div className="flex items-baseline justify-between gap-3 pt-1 pb-2">
+              <Label>More shows</Label>
+              <a
+                href="https://www.setlist.fm"
+                target="_blank"
+                rel="noopener"
+                className="text-[10px] font-semibold uppercase tracking-label text-ink-faint underline underline-offset-[3px] hover:text-accent"
               >
-                <ArtistPhoto name={s.artist} src={s.imageUrl} className="w-14 h-14" iconSize={18}>
-                  <DateTag isoDate={s.isoDate} />
-                </ArtistPhoto>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display text-[15px] font-bold leading-tight truncate">{s.artist}</h3>
-                  <Place className="mt-0.5">{[s.venue, s.city, s.state].filter(Boolean).join(', ')}</Place>
-                  {s.support && s.support.length > 0 && (
-                    <p className="mt-0.5 text-[11px] text-ink-faint truncate">with {s.support.join(', ')}</p>
-                  )}
-                </div>
-                <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                  {s.distanceMiles != null && (
-                    <span className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">
-                      {formatDistance(s.distanceMiles)}
-                    </span>
-                  )}
-                  <span className={`${btnSecondary} px-2.5 py-1 text-[10px]`}>+ Log</span>
-                </div>
-              </button>
-            ))}
-          </div>
+                via setlist.fm
+              </a>
+            </div>
+            {pastLoading ? <ShimmerRows count={2} /> : <ShowList shows={past} onSelect={select} />}
+          </section>
         )}
 
         {/* The catalogue stops at ticketed rooms, so this is the only route
@@ -286,6 +306,58 @@ export default function SelectShowPage() {
       </main>
 
       <BottomNav />
+    </div>
+  )
+}
+
+function ShowList({ shows, onSelect }: { shows: Show[]; onSelect: (show: Show) => void }) {
+  return (
+    <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
+      {shows.map((s, i) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onSelect(s)}
+          className={`w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-accent/5 ${
+            i % 2 ? 'bg-cream-alt' : ''
+          } ${i > 0 ? 'border-t border-ink/10' : ''}`}
+        >
+          <ArtistPhoto name={s.artist} src={s.imageUrl} className="w-14 h-14" iconSize={18}>
+            <DateTag isoDate={s.isoDate} />
+          </ArtistPhoto>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display text-[15px] font-bold leading-tight truncate">{s.artist}</h3>
+            <Place className="mt-0.5">{[s.venue, s.city, s.state].filter(Boolean).join(', ')}</Place>
+            {s.support && s.support.length > 0 && (
+              <p className="mt-0.5 text-[11px] text-ink-faint truncate">with {s.support.join(', ')}</p>
+            )}
+          </div>
+          <div className="flex-shrink-0 flex flex-col items-end gap-1">
+            {s.distanceMiles != null && (
+              <span className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">
+                {formatDistance(s.distanceMiles)}
+              </span>
+            )}
+            <span className={`${btnSecondary} px-2.5 py-1 text-[10px]`}>+ Log</span>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ShimmerRows({ count }: { count: number }) {
+  return (
+    <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? 'border-t border-ink/10' : ''}`}>
+          <div className="shimmer w-14 h-14 rounded-card flex-shrink-0" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="shimmer h-3.5 w-3/5 rounded" />
+            <div className="shimmer h-2.5 w-4/5 rounded" />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

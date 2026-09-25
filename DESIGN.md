@@ -156,8 +156,9 @@ Where the photos come from:
 - The first step of logging, and what the Log button opens. For the CRSSD weekend Log opens `/crssd` instead, and this screen is reached from there or from the feed's sunset card. `AppHeader` titled "What did you see?" under a "Log a show" label.
 - Search input for artist, venue or city.
 - A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and while it's on, radius chips for 10 / 50 / 100 mi. Location is asked for on arrival, so the chip reports the filter rather than starting it; it reads "Locating…" and is disabled while the browser answers. Turning it off is remembered. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
-- A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on. The catalogue only holds shows that have already happened — you log what you went to — so results run newest first, last night at the top.
+- A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on. Browsing shows the past week; a search reaches back a year. Only shows that have already happened appear — you log what you went to — so results run newest first, last night at the top.
 - One card of result rows, alternating `cream` / `cream-alt`. Each row has the artist photo with a date sticker, the artist, the place line, any support acts and a "+ Log" button. With Near me on, the distance ("4.2 mi") sits above that button in the same 10px uppercase `ink-faint` style. Tapping a row goes straight into logging.
+- Once a search is 3 or more characters, a second card, **More shows**, lists older shows from setlist.fm that the catalogue doesn't have, in the same row style. Its label row carries a "via setlist.fm" link on the right (10px uppercase `ink-faint`, underlined), which setlist.fm's terms require wherever its data appears. It shows two shimmer rows while loading, and "Nothing … matched" is held back until it has answered.
 - A dashed "Can't find your show?" tile, linking to **Add a show**.
 
 ### You (`/profile`)
