@@ -5,11 +5,14 @@ import { searchPastShows } from '@/lib/setlistfm'
 import { searchStoredShows } from '@/lib/shows/repository'
 import { readNearby } from '@/lib/shows/nearby'
 
-// GET /api/shows/past?q=kelela - shows from the last year that the catalogue
-// never captured, from setlist.fm (see lib/setlistfm.ts). /select-festival
-// asks for these alongside /api/shows/search and lists them underneath, so
-// the catalogue's own results never wait on a slower outside service.
+// GET /api/shows/past?q=kelela - shows from the last five years that the
+// catalogue never captured, from setlist.fm (see lib/setlistfm.ts), newest
+// first, a load at a time. /select-festival asks for these alongside
+// /api/shows/search and lists them underneath, so the catalogue's own
+// results never wait on a slower outside service.
 //
+// Returns `next`, a cursor for the load after this one ("Show earlier
+// shows"), passed back as `cursor`; null when there's nothing older.
 // Takes the same optional `lat`, `lng` and `radius` as the search route.
 //
 // A show both sources know about is left to the catalogue's copy, which has
@@ -18,8 +21,6 @@ import { readNearby } from '@/lib/shows/nearby'
 // supabase-js reads go in the Data Cache without this - see the search
 // route. setlist.fm's own requests opt into a short cache explicitly.
 export const fetchCache = 'default-no-store'
-
-const MAX_RESULTS = 30
 
 // setlist.fm has no photos, and many of its artists never had a show in the
 // catalogue to bring one. Up to this many are looked up on Ticketmaster per
@@ -44,10 +45,11 @@ function sameAct(a: string, b: string): boolean {
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? ''
   const nearby = readNearby(req.nextUrl.searchParams)
+  const cursor = req.nextUrl.searchParams.get('cursor')
 
   try {
     const [past, stored] = await Promise.all([
-      searchPastShows(q, { nearby }),
+      searchPastShows(q, { nearby, cursor }),
       searchStoredShows(q, { limit: 200 }),
     ])
 
@@ -57,16 +59,17 @@ export async function GET(req: NextRequest) {
     stored.forEach(s => {
       if (s.isoDate) actsOn.set(s.isoDate, [...(actsOn.get(s.isoDate) ?? []), looseAct(s.artist)])
     })
-    const shows = past
+    // No cap: a load is already bounded by the pages it reads, and trimming
+    // it would lose shows between this load and the next.
+    const shows = past.shows
       .filter(s => !(actsOn.get(s.isoDate!) ?? []).some(act => sameAct(act, looseAct(s.artist))))
-      .slice(0, MAX_RESULTS)
 
     const photo = await artistPhotos(shows.map(s => s.artist), PHOTO_LOOKUPS)
-    return NextResponse.json({ shows: shows.map(s => ({ ...s, imageUrl: photo(s.artist) })) })
+    return NextResponse.json({ shows: shows.map(s => ({ ...s, imageUrl: photo(s.artist) })), next: past.next })
   } catch (err) {
     // Never an error the page has to show: these results only ever add to
     // the catalogue's.
     console.error('shows/past failed:', err)
-    return NextResponse.json({ shows: [] })
+    return NextResponse.json({ shows: [], next: null })
   }
 }

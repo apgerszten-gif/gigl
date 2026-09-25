@@ -17,10 +17,11 @@
 //    database as part of someone's own log: the artist, venue and date they
 //    would otherwise have typed into Add a show.
 //  - A standard key allows 2 requests a second and 1,440 a day. Hence the
-//    caching, the page cap, and giving up quietly when it says no.
+//    caching, reading LOOKBACK_YEARS a load at a time rather than up front,
+//    and giving up quietly when it says no.
 
 import { nameKey } from './nameKey'
-import { formatShowDate, retainStartIso, windowEndIso } from './dates'
+import { formatShowDate, windowEndIso } from './dates'
 import { distanceInMiles, type Coords } from './geo'
 import type { Show } from './ticketmaster'
 
@@ -29,10 +30,19 @@ const API = 'https://api.setlist.fm/rest/1.0'
 const MIN_QUERY_LENGTH = 3
 const CACHE_SECONDS    = 6 * 60 * 60
 
-// 20 setlists to a page, newest first, upcoming dates included. An act on a
-// busy tour can fill a page with two months, so later pages are read while
-// they are still inside the year - up to this many.
-const MAX_PAGES = 3
+// How far back setlist.fm is searched. The catalogue itself only reaches
+// back a year (RETAIN_DAYS), and only to when its capture began.
+const LOOKBACK_YEARS = 5
+
+// 20 setlists to a page, newest first, upcoming dates included. A touring
+// act plays 50-100 shows a year, so five years can't be read up front
+// without burning the daily quota: each load reads this many pages, and
+// "Show earlier shows" on /select-festival asks for the next ones.
+const PAGES_PER_LOAD = 2
+
+// An artist with fewer shows than this in the whole window, and none left
+// to page through, might not be what the query meant - see searchPastShows.
+const FEW_SHOWS = 10
 // setlist.fm allows 2 requests a second. Every request this instance makes
 // takes the next slot at least this far after the last one - see call().
 const REQUEST_GAP_MS = 550
@@ -163,25 +173,35 @@ async function findArtists(query: string): Promise<Artist[]> {
   return partial ? [partial] : []
 }
 
-// Every setlist from `path` inside [since, until], newest first, reading
-// pages until they run past `since`, run out, or hit MAX_PAGES.
-async function setlistsWithin(path: string, params: Record<string, string>, since: string, until: string, maxPages = MAX_PAGES): Promise<Setlist[]> {
+// Pages [from, from + PAGES_PER_LOAD) of `path`, keeping the setlists inside
+// [since, until]. `more` says whether a later page could still hold some:
+// false once a page comes back short or runs past `since`. A request that
+// failed outright leaves `more` true, so asking again can still get there.
+async function readPages(
+  path: string, params: Record<string, string>, from: number, since: string, until: string,
+): Promise<{ setlists: Setlist[]; more: boolean }> {
   const found: Setlist[] = []
-  for (let page = 1; page <= maxPages; page++) {
+  for (let page = from; page < from + PAGES_PER_LOAD; page++) {
     const body = await call<{ setlist?: Setlist[] }>(path, { ...params, p: String(page) })
-    if (!body || body === 'empty') break
+    if (body === null) return { setlists: found, more: true }
+    if (body === 'empty') return { setlists: found, more: false }
     const setlists = body.setlist ?? []
-    if (setlists.length === 0) break
 
     for (const s of setlists) {
       const iso = isoFromSetlistDate(s.eventDate)
       if (iso && iso >= since && iso <= until) found.push(s)
     }
 
-    const oldest = isoFromSetlistDate(setlists[setlists.length - 1].eventDate)
-    if (setlists.length < 20 || !oldest || oldest < since) break
+    const oldest = setlists.length > 0 ? isoFromSetlistDate(setlists[setlists.length - 1].eventDate) : null
+    if (setlists.length < 20 || !oldest || oldest < since) return { setlists: found, more: false }
   }
-  return found
+  return { setlists: found, more: true }
+}
+
+function lookbackStartIso(): string {
+  const start = new Date()
+  start.setUTCFullYear(start.getUTCFullYear() - LOOKBACK_YEARS)
+  return start.toISOString().slice(0, 10)
 }
 
 // Stable across setlist.fm's own duplicates (two people can each post the
@@ -192,39 +212,71 @@ function showId(s: Setlist, isoDate: string): string {
 
 export interface PastShowSearch {
   nearby?: { centre: Coords; radiusMiles: number } | null
+  // Where the last load stopped, as it returned it in `next`. Omitted for
+  // the first load.
+  cursor?: string | null
 }
 
-// Past shows matching `query` from the last year, as the same Show shape the
-// catalogue search returns. Tried as an artist first, and as a venue when no
-// artist by that name played this year - "casbah" is as likely a search as a
-// band. Empty on a
-// short query, a missing key, or anything setlist.fm says no to: this only
-// ever adds to what the catalogue found.
-export async function searchPastShows(query: string, options: PastShowSearch = {}): Promise<Show[]> {
-  const value = query.trim()
-  if (value.length < MIN_QUERY_LENGTH) return []
+export interface PastShowPage {
+  shows: Show[]
+  // Pass back as `cursor` for older shows; null when there are none.
+  next:  string | null
+}
 
-  const since = retainStartIso()
+// 'a:3' is page 3 of the artist's setlists, 'v:3' page 3 of the venue
+// search - the kind is fixed by the first load, so a later page never
+// switches from one to the other.
+function parseCursor(cursor: string | null | undefined): { kind: 'a' | 'v'; page: number } | null {
+  const m = /^([av]):(\d{1,3})$/.exec(cursor ?? '')
+  return m ? { kind: m[1] as 'a' | 'v', page: Number(m[2]) } : null
+}
+
+// Past shows matching `query` from the last LOOKBACK_YEARS, newest first, a
+// load at a time, as the same Show shape the catalogue search returns.
+// Tried as an artist first, and as a venue when no artist by that name has
+// played in that time - "casbah" is as likely a search as a band. Empty on
+// a short query, a missing key, or anything setlist.fm says no to: this
+// only ever adds to what the catalogue found.
+export async function searchPastShows(query: string, options: PastShowSearch = {}): Promise<PastShowPage> {
+  const value = query.trim()
+  if (value.length < MIN_QUERY_LENGTH) return { shows: [], next: null }
+
+  const since = lookbackStartIso()
   const until = windowEndIso()
+  const cursor = parseCursor(options.cursor)
 
   let setlists: Setlist[] = []
-  for (const artist of await findArtists(value)) {
-    setlists.push(...await setlistsWithin(`/artist/${artist.mbid}/setlists`, {}, since, until))
+  let next: string | null = null
+
+  if (!cursor || cursor.kind === 'a') {
+    const from = cursor?.page ?? 1
+    let more = false
+    for (const artist of await findArtists(value)) {
+      const read = await readPages(`/artist/${artist.mbid}/setlists`, {}, from, since, until)
+      setlists.push(...read.setlists)
+      more = more || read.more
+    }
+    if (more) next = `a:${from + PAGES_PER_LOAD}`
   }
 
-  // Then as a venue: several bands are called Casbah, none of them played
-  // this year, and "casbah" means the one in San Diego. setlist.fm's venue
-  // search is loose too, but it sorts by date, so the room with the most
-  // going on leads - which is the one people mean. Only rooms whose name
-  // starts with what was typed are kept: "wiltern" is the Wiltern Theatre,
-  // not everywhere with a similar word in it.
-  if (setlists.length === 0) {
+  // Then as a venue, when the artist search came to a handful of shows and
+  // no more: "casbah" names a band with three shows in five years and a San
+  // Diego room with hundreds, and it's the room people mean. Both are kept,
+  // by date, so neither reading is lost. setlist.fm's venue search is loose
+  // too, but it sorts by date, so the busiest room leads; only rooms whose
+  // name starts with what was typed are kept - "wiltern" is the Wiltern
+  // Theatre, not everywhere with a similar word in it. From here on, pages
+  // come from the venue search.
+  const fewFromArtist = !cursor && !next && setlists.length < FEW_SHOWS
+  if (cursor?.kind === 'v' || fewFromArtist) {
+    const from = cursor?.page ?? 1
     const typed = looseName(value)
-    // A busy room fills a page in weeks; two pages is more than the list
-    // shows, and the search is slow enough already.
-    setlists = (await setlistsWithin('/search/setlists', { venueName: value }, since, until, 2))
-      .filter(s => looseName(s.venue.name).startsWith(typed))
+    const read = await readPages('/search/setlists', { venueName: value }, from, since, until)
+    const atVenue = read.setlists.filter(s => looseName(s.venue.name).startsWith(typed))
+    setlists = cursor ? atVenue : [...setlists, ...atVenue]
+    next = read.more ? `v:${from + PAGES_PER_LOAD}` : null
   }
+
   // Two artists' shows arrive one after the other; the list reads by date.
   setlists.sort((a, b) => isoFromSetlistDate(b.eventDate)!.localeCompare(isoFromSetlistDate(a.eventDate)!))
 
@@ -260,5 +312,5 @@ export async function searchPastShows(query: string, options: PastShowSearch = {
       distanceMiles,
     })
   }
-  return shows
+  return { shows, next }
 }

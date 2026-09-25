@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MapPin, Plus, Search } from 'lucide-react'
@@ -110,27 +110,45 @@ export default function SelectShowPage() {
   // Shows from before the catalogue began, from setlist.fm. Fetched beside
   // the catalogue search rather than inside it, so the catalogue's results
   // never wait on an outside service; a failure just means none appear.
+  //
+  // Newest first, a load at a time over five years: `pastNext` is where the
+  // last load stopped, and "Show earlier shows" picks up from there.
   const [past, setPast]               = useState<Show[]>([])
   const [pastLoading, setPastLoading] = useState(false)
+  const [pastNext, setPastNext]       = useState<string | null>(null)
+  const [moreLoading, setMoreLoading] = useState(false)
+
+  // The search the list on screen belongs to, so an older load that lands
+  // after the query has changed is dropped rather than appended.
+  const pastSearch = useRef('')
+
+  function pastUrl(q: string, cursor?: string) {
+    const params = new URLSearchParams({ q })
+    if (nearbyLat && nearbyLng) {
+      params.set('lat', nearbyLat)
+      params.set('lng', nearbyLng)
+      params.set('radius', String(nearbyRadius))
+    }
+    if (cursor) params.set('cursor', cursor)
+    return `/api/shows/past?${params.toString()}`
+  }
 
   useEffect(() => {
     const trimmed = query.trim()
+    pastSearch.current = `${trimmed}|${nearbyLat}|${nearbyLng}|${nearbyRadius}`
     setPast([])
+    setPastNext(null)
+    setMoreLoading(false)
     if (!nearby.ready || trimmed.length < PAST_MIN_QUERY) { setPastLoading(false); return }
 
     setPastLoading(true)
     const controller = new AbortController()
     const timeoutId = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: trimmed })
-        if (nearbyLat && nearbyLng) {
-          params.set('lat', nearbyLat)
-          params.set('lng', nearbyLng)
-          params.set('radius', String(nearbyRadius))
-        }
-        const res = await fetch(`/api/shows/past?${params.toString()}`, { signal: controller.signal })
-        const data = res.ok ? await res.json() : { shows: [] }
+        const res = await fetch(pastUrl(trimmed), { signal: controller.signal })
+        const data = res.ok ? await res.json() : { shows: [], next: null }
         setPast(data.shows ?? [])
+        setPastNext(data.next ?? null)
         setPastLoading(false)
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
@@ -142,6 +160,28 @@ export default function SelectShowPage() {
 
     return () => { clearTimeout(timeoutId); controller.abort() }
   }, [query, nearby.ready, nearbyLat, nearbyLng, nearbyRadius])
+
+  async function loadEarlier() {
+    if (!pastNext || moreLoading) return
+    const search = pastSearch.current
+    setMoreLoading(true)
+    try {
+      const res = await fetch(pastUrl(query.trim(), pastNext))
+      const data = res.ok ? await res.json() : null
+      if (pastSearch.current !== search) return
+      if (data) {
+        setPast(shown => {
+          const ids = new Set(shown.map(s => s.id))
+          return [...shown, ...(data.shows ?? []).filter((s: Show) => !ids.has(s.id))]
+        })
+        setPastNext(data.next ?? null)
+      }
+    } catch (err) {
+      console.error('earlier past shows failed:', err)
+    } finally {
+      if (pastSearch.current === search) setMoreLoading(false)
+    }
+  }
 
   function select(show: Show) {
     localStorage.setItem(LOCAL_STORAGE_KEY, show.id)
@@ -172,7 +212,9 @@ export default function SelectShowPage() {
   }
 
   const trimmedQuery = query.trim()
-  const showPast = trimmedQuery.length >= PAST_MIN_QUERY && (pastLoading || past.length > 0)
+  // `pastNext` alone keeps the section up too: a first load can be all
+  // announced dates with older shows still to come.
+  const showPast = trimmedQuery.length >= PAST_MIN_QUERY && (pastLoading || past.length > 0 || pastNext != null)
 
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
@@ -288,7 +330,17 @@ export default function SelectShowPage() {
                 via setlist.fm
               </a>
             </div>
-            {pastLoading ? <ShimmerRows count={2} /> : <ShowList shows={past} onSelect={select} />}
+            {pastLoading ? <ShimmerRows count={2} /> : past.length > 0 && <ShowList shows={past} onSelect={select} />}
+            {!pastLoading && pastNext && (
+              <button
+                type="button"
+                onClick={loadEarlier}
+                disabled={moreLoading}
+                className={`${btnSecondary} w-full mt-3 py-2.5 text-[11px]`}
+              >
+                {moreLoading ? 'Loading…' : 'Show earlier shows'}
+              </button>
+            )}
           </section>
         )}
 
