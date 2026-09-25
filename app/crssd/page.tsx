@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Lock, Search } from 'lucide-react'
-import { CRSSD, hasHappened } from '@/lib/crssd'
+import { CRSSD, compareSets, formatSetTime, hasHappened, setTimeFor } from '@/lib/crssd'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { setActiveShow } from '@/lib/activeShow'
 import { computeShowScore } from '@/lib/rating'
@@ -108,11 +108,14 @@ export default function CrssdPage() {
   }, [user])
 
   // Searching looks across the whole weekend - you know who you saw, not
-  // which day the schedule put them on.
+  // which day the schedule put them on. Either way the list runs in set
+  // order, headliners first (compareSets), a search's Saturday before its
+  // Sunday.
   const trimmed = search.trim().toLowerCase()
-  const visible = trimmed
+  const visible = (trimmed
     ? shows.filter(s => s.artist.toLowerCase().includes(trimmed))
     : shows.filter(s => s.isoDate === day)
+  ).sort((a, b) => (a.isoDate ?? '').localeCompare(b.isoDate ?? '') || compareSets(a.id, b.id))
 
   function select(show: Show) {
     localStorage.setItem(LOCAL_STORAGE_KEY, show.id)
@@ -231,6 +234,12 @@ export default function CrssdPage() {
               // rating can be corrected.
               const locked = score == null && !hasHappened(s.isoDate)
               const dayLabel = CRSSD.days.find(d => d.isoDate === s.isoDate)?.label ?? ''
+              // "9:45 – 11:00 PM · Ocean View". A search spans both days,
+              // so it leads with the day too.
+              const set = setTimeFor(s.id)
+              const when = set
+                ? [trimmed ? dayLabel.split(' ')[0] : null, formatSetTime(set), set.stage].filter(Boolean).join(' · ')
+                : dayLabel
 
               return (
                 <button
@@ -245,13 +254,14 @@ export default function CrssdPage() {
                   <ArtistPhoto name={s.artist} src={s.imageUrl} className="w-12 h-12" iconSize={36} icon={DjDecks} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display text-[15px] font-bold leading-tight truncate">{s.artist}</h3>
-                    <Place className="mt-0.5">{dayLabel}</Place>
+                    <Place className="mt-0.5">{when}</Place>
                   </div>
                   {score != null && <Stars score={score} size={12} />}
+                  {/* Just the lock: the day is on the tab, or leads the
+                      place line in a search, and a "SUN SEP 27" badge here
+                      would crowd the set time and stage out of the row. */}
                   {locked ? (
-                    <span className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap text-[10px] font-semibold uppercase tracking-label text-ink-faint">
-                      <Lock className="w-3 h-3" /> {dayLabel}
-                    </span>
+                    <Lock className="w-3.5 h-3.5 flex-shrink-0 text-ink-faint" aria-label={`Opens ${dayLabel}`} />
                   ) : (
                     <ChevronRight className="w-4 h-4 flex-shrink-0 text-ink-faint" />
                   )}
