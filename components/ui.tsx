@@ -160,7 +160,9 @@ export function ArtistPhoto({ name, src, className, iconSize = 20, icon: Icon = 
     <div className={`relative flex-shrink-0 ${className}`}>
       <div className={`w-full h-full rounded-card border-1.5 border-ink overflow-hidden ${src ? 'bg-paper' : tintFor(name)}`}>
         {src ? (
-          <img src={src} alt={name} className="w-full h-full object-cover" />
+          // Lazy: a CRSSD day is 27 photos and ~2MB, and on festival signal
+          // the ones below the fold shouldn't hold up the ones on screen.
+          <img src={src} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : (
           <div className="halftone w-full h-full flex items-center justify-center text-ink/45" aria-label={`${name} (no photo)`}>
             <Icon size={iconSize} strokeWidth={1.75} />
