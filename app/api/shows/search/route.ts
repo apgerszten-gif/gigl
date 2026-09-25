@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchStoredShows } from '@/lib/shows/repository'
 import { readNearby } from '@/lib/shows/nearby'
+import { artistPhotos } from '@/lib/shows/artistImageSync'
+
+// Ticketmaster photo lookups per request for rows with none (see below).
+// Fewer than /api/shows/past allows: this is the list people wait on.
+const PHOTO_LOOKUPS = 2
 
 // GET /api/shows/search?q=turnstile — searches the `shows` catalogue table,
 // which the nightly job at /api/cron/sync-shows keeps populated. `q` blank or
@@ -43,6 +48,14 @@ export async function GET(req: NextRequest) {
     // "the catalogue hasn't captured a week yet". Nothing upstream can fill
     // that gap, so there is nothing to fall back to.
     const shows = await searchStoredShows(q, { nearby })
+
+    // About one catalogue row in twelve came without a photo on its event.
+    // The artist often has one from another listing, or on Ticketmaster.
+    const unphotographed = shows.filter(s => !s.imageUrl).map(s => s.artist)
+    if (unphotographed.length > 0) {
+      const photo = await artistPhotos(unphotographed, PHOTO_LOOKUPS)
+      return NextResponse.json({ shows: shows.map(s => (s.imageUrl ? s : { ...s, imageUrl: photo(s.artist) })) })
+    }
     return NextResponse.json({ shows })
   } catch (err) {
     console.error('shows/search failed:', err)

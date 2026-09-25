@@ -369,7 +369,13 @@ export async function lookupArtistImage(name: string): Promise<string | null> {
   }
 
   const data: TMAttractionSearchResponse = await res.json()
+  const withPhoto = (data._embedded?.attractions ?? []).filter(a => pickImage(a.images))
+  // The exact name first. Failing that, letters and digits only: setlist.fm
+  // writes "Melt‐Banana" with a Unicode hyphen where Ticketmaster has "Melt
+  // Banana". Still whole-name equality, so it never settles for a namesake.
   const key = artistKey(name)
-  const match = (data._embedded?.attractions ?? []).find(a => artistKey(a.name) === key && pickImage(a.images))
+  const loose = (s: string) => artistKey(s).replace(/[^a-z0-9]/g, '')
+  const match = withPhoto.find(a => artistKey(a.name) === key)
+    ?? (loose(name) ? withPhoto.find(a => loose(a.name) === loose(name)) : undefined)
   return match ? pickImage(match.images) : null
 }

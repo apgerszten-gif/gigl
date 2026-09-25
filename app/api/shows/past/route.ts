@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { getArtistImages } from '@/lib/artistImages'
 import { nameKey } from '@/lib/nameKey'
+import { artistPhotos } from '@/lib/shows/artistImageSync'
 import { searchPastShows } from '@/lib/setlistfm'
 import { searchStoredShows } from '@/lib/shows/repository'
 import { readNearby } from '@/lib/shows/nearby'
@@ -21,6 +20,12 @@ import { readNearby } from '@/lib/shows/nearby'
 export const fetchCache = 'default-no-store'
 
 const MAX_RESULTS = 30
+
+// setlist.fm has no photos, and many of its artists never had a show in the
+// catalogue to bring one. Up to this many are looked up on Ticketmaster per
+// request, together (well under its 5-a-second limit) - an artist search
+// needs one, a venue search's long tail fills in over a few visits.
+const PHOTO_LOOKUPS = 4
 
 // The two sources spell acts differently: "Melt Banana" and "Melt‐Banana"
 // (a Unicode hyphen), "J. Roddy Walston & the Business" and "J Roddy
@@ -56,7 +61,7 @@ export async function GET(req: NextRequest) {
       .filter(s => !(actsOn.get(s.isoDate!) ?? []).some(act => sameAct(act, looseAct(s.artist))))
       .slice(0, MAX_RESULTS)
 
-    const photo = await getArtistImages(supabase, shows.map(s => s.artist))
+    const photo = await artistPhotos(shows.map(s => s.artist), PHOTO_LOOKUPS)
     return NextResponse.json({ shows: shows.map(s => ({ ...s, imageUrl: photo(s.artist) })) })
   } catch (err) {
     // Never an error the page has to show: these results only ever add to

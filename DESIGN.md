@@ -106,9 +106,10 @@ The real screens below all follow the patterns above. The style guide also shows
 
 Where the photos come from:
 - **Artist photos**:
-  - Search results use `shows.image_url`, the photo Ticketmaster sends with each listing.
+  - Search results use `shows.image_url`, the photo Ticketmaster sends with each listing. A listing without one, and every setlist.fm result, falls back to `artist_images`, and for an artist that table has never seen, a Ticketmaster artist lookup made while the search is answered (`artistPhotos` in `lib/shows/artistImageSync.ts`: up to 2 per catalogue search, 4 per setlist.fm search). The answer, photo or not, is saved, so each artist is looked up once a month at most.
   - Everywhere else a logged show appears, the photo comes from `public.artist_images`, looked up by artist name (`lib/artistImages.ts`; `useArtistImages` in client components).
   - The nightly sync fills that table from the headliners of the shows it fetches, then looks up up to 40 logged artists a night that are still missing (`lib/shows/artistImageSync.ts`).
+  - Small local acts are often not on Ticketmaster at all, and show the placeholder.
   - Festival imports fill in acts Ticketmaster has no photo of. `scripts/import-crssd.mjs` copies CRSSD's own press photos into the public `artist-photos` storage bucket, and writes them to `artist_images` with `source = 'crssd'`.
   - Images load with a plain `<img>`, from Ticketmaster's CDN or the `artist-photos` bucket, so `next.config.js` needs no change.
 - **Profile photos**: `profiles.avatar_url`. You set it by tapping your photo on You, which crops the image to a 512px square and uploads it to the `show-photos` bucket under your own folder (`lib/avatar.ts`).
