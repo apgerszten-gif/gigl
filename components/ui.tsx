@@ -210,19 +210,23 @@ export function placeOf(log: { stage?: string | null; day?: string | null; venue
   return log.venue || null
 }
 
-// 'YYYY-MM-DD' -> { month: 'Sep', day: '12' }, parsed at local midnight like
-// formatShowDate so it doesn't shift a day outside UTC.
-export function dateParts(isoDate: string | null | undefined): { month: string; day: string } | null {
+// 'YYYY-MM-DD' -> { month: 'Sep', day: '12', year: null }, parsed at local
+// midnight like formatShowDate so it doesn't shift a day outside UTC. `year`
+// is only set outside the current year, when month and day alone could mean
+// either.
+export function dateParts(isoDate: string | null | undefined): { month: string; day: string; year: string | null } | null {
   if (!isoDate) return null
   const d = new Date(`${isoDate}T00:00:00`)
   if (isNaN(d.getTime())) return null
   return {
     month: d.toLocaleDateString('en-US', { month: 'short' }),
     day:   String(d.getDate()),
+    year:  d.getFullYear() === new Date().getFullYear() ? null : String(d.getFullYear()),
   }
 }
 
-// Show date stuck onto the corner of an ArtistPhoto like a sticker.
+// Show date stuck onto the corner of an ArtistPhoto like a sticker, with the
+// year in smaller type underneath when it isn't this year's.
 export function DateTag({ isoDate }: { isoDate: string | null | undefined }) {
   const parts = dateParts(isoDate)
   if (!parts) return null
@@ -230,6 +234,7 @@ export function DateTag({ isoDate }: { isoDate: string | null | undefined }) {
     <span className="absolute -bottom-1.5 -right-1.5 -rotate-3 min-w-[28px] rounded bg-cream border-1.5 border-ink shadow-riso px-1 py-0.5 text-center leading-none">
       <span className="block text-[8px] font-bold uppercase tracking-label text-ink-muted">{parts.month}</span>
       <span className="block font-display text-[13px] font-bold text-ink">{parts.day}</span>
+      {parts.year && <span className="block mt-px text-[6.5px] font-bold tracking-label text-ink-muted">{parts.year}</span>}
     </span>
   )
 }

@@ -1,11 +1,16 @@
-// 'YYYY-MM-DD' -> 'Sep 12'. Parsed with an explicit local-midnight time so
-// this doesn't shift a day when the runtime's timezone isn't UTC (a bare
-// 'YYYY-MM-DD' otherwise parses as UTC midnight).
+// 'YYYY-MM-DD' -> 'Sep 12', or 'Oct 19, 2025' outside the current year -
+// search reaches back a year, so a bare month and day can mean either.
+// Parsed with an explicit local-midnight time so this doesn't shift a day
+// when the runtime's timezone isn't UTC (a bare 'YYYY-MM-DD' otherwise
+// parses as UTC midnight).
 export function formatShowDate(isoDate: string | null | undefined): string {
   if (!isoDate) return 'TBA'
   const d = new Date(`${isoDate}T00:00:00`)
   if (isNaN(d.getTime())) return 'TBA'
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const thisYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleDateString('en-US', thisYear
+    ? { month: 'short', day: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // ── The catalogue window ─────────────────────────────────────────────────────
