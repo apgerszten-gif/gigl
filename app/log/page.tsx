@@ -61,7 +61,8 @@ function LogInner() {
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) { router.push('/'); return }
+    // Signed out, there are no logs of theirs to mark on the lineup.
+    if (!user) { setLoadingLogged(false); return }
 
     async function fetchLogged(userId: string) {
       const loadStart = Date.now()

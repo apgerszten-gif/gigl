@@ -3,11 +3,12 @@ import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 import { AuthProvider } from '@/components/AuthProvider'
 import { PendingLogsSync } from '@/components/PendingLogsSync'
+import { VisitTracker } from '@/components/VisitTracker'
 import { spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
   title: 'Gigl — be the critic.',
-  description: 'Log and rank your Coachella sets',
+  description: "Log, rate and rank the live shows you've been to",
   manifest: '/manifest.json',
 }
 
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <FestivalThemeProvider>
             <PendingLogsSync />
+            <VisitTracker />
             <div className="max-w-md mx-auto min-h-screen">
               {children}
             </div>

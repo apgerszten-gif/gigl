@@ -45,20 +45,20 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 
 ## 3. Logo & app chrome
 
-- **Logo** (`components/Logo.tsx`): `Gigl` with a capital G, followed by a sienna slash, nothing else. It is set in Space Grotesk bold, 21px, with `-0.5px` tracking, in ink.
+- **Logo** (`components/Logo.tsx`): `Gigl` with a capital G, followed by a sienna slash, nothing else. It is set in Space Grotesk bold, 21px, with `-0.5px` tracking, in ink. On Feed and You it takes an `href` and links home; it stays inert on sign-in, choose-username, the intro demo and the style guide, where there is nowhere to go or navigating would break the demo. Headers with a back control pass it to `BackHeader`, which already routes to the feed.
 - **Header**: Sticky, `bg-paper/90` with a backdrop blur and a `border-ink/10` bottom rule. The logo or page title sits on the left, and any page actions (such as a share icon button) sit to its right.
   - On Feed, Rankings and Search, **your profile photo sits at the far right**. The header is sticky, so the photo stays in view while scrolling. Tapping it opens You.
   - Leave the photo off on You itself, which has a share button instead, and in the Log flow.
-- **Bottom dock**: Five tabs with Log in the centre, using `lucide-react` icons at stroke 1.75:
+- **Bottom dock**: Three tabs with Log in the centre, using `lucide-react` icons at stroke 1.75:
   1. **Feed** (`Newspaper`)
-  2. **Rankings** (`BarChart2`)
-  3. **Log** (`Plus`), shown as a raised sienna circle with an ink border and a riso shadow
-  4. **Search** (`Search`)
-  5. **You** (`CircleUser`), the profile
+  2. **Log** (`Plus`), shown as a raised sienna circle with an ink border and a riso shadow
+  3. **You** (`CircleUser`), the profile
 
-  The dock is cream with a 1.5px ink top border. Labels are 9px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. Search is the fourth tab so that Log can sit in the middle with two tabs either side.
+  The dock is cream with a 1.5px ink top border. Icons are 24px, labels 11px uppercase; the active tab is sienna and inactive tabs are `ink-faint`. Log is a 56px circle whose negative top margin is always (circle height − 34px), so its label stays level with the other two — change the circle and that number moves with it. Feed and You carry an inward padding nudge so they sit nearer the Log button rather than centred in their thirds.
 
-  Log and Search both open show search (`/select-festival`), because logging always starts by picking a show. Log adds `?mode=log`, which changes the heading to "What did you see?".
+  It used to be five. **Search** was removed because it opened the same screen as Log — both went to `/select-festival`, differing only in a heading — and once search returned only shows that had already happened, "find a show" stopped being a separate idea from "log a show". **Rankings** became a view on Feed rather than a destination: it is the same logged shows read as an aggregate instead of as a stream.
+
+  Log opens `/select-festival`, except for the CRSSD weekend, when it opens the CRSSD lineup (`/crssd`) directly. A small "Not at CRSSD?" link above the lineup leads to `/select-festival`. `/rankings` lights the Feed tab. Signed out, You opens sign-in (`/auth`), since there's no profile to show.
 - **Focused pages** (artist, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
 
 ---
@@ -85,7 +85,7 @@ Use the component rather than retyping its classes. The class lists are here so 
 | Headings | — | `font-display font-bold tracking-tight`: `text-xl` for card titles, `text-2xl` for page titles |
 | Big numbers | `Stat` in stat rows | `font-display font-bold`. Rank numbers are `text-accent` |
 | Artist photo | `ArtistPhoto` | Size set by the caller (`w-14 h-14` in lists, `w-[68px] h-[68px]` on feed cards). Frame: `rounded-card border-1.5 border-ink overflow-hidden`, with the image set to `object-cover`. With no photo, the frame is tinted (`bg-terra/25`, `bg-accent/15` or `bg-ink/10`, picked per artist) and holds a `.halftone` layer with a `MicVocal` icon in `text-ink/45`. Overlays such as the date sticker go outside the clipped frame so they can overhang |
-| Date sticker | `DateTag` (takes an ISO date) | Month and day on an artist photo's corner: `absolute -bottom-1.5 -right-1.5 -rotate-3 rounded bg-cream border-1.5 border-ink shadow-riso`. The month is 8px uppercase `ink-muted`; the day is 13px `font-display` bold |
+| Date sticker | `DateTag` (takes an ISO date) | Month and day on an artist photo's corner: `absolute -bottom-1.5 -right-1.5 -rotate-3 rounded bg-cream border-1.5 border-ink shadow-riso`. The month is 8px uppercase `ink-muted`; the day is 13px `font-display` bold. For a show outside the current year, the year sits underneath in 6.5px bold `ink-muted`, and written dates (`formatShowDate`, e.g. the sienna date above the artist on the log screen) read "Oct 19, 2025" |
 | Place line | `Place` | `flex items-center gap-1 text-[12px] text-ink-muted`: a `MapPin` icon (`w-3 h-3 text-accent`), then "Venue, City" truncated to one line |
 | Your profile photo (header) | `AppHeader` | `w-9 h-9 rounded-full border-1.5 border-ink shadow-riso` inside a link to You. On You itself it's `w-16 h-16` |
 | Other people's photos | `PersonPhoto` | `rounded-full bg-paper border border-ink/15`, `w-8 h-8` in feed cards. Initial in `font-display font-bold text-ink-muted` when there's no photo |
@@ -106,17 +106,19 @@ The real screens below all follow the patterns above. The style guide also shows
 
 Where the photos come from:
 - **Artist photos**:
-  - Search results use `shows.image_url`, the photo Ticketmaster sends with each listing.
+  - Search results use `shows.image_url`, the photo Ticketmaster sends with each listing. A listing without one, and every setlist.fm result, falls back to `artist_images`, and for an artist that table has never seen, a Ticketmaster artist lookup made while the search is answered (`artistPhotos` in `lib/shows/artistImageSync.ts`: up to 2 per catalogue search, 4 per setlist.fm search). The answer, photo or not, is saved, so each artist is looked up once a month at most.
   - Everywhere else a logged show appears, the photo comes from `public.artist_images`, looked up by artist name (`lib/artistImages.ts`; `useArtistImages` in client components).
   - The nightly sync fills that table from the headliners of the shows it fetches, then looks up up to 40 logged artists a night that are still missing (`lib/shows/artistImageSync.ts`).
-  - Images load with a plain `<img>` from Ticketmaster's CDN, so `next.config.js` needs no change.
+  - Small local acts are often not on Ticketmaster at all, and show the placeholder.
+  - Festival imports fill in acts Ticketmaster has no photo of. `scripts/import-crssd.mjs` copies CRSSD's own press photos into the public `artist-photos` storage bucket, and writes them to `artist_images` with `source = 'crssd'`.
+  - Images load with a plain `<img>`, from Ticketmaster's CDN or the `artist-photos` bucket, so `next.config.js` needs no change.
 - **Profile photos**: `profiles.avatar_url`. You set it by tapping your photo on You, which crops the image to a 512px square and uploads it to the `show-photos` bucket under your own folder (`lib/avatar.ts`).
 - An artist or person without a photo falls back to the placeholders in section 4.
 
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
-- Segmented toggle: All activity / Following. The style guide also shows a Popular option and filter chips for weekend, city and genre *(mockup)*.
-- Review cards, each with:
+- Two stacked segmented controls: **All activity / Following** on top, then **Artist rankings** below. The first two filter the stream in place; Artist rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. They're stacked rather than a row of three because "whose logs" and "the aggregate view" are different questions, and because a three-up row crushes the longer label. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
+- Review cards, at **85% of the default component scale** so more fit on screen — `Place`, `PullQuote` and `Chip` take a `compact` prop for this rather than shrinking everywhere, since the same pieces set a slower density on rankings, profiles and the artist page. Each card has:
   - any photos or videos the reviewer attached, full-bleed at the top
   - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
   - the reviewer's photo, handle (`text-[12.6px] font-semibold`) and timestamp, with the star rating on the right
@@ -124,27 +126,41 @@ Where the photos come from:
   - the review as a pull quote, then its tags as chips
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
+- Signed out, a card above the controls in the CRSSD sunset skin (`crssd-sunset`, with an ink border and riso shadow): "At CRSSD? Rate the sets you saw", a line saying an account is only needed to post, a small "Log a show" primary button (straight to `/crssd`) and an "I have an account" link. Tucked into the bottom-right corner below them is a small cream button with an ink border, "I'm rating a show / from somewhere else" on two 10px lines, which leads to `/select-festival`. All the text is full ink, since `ink-muted` gets lost against the bands. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
+- For the CRSSD weekend the header reads Gigl × CRSSD: the logo, a × in `ink-muted`, then `CrssdMark` at 15px tall. Retire it along with the CRSSD Log button.
 
-### Rankings (`/rankings`)
-- `AppHeader` with an "Everyone's ratings" label and the title.
-- Underline day tabs, only when the logged shows span more than one day.
+### Artist rankings (`/rankings`)
+- Reached from the Feed view switch, not the dock. Its own route, so the segmented control navigates rather than toggling state.
+- `AppHeader` with an "Everyone's ratings" label and the title, then the same two controls as Feed with Artist rankings selected.
+- One list, no day tabs. Splitting by day made sense when every logged show came from a festival lineup and "Saturday" named a real section of the event; with search covering the whole Ticketmaster catalogue it would slice a year of unrelated gigs by weekday. `day` still shows in the place line on festival-sourced rows.
 - Ranked cards: a sienna rank number, the artist photo with its date sticker, the artist with stars, the place line, a rating-count chip and any battle record.
 - The style guide also shows a milestone callout and a "View gig map" pill *(mockup)*.
+
+### Add a show (`/add-show`)
+- `BackHeader` titled "Add a show", no dock — it's part of the log flow.
+- Four `Field` inputs: **Artist**, **Date**, **Venue**, and an optional **City** that accepts "San Francisco, CA".
+- Artist, Venue and City are all `SuggestField`s: up to five tappable chips of values already in the catalogue, and a "Did you mean …?" line when what's typed is a near miss for one of them. Venues and cities fragment on spelling exactly as artists do — "fillmore sf" is a different room from "The Fillmore" as far as every future search is concerned.
+- The matching tolerates dropped articles ("fillmore" → "The Fillmore"), ordinary typos, and names typed short ("brick and morter" → "Brick and Mortar Music Hall"). It never blocks a new value — a band or a basement nobody has logged yet is the reason the page exists.
+- The date input is capped at today. A show you haven't been to isn't one you can log.
+- Submitting goes straight into logging the new show rather than back to search. If the show turns out to already exist, a card offers to log that one instead.
 
 ### Log a show (`/log-show`)
 - Title bar ("Log a show" or "Update log") with a close button. There's no dock or profile photo in this flow.
 - Selected-show card: the artist photo, the date as a sienna label, the artist and the place line.
 - Rating card: the overall stars once all three are set, then tappable Performance / Venue / Crowd star rows.
-- Field notes (the review), highlight tags (presets plus custom ones), "Went with" (friend tagging) and "Photos & video" (up to 1 video and 2 photos).
+- Field notes (the review) and "Photos & video" (up to 1 video and 2 photos). Highlight tags and "Went with" (friend tagging) were taken off to keep logging quick; a log re-rated here keeps any tags it already had, and tags still show on feed cards and can be edited from You.
 - Full-width primary button: "Save log".
+- Signed out, the whole screen works. An 11px `ink-faint` line under Save says posting asks for an account, and Save opens the sign-up sheet over the log rather than leaving it.
 - `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
 
-### Search (`/select-festival`)
-- `AppHeader` titled "Find a show", or "What did you see?" when opened from Log.
+### Pick a show (`/select-festival`)
+- The first step of logging, and what the Log button opens. For the CRSSD weekend Log opens `/crssd` instead, and this screen is reached from there or from the feed's sunset card. `AppHeader` titled "What did you see?" under a "Log a show" label.
 - Search input for artist, venue or city.
-- A "Coming up" label that changes to "Results for …" while typing.
-- One card of result rows, alternating `cream` / `cream-alt`. Each row has the artist photo with a date sticker, the artist, the place line, any support acts and a "+ Log" button. Tapping a row goes straight into logging.
-- A dashed "Can't find your show?" tile *(mockup: adding your own show)*.
+- A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and while it's on, radius chips for 10 / 50 / 100 mi. Location is asked for on arrival, so the chip reports the filter rather than starting it; it reads "Locating…" and is disabled while the browser answers. Turning it off is remembered. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
+- A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on. Browsing shows the past week; a search reaches back a year. Only shows that have already happened appear — you log what you went to — so results run newest first, last night at the top.
+- One card of result rows, alternating `cream` / `cream-alt`. Each row has the artist photo with a date sticker, the artist, the place line, any support acts and a "+ Log" button. With Near me on, the distance ("4.2 mi") sits above that button in the same 10px uppercase `ink-faint` style. Tapping a row goes straight into logging.
+- Once a search is 3 or more characters, a second card, **More shows**, lists shows from the past five years from setlist.fm that the catalogue doesn't have, newest first, in the same row style. Under it, a full-width `btnSecondary` "Show earlier shows" (11px, "Loading…" while it works) appends the next, older batch; it disappears when there's nothing older. Its label row carries a "via setlist.fm" link on the right (10px uppercase `ink-faint`, underlined), which setlist.fm's terms require wherever its data appears. It shows two shimmer rows while loading, and "Nothing … matched" is held back until it has answered.
+- A dashed "Can't find your show?" tile, linking to **Add a show**.
 
 ### You (`/profile`)
 - `AppHeader` with the logo and a share button, which shares or copies your public profile link. There's no profile photo in the header, since this page is your profile.
@@ -165,7 +181,8 @@ Where the photos come from:
   - a Performance / Venue / Crowd breakdown
   - review cards
 - **Stage** (`/stage/[name]`), **Battle** (`/battle`), the follower lists, sign-in, username and legal pages all use the same pieces.
-- **Landing** (`/`, `components/IntroDemo.tsx`): a 16-second tour played in a mock phone (ink bezel, `shadow-riso-lg`) and built from the real components. It has four scenes: the feed with the Log tip and a tap, show search with a pick, star rating, and rankings. A "1 of 4" label and caption above the phone and progress dots below follow the scenes. Tapping or swiping anywhere, Skip, or the end of the tour goes to sign-up.
+- **Landing** (`/`): a server redirect to the feed (`next.config.js`), signed in or not, so a QR scan lands in one hop. The feed sends an account without a username on to Choose username. It used to play the intro tour in `components/IntroDemo.tsx`, a 14-second tour in a mock phone (ink bezel, `shadow-riso-lg`) with four scenes (the feed with the Log tip and a tap, show search with a pick, star rating, and rankings) that ended at sign-up. The tour is no longer shown but is kept in case it's wanted back.
+- **Sign-up sheet** (`components/SignUpSheet.tsx`): asks for an account in place, over the page, when someone signed out tries to post, react, comment or follow. A bottom sheet on a `bg-ink/55` scrim: `bg-paper`, a 1.5px ink border on the top and sides, `rounded-t-card`. A `text-2xl` display title with the accent full stop, a one-line reason in `ink-muted`, a close button, then the same phone and code steps as sign-in (`components/PhoneCodeForm.tsx`) and the same "Sign in with email" link for older accounts. An account without a username gets one more step for it, with a full-width primary button named for what happens next ("Post").
 - **Sign-in** (`/auth`): logo header, then a slightly rotated collage of two app cards (an artist card with its date sticker and stars, and a review quote). Below that are the headline and a card that changes by step:
   - **Phone:** the phone number field and "Text me a code". This one step both signs people up and signs them back in. A "Sign in with email" link under the card is for accounts made before phone sign-up.
   - **Code:** the number the code went to, with a Change link; a large spaced code field that submits once all 6 digits are in; Continue; and a resend link with a 60-second countdown.

@@ -98,7 +98,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) { router.push('/'); return }
+    if (!user) { router.push('/auth'); return }
 
     async function load(userId: string) {
       const loadStart = Date.now()
@@ -270,7 +270,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-paper text-ink pb-28">
       {/* Your own profile, so the header carries a share button rather than your photo. */}
       <AppHeader showProfile={false}>
-        <Logo />
+        <Logo href="/feed" />
         <button
           type="button"
           onClick={copyLink}
@@ -344,7 +344,7 @@ export default function ProfilePage() {
           {shows.length === 0 ? (
             <EmptyState>
               <p className="mb-4">No shows logged yet</p>
-              <Link href="/select-festival?mode=log" className={`${btnPrimary} px-6 py-3 text-xs`}>Log your first show →</Link>
+              <Link href="/select-festival" className={`${btnPrimary} px-6 py-3 text-xs`}>Log your first show →</Link>
             </EmptyState>
           ) : (
             <div className="flex flex-col gap-3">

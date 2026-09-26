@@ -7,6 +7,7 @@ import { BattleModeCard } from '@/components/BattleModeCard'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
+import { FeedTabs } from '@/components/FeedTabs'
 import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { timeQuery } from '@/lib/queryTiming'
@@ -15,21 +16,12 @@ import { aggregateArtistRows, RANKINGS_SELECT, type ArtistRow } from '@/lib/rank
 
 export type { ArtistRow }
 
-const WEEKDAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-
-// Unknown day strings sort after the real weekdays instead of ahead of them.
-function weekdayIndex(d: string): number {
-  const i = WEEKDAY_ORDER.indexOf(d.toLowerCase())
-  return i === -1 ? WEEKDAY_ORDER.length : i
-}
-
 export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
   const router   = useRouter()
   const supabase = createClient()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
 
   const [rows, setRows]         = useState<ArtistRow[]>(initialRows)
-  const [filter, setFilter]     = useState<string>('all')
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
   const [battleAggMap, setBattleAggMap] = useState<Record<string, { wins: number; losses: number }>>({})
@@ -75,13 +67,6 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
     }
   }
 
-  // The rows already arrived pre-computed from the server component — this
-  // check only exists to bounce unauthenticated visitors, it never gates
-  // the data itself.
-  useEffect(() => {
-    if (!authLoading && !user) router.push('/')
-  }, [authLoading, user, router])
-
   // All-time record per artist, aggregated across every user's battles - a
   // public consensus view, same treatment as Feed, never any one user's own
   // record (that's Profile's job).
@@ -99,18 +84,14 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       })
   }, [rows])
 
-  // Day chips are derived from the logged shows themselves rather than from a
-  // festival lineup. Show search moved to Ticketmaster, so there is no lineup
-  // to read, and the festival id this used to pull from localStorage only made
-  // the chips depend on whatever stale value the browser was still carrying.
-  const loggedDays = Array.from(new Set(rows.map(r => r.day).filter(Boolean)))
-    .sort((a, b) => weekdayIndex(a) - weekdayIndex(b))
-  const days = ['all', ...loggedDays]
-
-  // A day can disappear from the list on a realtime update; fall back to 'all'
-  // rather than stranding the user on a filter that now matches nothing.
-  const activeFilter = days.includes(filter) ? filter : 'all'
-  const visible = activeFilter === 'all' ? rows : rows.filter(r => r.day === activeFilter)
+  // One list, no day split. Splitting by day made sense when every logged
+  // show came from a festival lineup and "Saturday" named a real section of
+  // the event. Show search covers the whole Ticketmaster catalogue now, so a
+  // day chip would be slicing a year of unrelated gigs by weekday.
+  //
+  // `day` still exists on rows that came from a festival and still appears in
+  // the place line below - it just isn't a filter any more.
+  const visible = rows
 
   const artistImage = useArtistImages(visible.map(r => r.name))
 
@@ -123,28 +104,16 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
       <AppHeader>
         <div className="min-w-0">
           <Label>Everyone&apos;s ratings</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Rankings</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Artist rankings</h1>
         </div>
       </AppHeader>
 
-      {/* Day filter - only worth showing once the logged shows actually span
-          more than one day; with a single day 'All' is the whole list. */}
-      {loggedDays.length > 1 && (
-        <div className="flex gap-5 px-5 border-b border-ink/10 overflow-x-auto no-scrollbar">
-          {days.map(d => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setFilter(d)}
-              className={`py-2.5 text-[10px] font-bold uppercase tracking-label whitespace-nowrap ${
-                activeFilter === d ? 'text-ink border-b-2 border-accent' : 'text-ink-faint'
-              }`}
-            >
-              {d === 'all' ? 'All' : dayLabel(d)}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Same control as Feed, with the rankings row selected. No
+          onFilterChange here: from this page both filter options are a
+          navigation back to Feed. See components/FeedTabs.tsx. */}
+      <div className="px-5 pt-3">
+        <FeedTabs value="rankings" />
+      </div>
 
       <main className="px-5 pt-4 space-y-3">
         {battleModeUnlocked && !battleCardDismissed && (

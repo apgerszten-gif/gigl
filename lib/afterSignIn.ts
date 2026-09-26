@@ -13,5 +13,7 @@ export async function pathAfterSignIn(client: SupabaseClient, userId: string): P
     .single()
 
   if (!profile || profile.username_set === false) return '/choose-username'
-  return localStorage.getItem(LOCAL_STORAGE_KEY) ? '/feed' : '/select-festival'
+  // Otherwise the CRSSD lineup rather than search: this weekend most people
+  // signing in are at the festival. See app/crssd.
+  return localStorage.getItem(LOCAL_STORAGE_KEY) ? '/feed' : '/crssd'
 }

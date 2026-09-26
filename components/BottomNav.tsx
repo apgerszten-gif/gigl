@@ -1,23 +1,39 @@
 'use client'
 
-import { Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
-import { BarChart2, CircleUser, Newspaper, Plus, Search, X } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { CircleUser, Newspaper, Plus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useAuth } from '@/components/AuthProvider'
 
-export type DockTab = 'feed' | 'rankings' | 'log' | 'search' | 'profile'
+export type DockTab = 'feed' | 'log' | 'profile'
 
-// Log sits in the centre with two tabs either side; Search is the fourth tab
-// that makes that symmetry possible. Both Log and Search open show search -
-// logging always starts by picking a show - with Log asking "what did you
-// see?" instead of "find a show".
-const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon }[] = [
-  { id: 'feed',     label: 'Feed',     href: '/feed',                     Icon: Newspaper },
-  { id: 'rankings', label: 'Rankings', href: '/rankings',                 Icon: BarChart2 },
-  { id: 'log',      label: 'Log',      href: '/select-festival?mode=log', Icon: Plus },
-  { id: 'search',   label: 'Search',   href: '/select-festival',          Icon: Search },
-  { id: 'profile',  label: 'You',      href: '/profile',                  Icon: CircleUser },
+// Three tabs, Log dead centre with one either side.
+//
+// There used to be five. Search was the fourth, and DESIGN.md admitted why:
+// it existed "so that Log can sit in the middle with two tabs either side".
+// It also pointed at the same screen as Log - both opened /select-festival,
+// differing only in a heading - and once search started returning only shows
+// that have already happened, "find a show" stopped being a separate idea
+// from "log a show" altogether. A spacer with a job title.
+//
+// Rankings moved to a view on Feed rather than a destination of its own:
+// both are the same logs read two ways, activity and aggregate. See
+// components/FeedTabs.tsx.
+
+// `nudge` pulls the outer two tabs in towards Log. Padding rather than a
+// translate, so it shifts where the icon and label sit without moving the
+// tap target off them: each tab still spans its full third of the bar.
+//
+// For the CRSSD weekend Log opens the festival lineup directly; other shows
+// are one tap away from there ("Not at CRSSD?") and from the feed's sunset
+// card. To retire it, point Log, that card and the sign-up redirect in
+// app/auth back at /select-festival, and drop the /log-menu redirect in
+// next.config.js.
+const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon; nudge?: string }[] = [
+  { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper,  nudge: 'pl-7' },
+  { id: 'log',     label: 'Log',  href: '/crssd',            Icon: Plus },
+  { id: 'profile', label: 'You',  href: '/profile',          Icon: CircleUser, nudge: 'pr-7' },
 ]
 
 interface Props {
@@ -26,38 +42,38 @@ interface Props {
   onDismissLogTip?: () => void
 }
 
-// The persistent 5-tab dock from DESIGN.md, routed.
+// The persistent 3-tab dock from DESIGN.md, routed. No Suspense wrapper any
+// more: the only thing that needed useSearchParams was telling the Log tab
+// apart from the Search tab by `?mode=log`, and neither survives.
 export default function BottomNav(props: Props) {
-  return (
-    <Suspense fallback={<DockBar active={null} mode="links" {...props} />}>
-      <DockWithRoute {...props} />
-    </Suspense>
-  )
-}
-
-function DockWithRoute(props: Props) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const { user, loading } = useAuth()
 
   let active: DockTab | null = null
-  if (pathname.startsWith('/feed')) active = 'feed'
-  else if (pathname.startsWith('/rankings')) active = 'rankings'
+  // /rankings lights Feed, because Rankings is one of Feed's views now.
+  if (pathname.startsWith('/feed') || pathname.startsWith('/rankings')) active = 'feed'
   else if (pathname.startsWith('/profile')) active = 'profile'
-  else if (pathname.startsWith('/select-festival')) active = searchParams.get('mode') === 'log' ? 'log' : 'search'
-  else if (pathname.startsWith('/log')) active = 'log'
+  // /log and /log-show are both caught by the /log prefix.
+  else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log') || pathname.startsWith('/crssd')) active = 'log'
 
-  return <DockBar active={active} mode="links" {...props} />
+  // Someone who hasn't signed up has no profile to open, so You is where
+  // they sign up or sign in.
+  const profileHref = !loading && !user ? '/auth' : undefined
+
+  return <DockBar active={active} mode="links" profileHref={profileHref} {...props} />
 }
 
 // The dock itself, without routing. `mode` picks what the tabs are: links
 // (the app), buttons calling onSelect (the style guide), or inert (the intro
 // demo, which sits it inside a mock phone with `contained`).
 export function DockBar({
-  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle,
+  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle, profileHref,
 }: Props & {
   active: DockTab | null
   mode: 'links' | 'buttons' | 'static'
   onSelect?: (tab: DockTab) => void
+  // Where You goes instead of /profile (sign-in, when signed out).
+  profileHref?: string
   contained?: boolean
   logTip?: React.ReactNode
   logExtras?: React.ReactNode
@@ -68,21 +84,23 @@ export function DockBar({
   return (
     <nav className={`${contained ? 'absolute' : 'fixed'} bottom-0 inset-x-0 z-40`}>
       <div className="max-w-md mx-auto bg-cream border-t-1.5 border-ink flex safe-bottom">
-        {TABS.map(({ id, label, href, Icon }) => {
+        {TABS.map(({ id, label, href, Icon, nudge }) => {
           const isActive = active === id
-          const labelClass = `text-[9px] font-bold uppercase tracking-label ${isActive ? 'text-accent' : 'text-ink-faint'}`
+          const labelClass = `text-[11px] font-bold uppercase tracking-label ${isActive ? 'text-accent' : 'text-ink-faint'}`
 
           if (id === 'log') {
             return (
               <div key={id} className="relative flex-1 flex flex-col items-center">
                 {logTip ?? (showLogTip && <LogTip onDismiss={onDismissLogTip} />)}
                 <Tab {...tab} id={id} href={href} className="flex flex-col items-center gap-1 pb-1">
-                  {/* -18px lifts the button while keeping its label level with the other tabs' labels. */}
+                  {/* The lift keeps this label level with the other tabs'.
+                      It is (circle height - 34px), so it has to move whenever
+                      the circle or the icon size does. */}
                   <span
                     style={logButtonStyle}
-                    className="relative -mt-[18px] w-12 h-12 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center"
+                    className="relative -mt-[22px] w-14 h-14 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center"
                   >
-                    <Icon className="w-6 h-6" strokeWidth={2.5} />
+                    <Icon className="w-7 h-7" strokeWidth={2.5} />
                     {logExtras}
                   </span>
                   <span className={labelClass}>{label}</span>
@@ -92,8 +110,8 @@ export function DockBar({
           }
 
           return (
-            <Tab key={id} {...tab} id={id} href={href} className="flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1">
-              <Icon className={`w-5 h-5 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
+            <Tab key={id} {...tab} id={id} href={id === 'profile' && profileHref ? profileHref : href} className={`flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1 ${nudge ?? ''}`}>
+              <Icon className={`w-6 h-6 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
               <span className={labelClass}>{label}</span>
             </Tab>
           )

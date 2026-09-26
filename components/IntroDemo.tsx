@@ -11,7 +11,7 @@ import {
   btnPrimary, btnSecondary, headerClass, inputBox,
 } from '@/components/ui'
 
-// The logged-out landing: a 16-second tour of the real screens (feed, show
+// The logged-out landing: a 14-second tour of the real screens (feed, show
 // search, rating, rankings) played inside a mock phone, built from the same
 // components as the app. Tapping or swiping anywhere goes to sign-up.
 //
@@ -19,16 +19,16 @@ import {
 // the introPan keyframes, and each tap/fill inside a scene is a CSS animation
 // with an absolute delay (in seconds) on that same clock.
 
-const DURATION_MS = 16000
+const DURATION_MS = 14000
 
 // When each scene has finished panning into view (see introPan).
-const SCENE_STARTS_MS = [0, 3900, 8000, 12100]
+const SCENE_STARTS_MS = [0, 3400, 7000, 10600]
 
 const CAPTIONS = [
-  { label: 'The feed',   title: "See what everyone's seeing" },
+  { label: 'The feed',   title: "See what everyone's rating" },
   { label: 'Log a show', title: 'Find the show you saw' },
   { label: 'Rate it',    title: 'Stars in a few taps' },
-  { label: 'Rankings',   title: 'Watch the rankings move' },
+  { label: 'Rankings',   title: 'See what everyone thinks about your favorite artists' },
 ]
 
 const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'
@@ -177,20 +177,20 @@ function SearchScene() {
         <div className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5`}>
           <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
           <span className="relative flex-1 text-sm">
-            <span className="text-ink-faint" style={{ animation: 'introFadeOut 0.15s linear 4.5s forwards' }}>
+            <span className="text-ink-faint" style={{ animation: 'introFadeOut 0.15s linear 4s forwards' }}>
               Artist, venue or city
             </span>
-            <span className="absolute inset-0 opacity-0" style={{ animation: 'introFadeIn 0.3s ease-out 4.55s forwards' }}>
+            <span className="absolute inset-0 opacity-0" style={{ animation: 'introFadeIn 0.3s ease-out 4.05s forwards' }}>
               turn<span className="ml-px inline-block w-px h-4 align-middle bg-ink" style={{ animation: 'introBlink 1s steps(1) infinite' }} />
             </span>
           </span>
         </div>
       </div>
 
-      <Appear at={4.9}>
+      <Appear at={4.4}>
         <Label className="px-4 pt-4 pb-2">Results for &ldquo;turn&rdquo;</Label>
       </Appear>
-      <Appear at={5.0} className="mx-4 rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
+      <Appear at={4.5} className="mx-4 rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
         {RESULTS.map((r, i) => (
           <div
             key={r.artist}
@@ -206,8 +206,8 @@ function SearchScene() {
             <span className={`${btnSecondary} flex-shrink-0 px-2 py-1 text-[10px]`}>+ Log</span>
             {i === 0 && (
               <>
-                <TapHighlight at={5.85} />
-                <FingerTap delay={5.7} />
+                <TapHighlight at={5.35} />
+                <FingerTap delay={5.2} />
               </>
             )}
           </div>
@@ -222,9 +222,9 @@ function SearchScene() {
 // ── Scene 3: rate it ─────────────────────────────────────────────────────────
 
 const RATING_ROWS = [
-  { label: 'Performance', count: 5, tap: 8.35 },
-  { label: 'Venue',       count: 4, tap: 9.15 },
-  { label: 'Crowd',       count: 5, tap: 9.85 },
+  { label: 'Performance', count: 5, tap: 7.35 },
+  { label: 'Venue',       count: 4, tap: 8 },
+  { label: 'Crowd',       count: 5, tap: 8.6 },
 ]
 
 function RateScene() {
@@ -248,7 +248,7 @@ function RateScene() {
         <Card className="p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <Label tone="ink">Your rating</Label>
-            <Appear at={10.3}><Stars score={14 / 3} size={14} /></Appear>
+            <Appear at={8.95}><Stars score={14 / 3} size={14} /></Appear>
           </div>
           {RATING_ROWS.map(row => (
             <div key={row.label} className="flex items-center justify-between gap-3">
@@ -264,7 +264,7 @@ function RateScene() {
         <div className="space-y-1.5">
           <Label tone="ink">Field notes</Label>
           <div className={`${inputBox} px-3 py-2.5 min-h-[44px] text-[13px] leading-snug`}>
-            <Appear at={10.65}>Never left the pit once. That breakdown is still ringing in my ears.</Appear>
+            <Appear at={9.25}>Never left the pit once. That breakdown is still ringing in my ears.</Appear>
           </div>
         </div>
 
@@ -273,10 +273,10 @@ function RateScene() {
           <div className="flex flex-wrap gap-1.5">
             <span className="relative">
               <Chip>Crowd surf</Chip>
-              <span className="absolute inset-0 opacity-0" style={{ animation: 'introFadeIn 0.3s ease-out 10.95s forwards' }}>
+              <span className="absolute inset-0 opacity-0" style={{ animation: 'introFadeIn 0.3s ease-out 9.55s forwards' }}>
                 <Chip active>Crowd surf</Chip>
               </span>
-              <FingerTap delay={10.85} />
+              <FingerTap delay={9.45} />
             </span>
             <Chip>Sing along</Chip>
             <Chip>Packed crowd</Chip>
@@ -285,10 +285,10 @@ function RateScene() {
 
         <span
           className={`${btnPrimary} relative w-full py-3.5 text-xs`}
-          style={{ animation: 'introPress 0.5s ease-out 11.45s' }}
+          style={{ animation: 'introPress 0.5s ease-out 9.95s' }}
         >
           Save log
-          <FingerTap delay={11.35} />
+          <FingerTap delay={9.85} />
         </span>
       </div>
     </div>
@@ -331,12 +331,12 @@ function RankingsScene() {
               <Place className="mt-0.5">{r.place}</Place>
               <div className="mt-1"><Chip>{r.count} ratings</Chip></div>
             </div>
-            {i === 0 && <TapHighlight at={12.5} />}
+            {i === 0 && <TapHighlight at={11} />}
           </Card>
         ))}
       </div>
 
-      <DockBar active="rankings" mode="static" contained />
+      <DockBar active="feed" mode="static" contained />
     </div>
   )
 }
@@ -496,12 +496,12 @@ export default function IntroDemo() {
       <style>{`
         @keyframes introPan {
           0%      { transform: translateY(0); }
-          23.125% { transform: translateY(0); }
-          25.625% { transform: translateY(-25%); }
-          48.75%  { transform: translateY(-25%); }
-          51.25%  { transform: translateY(-50%); }
-          74.375% { transform: translateY(-50%); }
-          76.875% { transform: translateY(-75%); }
+          22.857% { transform: translateY(0); }
+          25.714% { transform: translateY(-25%); }
+          48.571% { transform: translateY(-25%); }
+          51.429% { transform: translateY(-50%); }
+          74.286% { transform: translateY(-50%); }
+          77.143% { transform: translateY(-75%); }
           100%    { transform: translateY(-75%); }
         }
         @keyframes introHintPulse {

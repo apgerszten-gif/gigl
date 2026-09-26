@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Pencil, Search, Share2 } from 'lucide-react'
+import { Pencil, Plus, Search, Share2 } from 'lucide-react'
 import { DockBar } from '@/components/BottomNav'
+import { SuggestField } from '@/components/SuggestField'
 import { Logo } from '@/components/Logo'
 import {
-  ArtistPhoto, Card, Chip, DateTag, HeaderPhoto, Label, PersonPhoto, Place, PullQuote, Segmented, Stars, Stat, TopBar,
-  btnPrimary, btnSecondary, headerClass, iconBtn, inputBox,
+  ArtistPhoto, Card, Chip, DateTag, Field, HeaderPhoto, Label, PersonPhoto, Place, PullQuote, Segmented, Stars, Stat, TopBar,
+  btnPrimary, btnSecondary, fieldInput, headerClass, iconBtn, inputBox,
 } from '@/components/ui'
 
 // Sample-data renderings of the core screens in DESIGN.md, built from the same
@@ -16,7 +17,9 @@ import {
 // Ratings are stars only; a show's rating is the average of three whole-star
 // sub-ratings, so it lands on thirds (5, 4.67, 4.33...).
 
-type Screen = 'feed' | 'rankings' | 'log' | 'search' | 'profile'
+// 'pick' is the show picker the Log button opens; 'log' is the rating form
+// it leads to. There is no 'search' any more - see components/BottomNav.tsx.
+type Screen = 'feed' | 'rankings' | 'pick' | 'add' | 'log' | 'profile'
 
 const ME = { name: 'Alex Gerszten', handle: 'gers_tunes' }
 
@@ -34,13 +37,20 @@ export function DesignPreview() {
         Style guide · sample data
       </div>
 
-      {screen === 'feed'     && <FeedScreen onProfile={openProfile} />}
-      {screen === 'rankings' && <RankingsScreen onProfile={openProfile} />}
+      {screen === 'feed'     && <FeedScreen onProfile={openProfile} onRankings={() => setScreen('rankings')} />}
+      {screen === 'rankings' && <RankingsScreen onProfile={openProfile} onFeed={() => setScreen('feed')} />}
       {screen === 'log'      && <LogShowScreen />}
-      {screen === 'search'   && <SearchScreen onProfile={openProfile} onPick={() => setScreen('log')} />}
+      {screen === 'pick'     && <PickShowScreen onProfile={openProfile} onPick={() => setScreen('log')} onAdd={() => setScreen('add')} />}
+      {screen === 'add'      && <AddShowScreen />}
       {screen === 'profile'  && <ProfileScreen />}
 
-      <DockBar active={screen} mode="buttons" onSelect={setScreen} />
+      {/* Rankings is a view of Feed and the picker belongs to Log, so both
+          map onto the three real tabs rather than getting one each. */}
+      <DockBar
+        active={screen === 'rankings' ? 'feed' : screen === 'pick' || screen === 'add' ? 'log' : screen}
+        mode="buttons"
+        onSelect={tab => setScreen(tab === 'log' ? 'pick' : tab)}
+      />
     </div>
   )
 }
@@ -85,8 +95,8 @@ const REVIEWS = [
   },
 ]
 
-function FeedScreen({ onProfile }: { onProfile: () => void }) {
-  const [filter, setFilter] = useState<'all' | 'following' | 'popular'>('all')
+function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankings: () => void }) {
+  const [filter, setFilter] = useState<string>('all')
   return (
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
@@ -94,14 +104,21 @@ function FeedScreen({ onProfile }: { onProfile: () => void }) {
       </DemoHeader>
 
       <div className="px-5 pt-3 space-y-2.5">
+        {/* Two tiers: whose logs, then the separate aggregate view. The real
+            one is components/FeedTabs.tsx - inlined here because the style
+            guide must not actually navigate. */}
         <Segmented
           options={[
             { value: 'all', label: 'All activity' },
             { value: 'following', label: 'Following' },
-            { value: 'popular', label: 'Popular' },
           ]}
           value={filter}
           onChange={setFilter}
+        />
+        <Segmented
+          options={[{ value: 'rankings', label: 'Artist rankings' }]}
+          value=""
+          onChange={onRankings}
         />
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <Chip active>This weekend</Chip>
@@ -113,32 +130,32 @@ function FeedScreen({ onProfile }: { onProfile: () => void }) {
       <main className="px-5 pt-4 space-y-4">
         {REVIEWS.map(review => (
           <Card key={review.handle} className="overflow-hidden">
-            <div className="px-4 pt-3 pb-3 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <PersonPhoto name={review.handle} className="w-8 h-8 text-sm border border-ink/15" />
+            <div className="px-3.5 pt-2.5 pb-2.5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <PersonPhoto name={review.handle} className="w-7 h-7 text-xs border border-ink/15" />
                   <div className="min-w-0">
-                    <p className="text-[12.6px] font-semibold truncate">@{review.handle}</p>
-                    <p className="text-[11px] text-ink-muted">{review.when}</p>
+                    <p className="text-[10.7px] font-semibold truncate">@{review.handle}</p>
+                    <p className="text-[9.4px] text-ink-muted">{review.when}</p>
                   </div>
                 </div>
-                <Stars score={review.score} size={15} />
+                <Stars score={review.score} size={13} />
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 min-w-0 space-y-1">
-                  <h3 className="font-display text-xl font-bold tracking-tight leading-tight">{review.artist}</h3>
-                  <Place>{review.place}</Place>
+              <div className="flex items-center gap-2.5">
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <h3 className="font-display text-[17px] font-bold tracking-tight leading-tight">{review.artist}</h3>
+                  <Place compact>{review.place}</Place>
                 </div>
-                <ArtistPhoto name={review.artist} className="w-[68px] h-[68px]" iconSize={23}>
+                <ArtistPhoto name={review.artist} className="w-[58px] h-[58px]" iconSize={20}>
                   <DateTag isoDate={review.date} />
                 </ArtistPhoto>
               </div>
 
-              <PullQuote>{review.quote}</PullQuote>
+              <PullQuote compact>{review.quote}</PullQuote>
 
-              <div className="flex flex-wrap gap-1.5">
-                {review.tags.map(tag => <Chip key={tag}>{tag}</Chip>)}
+              <div className="flex flex-wrap gap-1">
+                {review.tags.map(tag => <Chip key={tag} compact>{tag}</Chip>)}
               </div>
             </div>
           </Card>
@@ -156,15 +173,31 @@ const RANKED = [
   { artist: 'Mitski',       place: 'The Wiltern, Los Angeles, CA', date: '2026-09-02', count: 17, score: 14 / 3 },
 ]
 
-function RankingsScreen({ onProfile }: { onProfile: () => void }) {
+function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: () => void }) {
   return (
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
         <div className="min-w-0">
           <Label>Everyone&apos;s ratings</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Rankings</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Artist rankings</h1>
         </div>
       </DemoHeader>
+
+      <div className="px-5 pt-3 space-y-2.5">
+        <Segmented
+          options={[
+            { value: 'all', label: 'All activity' },
+            { value: 'following', label: 'Following' },
+          ]}
+          value=""
+          onChange={onFeed}
+        />
+        <Segmented
+          options={[{ value: 'rankings', label: 'Artist rankings' }]}
+          value="rankings"
+          onChange={() => {}}
+        />
+      </div>
 
       <div className="mx-5 mt-4 p-3 rounded-card bg-accent/10 border-1.5 border-accent/30 flex items-center justify-between gap-3">
         <div>
@@ -306,12 +339,12 @@ function LogShowScreen() {
 
 const RESULTS = [
   { artist: 'Phoebe Bridgers',    place: 'The Greek Theatre, Berkeley, CA',       date: '2026-09-19' },
-  { artist: 'Turnstile',          place: 'Hollywood Palladium, Los Angeles, CA',  date: '2026-09-24' },
-  { artist: 'Japanese Breakfast', place: 'The Fillmore, San Francisco, CA',       date: '2026-10-02' },
-  { artist: 'Mitski',             place: 'Shrine Auditorium, Los Angeles, CA',    date: '2026-10-09' },
+  { artist: 'Turnstile',          place: 'Hollywood Palladium, Los Angeles, CA',  date: '2026-09-18' },
+  { artist: 'Japanese Breakfast', place: 'The Fillmore, San Francisco, CA',       date: '2026-09-16' },
+  { artist: 'Mitski',             place: 'Shrine Auditorium, Los Angeles, CA',    date: '2026-09-14' },
 ]
 
-function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: () => void }) {
+function PickShowScreen({ onProfile, onPick, onAdd }: { onProfile: () => void; onPick: () => void; onAdd: () => void }) {
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const results = RESULTS.filter(r => !q || r.artist.toLowerCase().includes(q) || r.place.toLowerCase().includes(q))
@@ -320,8 +353,8 @@ function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: ()
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
         <div className="min-w-0">
-          <Label>Search</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Find a show</h1>
+          <Label>Log a show</Label>
+          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">What did you see<span className="text-accent">?</span></h1>
         </div>
       </DemoHeader>
 
@@ -337,7 +370,7 @@ function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: ()
         </label>
       </div>
 
-      <Label className="px-5 pt-4 pb-2">{q ? `${results.length} matches` : 'Coming up'}</Label>
+      <Label className="px-5 pt-4 pb-2">{q ? `${results.length} matches` : 'This past week'}</Label>
 
       <main className="mx-5 rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
         {results.map((r, i) => (
@@ -356,6 +389,20 @@ function SearchScreen({ onProfile, onPick }: { onProfile: () => void; onPick: ()
           <p className="px-3.5 py-6 text-center text-xs text-ink-muted">No shows match &ldquo;{query}&rdquo;</p>
         )}
       </main>
+
+      <button
+        type="button"
+        onClick={onAdd}
+        className="mt-3 mx-5 w-[calc(100%-40px)] flex items-center gap-3 rounded-card border-1.5 border-dashed border-ink/30 px-3.5 py-3 text-left"
+      >
+        <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
+          <Plus className="w-4 h-4" strokeWidth={2} />
+        </span>
+        <div className="min-w-0">
+          <p className="font-display text-[15px] font-bold leading-tight">Can&apos;t find your show?</p>
+          <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Add it yourself</p>
+        </div>
+      </button>
     </div>
   )
 }
@@ -440,6 +487,39 @@ function ProfileScreen() {
           </div>
           <span className="p-1.5 text-ink-faint"><Pencil className="w-4 h-4" /></span>
         </Card>
+      </div>
+    </div>
+  )
+}
+
+// -- Screen: Add a show ------------------------------------------------------
+// Uses the real SuggestField rather than a mock, so the suggestion chips and
+// the "did you mean" prompt here are the same code the app runs - and can be
+// seen working without a sign-in, which the real /add-show needs.
+
+function AddShowScreen() {
+  const [artist, setArtist] = useState('')
+  const [venue, setVenue]   = useState('')
+  const [city, setCity]     = useState('')
+  const [date, setDate]     = useState('')
+
+  return (
+    <div className="pb-28">
+      <div className={`${headerClass} px-5 py-3`}>
+        <h1 className="font-display text-lg font-bold tracking-tight">Add a show</h1>
+      </div>
+
+      <div className="px-5 pt-4 space-y-3">
+        <SuggestField field="artist" label="Artist" hint="who you saw" placeholder="Turnstile" value={artist} onChange={setArtist} />
+
+        <Field label="Date" hint="when it happened">
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className={fieldInput} />
+        </Field>
+
+        <SuggestField field="venue" label="Venue" hint="where it was" placeholder="Bottom of the Hill" value={venue} onChange={setVenue} />
+        <SuggestField field="city" label="City" hint="optional" placeholder="San Francisco, CA" value={city} onChange={setCity} />
+
+        <button type="button" className={`${btnPrimary} w-full py-3.5 text-xs`}>Add show and log it</button>
       </div>
     </div>
   )

@@ -51,9 +51,13 @@ export function Label({ children, className = '', tone = 'muted' }: {
   )
 }
 
-export function Chip({ children, active = false }: { children: React.ReactNode; active?: boolean }) {
+export function Chip({ children, active = false, compact = false }: {
+  children: React.ReactNode; active?: boolean; compact?: boolean
+}) {
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-label border-1.5 whitespace-nowrap ${
+    <span className={`inline-block rounded font-semibold uppercase tracking-label border-1.5 whitespace-nowrap ${
+      compact ? 'px-1.5 py-0 text-[8.5px]' : 'px-2 py-0.5 text-[10px]'
+    } ${
       active ? 'bg-accent/10 border-accent/30 text-accent' : 'border-ink/15 text-ink-muted'
     }`}>
       {children}
@@ -61,9 +65,11 @@ export function Chip({ children, active = false }: { children: React.ReactNode; 
   )
 }
 
-export function PullQuote({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function PullQuote({ children, className = '', compact = false }: {
+  children: React.ReactNode; className?: string; compact?: boolean
+}) {
   return (
-    <blockquote className={`border-l-2 border-accent pl-3 font-display text-[15px] leading-snug ${className}`}>
+    <blockquote className={`border-l-2 border-accent ${compact ? 'pl-2.5 text-[12.75px]' : 'pl-3 text-[15px]'} font-display leading-snug ${className}`}>
       &ldquo;{children}&rdquo;
     </blockquote>
   )
@@ -115,20 +121,51 @@ function tintFor(name: string) {
   return PHOTO_TINTS[sum % PHOTO_TINTS.length]
 }
 
-// Square artist photo with a riso border, or the halftone-and-mic
-// placeholder when there's no photo. `children` (e.g. a DateTag) sits
-// outside the clipped frame so it can overhang the corner.
-export function ArtistPhoto({ name, src, className, iconSize = 20, children }: {
-  name: string; src?: string | null; className: string; iconSize?: number; children?: React.ReactNode
+// What ArtistPhoto's placeholder icon is called with. Matches the slice of
+// lucide's props actually used, so a lucide icon and a hand-drawn one are
+// interchangeable here.
+interface IconProps { size?: string | number; strokeWidth?: string | number }
+
+// A DJ behind the decks, for bills where nobody is holding a microphone.
+// Drawn rather than imported: lucide has turntables, headphones and vinyl,
+// but nobody standing behind them, and the point of the placeholder is that
+// somebody played.
+export function DjDecks({ size = 20, strokeWidth = 1.75 }: IconProps) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    >
+      <circle cx="12" cy="4.25" r="2.25" />
+      <path d="M6.5 13.5 L9 9.25 A3.6 3.6 0 0 1 15 9.25 L17.5 13.5" />
+      <rect x="2" y="13.5" width="20" height="7" rx="1.5" />
+      <circle cx="7" cy="17" r="1.6" />
+      <circle cx="17" cy="17" r="1.6" />
+    </svg>
+  )
+}
+
+// Square artist photo with a riso border, or the halftone placeholder when
+// there's no photo. `children` (e.g. a DateTag) sits outside the clipped
+// frame so it can overhang the corner.
+//
+// `icon` swaps what the placeholder draws. It stays a microphone everywhere
+// by default; an all-DJ bill passes DjDecks (see app/crssd).
+export function ArtistPhoto({ name, src, className, iconSize = 20, icon: Icon = MicVocal, children }: {
+  name: string; src?: string | null; className: string; iconSize?: number
+  icon?: React.ComponentType<IconProps>
+  children?: React.ReactNode
 }) {
   return (
     <div className={`relative flex-shrink-0 ${className}`}>
       <div className={`w-full h-full rounded-card border-1.5 border-ink overflow-hidden ${src ? 'bg-paper' : tintFor(name)}`}>
         {src ? (
-          <img src={src} alt={name} className="w-full h-full object-cover" />
+          // Lazy: a CRSSD day is 27 photos and ~2MB, and on festival signal
+          // the ones below the fold shouldn't hold up the ones on screen.
+          <img src={src} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : (
           <div className="halftone w-full h-full flex items-center justify-center text-ink/45" aria-label={`${name} (no photo)`}>
-            <MicVocal size={iconSize} strokeWidth={1.75} />
+            <Icon size={iconSize} strokeWidth={1.75} />
           </div>
         )}
       </div>
@@ -151,10 +188,16 @@ export function PersonPhoto({ name, src, className }: { name: string; src?: stri
 }
 
 // A place (venue and city, a stage, or just a city) behind a small sienna pin.
-export function Place({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+// `compact` is the feed's density: every size in a review tile is 15% down
+// on the default so more of them fit on screen. It's a prop rather than a
+// smaller default because the same component sets the place line on
+// rankings, profiles and the artist page, which aren't list-dense.
+export function Place({ children, className = '', compact = false }: {
+  children: React.ReactNode; className?: string; compact?: boolean
+}) {
   return (
-    <p className={`flex items-center gap-1 text-[12px] text-ink-muted min-w-0 ${className}`}>
-      <MapPin className="w-3 h-3 flex-shrink-0 text-accent" strokeWidth={2.25} />
+    <p className={`flex items-center gap-1 ${compact ? 'text-[10.2px]' : 'text-[12px]'} text-ink-muted min-w-0 ${className}`}>
+      <MapPin className={`${compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} flex-shrink-0 text-accent`} strokeWidth={2.25} />
       <span className="truncate">{children}</span>
     </p>
   )
@@ -169,19 +212,23 @@ export function placeOf(log: { stage?: string | null; day?: string | null; venue
   return log.venue || null
 }
 
-// 'YYYY-MM-DD' -> { month: 'Sep', day: '12' }, parsed at local midnight like
-// formatShowDate so it doesn't shift a day outside UTC.
-export function dateParts(isoDate: string | null | undefined): { month: string; day: string } | null {
+// 'YYYY-MM-DD' -> { month: 'Sep', day: '12', year: null }, parsed at local
+// midnight like formatShowDate so it doesn't shift a day outside UTC. `year`
+// is only set outside the current year, when month and day alone could mean
+// either.
+export function dateParts(isoDate: string | null | undefined): { month: string; day: string; year: string | null } | null {
   if (!isoDate) return null
   const d = new Date(`${isoDate}T00:00:00`)
   if (isNaN(d.getTime())) return null
   return {
     month: d.toLocaleDateString('en-US', { month: 'short' }),
     day:   String(d.getDate()),
+    year:  d.getFullYear() === new Date().getFullYear() ? null : String(d.getFullYear()),
   }
 }
 
-// Show date stuck onto the corner of an ArtistPhoto like a sticker.
+// Show date stuck onto the corner of an ArtistPhoto like a sticker, with the
+// year in smaller type underneath when it isn't this year's.
 export function DateTag({ isoDate }: { isoDate: string | null | undefined }) {
   const parts = dateParts(isoDate)
   if (!parts) return null
@@ -189,6 +236,7 @@ export function DateTag({ isoDate }: { isoDate: string | null | undefined }) {
     <span className="absolute -bottom-1.5 -right-1.5 -rotate-3 min-w-[28px] rounded bg-cream border-1.5 border-ink shadow-riso px-1 py-0.5 text-center leading-none">
       <span className="block text-[8px] font-bold uppercase tracking-label text-ink-muted">{parts.month}</span>
       <span className="block font-display text-[13px] font-bold text-ink">{parts.day}</span>
+      {parts.year && <span className="block mt-px text-[6.5px] font-bold tracking-label text-ink-muted">{parts.year}</span>}
     </span>
   )
 }

@@ -5,7 +5,12 @@
 // none of this: it's represented purely by LOCAL_STORAGE_KEY resolving via
 // getFestival(), which is how /log tells the two apart.
 export interface ActiveShow {
-  id:      string // tm-{eventId} - matches whatever LOCAL_STORAGE_KEY holds when this is set
+  // Whatever LOCAL_STORAGE_KEY holds when this is set: tm-{eventId} from
+  // search, user-{uuid} from /add-show, or an imported festival set's id
+  // (crssd-fall-2026-… from /crssd). Any row in `shows` can be the active
+  // one - what matters is that it is fully specified, so /log has nothing
+  // left to ask and goes straight to /log-show.
+  id:      string
   artist:  string
   venue:   string
   city:    string

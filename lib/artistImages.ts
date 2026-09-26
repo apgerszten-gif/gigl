@@ -1,16 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { nameKey } from './nameKey'
 
 // Artist photos live in public.artist_images, keyed by a normalised artist
 // name so "Charli xcx", "Charli XCX" and "Charli XCX " share one photo. The
 // nightly sync fills the table; everything else only reads it.
 
 export function artistKey(name: string): string {
-  return name
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')   // drop accents: "Rüfüs" -> "rufus"
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
+  return nameKey(name)
 }
 
 // PostgREST puts `in` filters in the URL, so look keys up in chunks.

@@ -43,7 +43,7 @@ export function FirstShowCelebration({ username }: { username: string | null }) 
         <button type="button" onClick={handleShare} className={`${btnPrimary} w-full py-3.5 text-xs mb-2.5`}>
           {copied ? 'Link copied!' : 'Share with friends'}
         </button>
-        <button type="button" onClick={() => router.push('/select-festival?mode=log')} className={`${btnSecondary} w-full py-3.5 text-xs mb-2.5`}>
+        <button type="button" onClick={() => router.push('/select-festival')} className={`${btnSecondary} w-full py-3.5 text-xs mb-2.5`}>
           Log another show
         </button>
         <button type="button" onClick={() => router.push('/feed')} className="p-2 text-xs text-ink-muted underline underline-offset-[3px]">

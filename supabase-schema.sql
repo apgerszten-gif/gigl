@@ -532,7 +532,195 @@ create policy "artist_images_read" on public.artist_images for select using (tru
 -- existing profiles_update policy already limits writes to your own row.
 alter table public.profiles add column if not exists avatar_url text;
 
--- Phone number is now the way to sign up (app/auth/page.tsx), so a new
+-- "Near me" show search (the Near me control on /select-festival).
+--
+-- No PostGIS and no new columns: shows.lat/lng already hold the venue
+-- coordinates, or the metro centroid where Ticketmaster gave none, and the
+-- search filters with a plain lat/lng bounding box (lib/geo.ts) which is then
+-- trimmed to a real circle in JS. A composite btree serves the latitude range
+-- and keeps longitude on the same index tuple, so the box lookup never falls
+-- back to a sequential scan; it is not a spatial index and doesn't pretend to
+-- be one. Move to PostGIS + GIST only if coverage grows past a few hundred
+-- thousand rows or the radius has to be sorted on rather than filtered by.
+--
+-- Rows with a null lat or lng are simply never returned by a nearby search:
+-- they can't be placed, and inventing a location for them would be worse
+-- than leaving them out of a local list.
+create index if not exists shows_lat_lng_idx on public.shows (lat, lng);
+
+-- The catalogue is a record of shows that HAPPENED, not a what's-on listing.
+--
+-- Gigl is a log of gigs you went to, so a row you couldn't have attended yet
+-- is nothing anyone can rate, and it buries the one they opened the app to
+-- log. Show search therefore returns only the past week: PAST_WINDOW_DAYS in
+-- lib/dates.ts defines the window, and the query filters show_date to it at
+-- both ends, newest first.
+--
+-- The table itself holds more than that window, and has to. Ticketmaster's
+-- Discovery API has no past events - an explicit past date range returns
+-- nothing, while the same query without one returns hundreds of upcoming
+-- listings - so there is no archive to sync a past week from. Instead the
+-- nightly job keeps capturing upcoming listings, and a row ages in place:
+-- upcoming, then inside the search window, then deleted.
+--
+-- This changes the pruning rule described further up in one respect only.
+-- The cutoff moves from "show_date < today" to "show_date < today minus
+-- PAST_WINDOW_DAYS": a row now survives its own show date by a week, because
+-- for that week it is the only evidence the show ever existed and nothing
+-- can fetch it back once deleted. The rest of that rule is unchanged and now
+-- matters more than before - future-dated rows are still never deleted, both
+-- because an event missing from one night's results is as likely to be a
+-- partial upstream failure as a cancellation, and because every future row
+-- is the advance capture of a show about to enter the search window.
+--
+-- Rows with a null show_date are matched by neither the window filter nor the
+-- prune, so they linger while staying invisible to search. Ticketmaster
+-- rarely omits a date; worth a sweep of its own if user-submitted rows ever
+-- land without one.
+--
+-- shows_show_date_idx already serves the range scan, and a btree reads in
+-- either direction, so newest-first needs no new index.
+
+-- User-submitted shows: "Can't find your show? Add it yourself."
+--
+-- shows.source has distinguished these since the table was created
+-- ('ticketmaster' today; 'user' once manual submissions land). This is that.
+-- It exists because the gap is permanent rather than a coverage problem to
+-- throw more APIs at: house shows, local bills and DIY spaces are in no
+-- aggregator at any price, and the person who was there is the only source
+-- there will ever be.
+--
+-- No insert policy is added, deliberately. public.shows still has zero client
+-- write grants, and submissions go through /api/shows/submit under the
+-- service role, so the validation and duplicate checks there cannot be
+-- skipped by talking to PostgREST directly with an anon key.
+alter table public.shows add column if not exists submitted_by uuid references public.profiles(id) on delete set null;
+
+-- Note "on delete set null" rather than a cascade. If somebody deletes their
+-- account the show they contributed stays: other people may have logged it,
+-- and it is very likely the only record anywhere that the gig happened. The
+-- submitter is forgotten, the show is not.
+--
+-- For the same reason the nightly prune skips source = 'user' entirely. A
+-- Ticketmaster row can always be re-fetched while it is still upcoming; a
+-- hand-typed one cannot be recovered from anywhere. See prunePastShows() in
+-- lib/shows/repository.ts.
+create index if not exists shows_source_idx on public.shows (source);
+
+-- Duplicate detection on submit looks up everything already on the submitted
+-- date and compares artist names in JS, because a date is exact where names
+-- are not. This is the index that keeps that lookup cheap.
+create index if not exists shows_date_source_idx on public.shows (show_date, source);
+
+-- Being findable by phone number is a separate question from having linked
+-- one.
+--
+-- profiles.phone_number was collected for SMS show scoring (see /api/sms/*).
+-- /api/friends/match uses it for something different: telling a new user
+-- which of their contacts is already here. That is a purpose the original
+-- consent didn't cover, so it gets its own flag rather than being assumed.
+--
+-- Defaults to true because the matching is one-directional and reveals
+-- nothing a profile doesn't already show publicly - someone who has your
+-- number learns only that the account exists. Set it false to disappear from
+-- contact matching while keeping SMS scoring.
+alter table public.profiles add column if not exists discoverable_by_phone boolean not null default true;
+
+-- Contacts themselves are never stored. /api/friends/match takes SHA-256
+-- hashes of E.164 numbers, computed on the device, and intersects them with
+-- hashes of its own users' numbers in memory. There is no contacts table and
+-- no edge is recorded for a phone number that doesn't belong to an account:
+-- people who never signed up leave no trace of having been in someone's
+-- address book.
+
+-- The QR funnel: how many people scanned a code, how many of them opened the
+-- site, and how many signed up. Written only by app/qr (kind 'scan') and
+-- app/api/visits (kind 'visit'), both with the service role. RLS is on with
+-- no policies, so neither the anon key nor a signed-in user can read or
+-- write it.
+--
+-- visitor_id is a random id: from a cookie on the phone for a scan, from
+-- localStorage for a visit. The two aren't the same id, so a scan can't be
+-- followed into the visit it became - only counted beside it. Nothing else
+-- about the phone or the person is kept.
+create table if not exists public.site_events (
+  id         bigint generated always as identity primary key,
+  created_at timestamp with time zone not null default now(),
+  kind       text not null check (kind in ('scan', 'visit')),
+  visitor_id uuid not null,
+  source     text not null
+);
+alter table public.site_events enable row level security;
+create index if not exists site_events_kind_created_idx on public.site_events (kind, created_at);
+
+-- Sign-ups aren't events: auth.users is already an exact count of them, and
+-- each account made from here on carries raw_user_meta_data->>'signup_source'
+-- ('qr', 'share' or 'direct') - the first door that browser came in by. See
+-- lib/visitor.ts.
+--
+-- The numbers live in their own schema rather than `public`, because
+-- PostgREST serves everything in `public` and these read auth.users. Read
+-- them in the SQL editor:
+--
+--   select * from analytics.funnel_by_day;
+--   select * from analytics.funnel_total;
+create schema if not exists analytics;
+
+-- One row per day, San Diego time. "phones" and "visitors" are distinct ids
+-- within that day, so they can't be summed across days - funnel_total
+-- counts them across the whole run instead.
+create or replace view analytics.funnel_by_day as
+with events as (
+  select (created_at at time zone 'America/Los_Angeles')::date as day,
+         count(*)                   filter (where kind = 'scan')                     as scans,
+         count(distinct visitor_id) filter (where kind = 'scan')                     as phones_scanned,
+         count(*)                   filter (where kind = 'visit')                    as opens,
+         count(distinct visitor_id) filter (where kind = 'visit')                    as visitors,
+         count(distinct visitor_id) filter (where kind = 'visit' and source = 'qr') as visitors_from_qr
+  from public.site_events
+  group by 1
+), signups as (
+  select (created_at at time zone 'America/Los_Angeles')::date as day,
+         count(*)                                                              as signups,
+         count(*) filter (where raw_user_meta_data->>'signup_source' = 'qr') as signups_from_qr
+  from auth.users
+  group by 1
+)
+select coalesce(e.day, s.day)            as day,
+       coalesce(e.scans, 0)              as scans,
+       coalesce(e.phones_scanned, 0)     as phones_scanned,
+       coalesce(e.opens, 0)              as opens,
+       coalesce(e.visitors, 0)           as visitors,
+       coalesce(e.visitors_from_qr, 0)   as visitors_from_qr,
+       coalesce(s.signups, 0)            as signups,
+       coalesce(s.signups_from_qr, 0)    as signups_from_qr
+from events e
+full join signups s on s.day = e.day
+order by 1 desc;
+
+-- Everything since counting began (the first site_events row), so accounts
+-- from before tracking don't pad the sign-ups.
+create or replace view analytics.funnel_total as
+with since as (
+  select min(created_at) as t from public.site_events
+)
+select (select count(*)                   from public.site_events where kind = 'scan')                     as scans,
+       (select count(distinct visitor_id) from public.site_events where kind = 'scan')                     as phones_scanned,
+       (select count(*)                   from public.site_events where kind = 'visit')                    as opens,
+       (select count(distinct visitor_id) from public.site_events where kind = 'visit')                    as visitors,
+       (select count(distinct visitor_id) from public.site_events where kind = 'visit' and source = 'qr') as visitors_from_qr,
+       (select count(*) from auth.users, since where created_at >= since.t)                                as signups,
+       (select count(*) from auth.users, since
+         where created_at >= since.t and raw_user_meta_data->>'signup_source' = 'qr')                     as signups_from_qr;
+
+-- profiles.city defaulted to 'Coachella' from when Gigl was a Coachella app,
+-- so every account has it, whatever city its owner is in. Nothing reads the
+-- column (the city line on a profile is still a mockup), so clear the stale
+-- value rather than let a future feature show it as fact.
+alter table public.profiles alter column city drop default;
+update public.profiles set city = null where city = 'Coachella';
+
+-- Phone number is now the way to sign up (/auth and the sign-up sheet), so a new
 -- account's placeholder username can no longer be its phone number:
 -- profiles are public, which would show the number at /u/<number> until the
 -- user picked a name. Sign-ups without an email get user_<first 8 hex

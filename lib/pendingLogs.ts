@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 
 const QUEUE_KEY = 'gigl_pending_logs'
 
@@ -85,4 +86,75 @@ export async function flushPendingLogs(): Promise<void> {
   } finally {
     flushing = false
   }
+}
+
+// ── Guest drafts ─────────────────────────────────────────────────────────────
+//
+// Someone who hasn't signed up can still write a whole log; the account is
+// only asked for when they hit Save. The draft is parked here the moment
+// they do, before the sign-up sheet opens, so a page reload while they're
+// off fetching a code (or a sheet they close and come back to) doesn't cost
+// them what they wrote. There's no user yet, so it can't go in the queue
+// above - once they're signed in, the log screen saves it the normal way
+// and clears it.
+//
+// One draft at a time: it's whatever they last tried to post. Photos aren't
+// kept - a File can't be written to localStorage - so they only survive as
+// long as the log screen stays open, which the sheet is built around.
+
+const GUEST_DRAFT_KEY = 'gigl_guest_draft'
+
+export type GuestDraft = Omit<PendingLogPayload, 'user_id' | 'photo_url' | 'media_urls' | 'emoji'>
+
+export function saveGuestDraft(draft: GuestDraft): void {
+  try {
+    localStorage.setItem(GUEST_DRAFT_KEY, JSON.stringify(draft))
+  } catch {
+    // Storage full or blocked: the draft still lives in the page's own state.
+  }
+}
+
+export function getGuestDraftForArtist(artistId: string): GuestDraft | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(GUEST_DRAFT_KEY)
+    const draft: GuestDraft | null = raw ? JSON.parse(raw) : null
+    return draft?.artist_id === artistId ? draft : null
+  } catch {
+    return null
+  }
+}
+
+export function clearGuestDraft(): void {
+  try {
+    localStorage.removeItem(GUEST_DRAFT_KEY)
+  } catch {
+    // nothing to clear
+  }
+}
+
+// The sign-up sheet promises "make an account and it goes up on the feed",
+// but people also close it and sign up later from the feed card or the You
+// tab. Then the log screen isn't there to save the draft, so this moves it
+// into the queue under the new account instead (without photos, which the
+// draft never kept). Returns whether there was a draft to move.
+export function queueGuestDraft(userId: string): boolean {
+  let draft: GuestDraft | null = null
+  try {
+    const raw = localStorage.getItem(GUEST_DRAFT_KEY)
+    draft = raw ? JSON.parse(raw) : null
+  } catch {
+    return false
+  }
+  if (!draft?.artist_id || !draft.performance_rating || !draft.venue_rating || !draft.crowd_rating) return false
+
+  enqueuePendingLog({
+    ...draft,
+    user_id:    userId,
+    photo_url:  null,
+    media_urls: null,
+    emoji:      deriveLegacyEmoji(computeShowScore(draft.performance_rating, draft.venue_rating, draft.crowd_rating)),
+  })
+  clearGuestDraft()
+  return true
 }
