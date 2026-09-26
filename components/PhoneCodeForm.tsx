@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { formatPhoneForDisplay, isNorthAmericanNumber, normalizePhoneNumber } from '@/lib/phone'
+import { formatPhoneAsTyped, formatPhoneForDisplay, isNorthAmericanNumber, normalizePhoneNumber } from '@/lib/phone'
 import { signupMetadata } from '@/lib/visitor'
 import { ErrorNote, Field, btnPrimary, fieldInput } from '@/components/ui'
 
@@ -134,8 +134,8 @@ export function PhoneCodeForm({ onStepChange, onVerified }: {
             inputMode="tel"
             autoComplete="tel"
             value={phoneInput}
-            onChange={e => setPhoneInput(e.target.value)}
-            placeholder="(555) 123-4567"
+            onChange={e => setPhoneInput(formatPhoneAsTyped(e.target.value))}
+            placeholder="555-123-4567"
             className={fieldInput}
           />
         </Field>

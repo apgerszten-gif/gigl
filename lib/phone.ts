@@ -24,8 +24,23 @@ export function isNorthAmericanNumber(e164: string): boolean {
   return /^\+1[2-9]\d{2}[2-9]\d{6}$/.test(e164)
 }
 
-// '+15551234567' -> '(555) 123-4567'; other numbers are shown as stored.
+// '+15551234567' -> '555-123-4567'; other numbers are shown as stored.
 export function formatPhoneForDisplay(e164: string): string {
   const match = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164)
-  return match ? `(${match[1]}) ${match[2]}-${match[3]}` : e164
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : e164
+}
+
+// The phone field as someone types: 555-123-4567, each dash appearing once
+// the next group starts, so backspacing never gets stuck on one. Area codes
+// never start with 1, so a leading 1 (typed, or from a pasted or autofilled
+// +1) is the country code and is dropped. A number from anywhere else, or
+// one too long, is left as typed rather than cut down to ten digits that
+// would pass for someone else's number; sign-up then turns it away.
+export function formatPhoneAsTyped(raw: string): string {
+  if (/^\s*\+(?!1)/.test(raw)) return raw
+  const digits = raw.replace(/\D/g, '').replace(/^1/, '')
+  if (digits.length > 10) return raw
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
 }
