@@ -11,7 +11,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
+/* The dock's bottom padding: the home-indicator safe area less 20px. The
+   whole inset (about 34px on an iPhone) left a band of empty cream under the
+   tab labels; this keeps them just clear of the indicator line instead. */
+.safe-bottom { padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - 20px)); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
