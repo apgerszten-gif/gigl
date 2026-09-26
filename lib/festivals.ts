@@ -439,6 +439,17 @@ export function getFestival(id: string): Festival | null {
   return FESTIVALS.find(f => f.id === id) ?? null
 }
 
+// A log from a festival lineup stores only its stage and day, so which
+// festival it was comes from the artist id ('osl-…', 'lolla-…').
+const FESTIVAL_NAME_BY_ARTIST = new Map(
+  FESTIVALS.flatMap(f => f.artists.map(a => [a.id, f.name.replace(/\s+\d{4}$/, '')] as const))
+)
+
+// 'osl-faouzia' -> 'Outside Lands'; null for anything not from a lineup.
+export function festivalNameOf(artistId: string | null | undefined): string | null {
+  return (artistId && FESTIVAL_NAME_BY_ARTIST.get(artistId)) || null
+}
+
 export function getArtistsByDay(festival: Festival, day: string): FestivalArtist[] {
   return festival.artists.filter(a => a.day === day)
 }

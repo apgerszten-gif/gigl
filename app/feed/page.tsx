@@ -18,7 +18,7 @@ import { Logo } from '@/components/Logo'
 import { CrssdMark } from '@/components/CrssdMark'
 import { SignUpSheet } from '@/components/SignUpSheet'
 import {
-  ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary,
+  ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary, placeOf,
 } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
@@ -281,10 +281,6 @@ function FeedInner() {
     return `${Math.floor(hrs / 24)}d ago`
   }
 
-  function dayLabel(day: string) {
-    return day.charAt(0).toUpperCase() + day.slice(1)
-  }
-
   // Following means nothing without an account, even if ?filter= (from
   // Rankings) asked for it.
   const activeFilter = user ? filterMode : 'all'
@@ -381,9 +377,7 @@ function FeedInner() {
             : null
           const hasTags   = !!item.tags && item.tags.length > 0
           const mediaUrls = resolveMediaUrls(item).map(resolvePhotoUrl)
-          const place     = item.stage
-            ? [item.stage, item.day ? dayLabel(item.day) : null].filter(Boolean).join(' · ')
-            : item.venue
+          const place     = placeOf(item)
 
           const itemInteractions = interactions[item.id] ?? EMPTY_INTERACTIONS
 

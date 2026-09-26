@@ -10,6 +10,7 @@ import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
+import { festivalNameOf } from '@/lib/festivals'
 import { timeQuery } from '@/lib/queryTiming'
 import { useArtistImages } from '@/lib/useArtistImages'
 import { aggregateArtistRows, RANKINGS_SELECT, type ArtistRow } from '@/lib/rankings'
@@ -123,8 +124,9 @@ export function RankingsClient({ initialRows }: { initialRows: ArtistRow[] }) {
         {visible.length === 0 && <EmptyState>No ratings yet</EmptyState>}
 
         {visible.map((row, i) => {
+          const festival = festivalNameOf(row.artist_id)
           const place = row.stage
-            ? [row.stage, row.day ? dayLabel(row.day) : null].filter(Boolean).join(' · ')
+            ? [row.stage, row.day ? dayLabel(row.day) : null].filter(Boolean).join(' · ') + (festival ? ` (${festival})` : '')
             : row.venue
           return (
             <div

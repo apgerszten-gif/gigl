@@ -5,6 +5,7 @@
 import Link from 'next/link'
 import { ChevronLeft, MapPin, MicVocal } from 'lucide-react'
 import { StarDisplay } from './StarDisplay'
+import { festivalNameOf } from '@/lib/festivals'
 
 // ── Class recipes ────────────────────────────────────────────────────────────
 
@@ -203,11 +204,15 @@ export function Place({ children, className = '', compact = false }: {
   )
 }
 
-// Place text for a log: the festival stage and day, or the venue.
-export function placeOf(log: { stage?: string | null; day?: string | null; venue?: string | null }): string | null {
+// Place text for a log: the festival stage and day with the festival after
+// them ("Lands End · Friday (Outside Lands)"), or the venue.
+export function placeOf(log: {
+  stage?: string | null; day?: string | null; venue?: string | null; artist_id?: string | null
+}): string | null {
   if (log.stage) {
     const day = log.day ? log.day.charAt(0).toUpperCase() + log.day.slice(1) : null
-    return [log.stage, day].filter(Boolean).join(' · ')
+    const festival = festivalNameOf(log.artist_id)
+    return [log.stage, day].filter(Boolean).join(' · ') + (festival ? ` (${festival})` : '')
   }
   return log.venue || null
 }

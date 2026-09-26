@@ -86,7 +86,7 @@ Use the component rather than retyping its classes. The class lists are here so 
 | Big numbers | `Stat` in stat rows | `font-display font-bold`. Rank numbers are `text-accent` |
 | Artist photo | `ArtistPhoto` | Size set by the caller (`w-14 h-14` in lists, `w-[68px] h-[68px]` on feed cards). Frame: `rounded-card border-1.5 border-ink overflow-hidden`, with the image set to `object-cover`. With no photo, the frame is tinted (`bg-terra/25`, `bg-accent/15` or `bg-ink/10`, picked per artist) and holds a `.halftone` layer with a `MicVocal` icon in `text-ink/45`. Overlays such as the date sticker go outside the clipped frame so they can overhang |
 | Date sticker | `DateTag` (takes an ISO date) | Month and day on an artist photo's corner: `absolute -bottom-1.5 -right-1.5 -rotate-3 rounded bg-cream border-1.5 border-ink shadow-riso`. The month is 8px uppercase `ink-muted`; the day is 13px `font-display` bold. For a show outside the current year, the year sits underneath in 6.5px bold `ink-muted`, and written dates (`formatShowDate`, e.g. the sienna date above the artist on the log screen) read "Oct 19, 2025" |
-| Place line | `Place` | `flex items-center gap-1 text-[12px] text-ink-muted`: a `MapPin` icon (`w-3 h-3 text-accent`), then "Venue, City" truncated to one line |
+| Place line | `Place` | `flex items-center gap-1 text-[12px] text-ink-muted`: a `MapPin` icon (`w-3 h-3 text-accent`), then "Venue, City" truncated to one line. A festival log's place is its stage and day with the festival after them, "Lands End · Saturday (Outside Lands)" (`placeOf`) |
 | Your profile photo (header) | `AppHeader` | `w-9 h-9 rounded-full border-1.5 border-ink shadow-riso` inside a link to You. On You itself it's `w-16 h-16` |
 | Other people's photos | `PersonPhoto` | `rounded-full bg-paper border border-ink/15`, `w-8 h-8` in feed cards. Initial in `font-display font-bold text-ink-muted` when there's no photo |
 | Star rating | `Stars` | `<StarDisplay accent="currentColor" />` inside a `text-star` element |
@@ -122,7 +122,7 @@ Where the photos come from:
   - any photos or videos the reviewer attached, full-bleed at the top
   - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
   - the reviewer's photo, handle (`text-[12.6px] font-semibold`) and timestamp, with the star rating on the right
-  - the artist heading and place line, with the artist photo and date sticker beside them (festival logs show the stage and day instead)
+  - the artist heading and place line, with the artist photo and date sticker beside them (festival logs show the stage and day instead, with the festival in parentheses)
   - the review as a pull quote, then its tags as chips
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
