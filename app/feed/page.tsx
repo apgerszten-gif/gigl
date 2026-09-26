@@ -464,6 +464,7 @@ function FeedInner() {
         <SignUpSheet
           title={signUpMode === 'signin' ? 'Good to have you back' : 'Join in'}
           blurb="Make an account to react, comment and follow people. It's also how you post your own logs."
+          initialMode={signUpMode}
           onClose={() => setSignUpMode(null)}
           onSignedIn={() => setSignUpMode(null)}
         />

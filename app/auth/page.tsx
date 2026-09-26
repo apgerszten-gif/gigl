@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import { pathAfterSignIn } from '@/lib/afterSignIn'
 import { Logo } from '@/components/Logo'
 import { PhoneCodeForm, type PhoneStep } from '@/components/PhoneCodeForm'
+import { EmailAuthPage } from '@/components/EmailAuthPage'
+import { useSignupMethod } from '@/lib/signupMethod'
 import {
   ArtistPhoto, Card, DateTag, ErrorNote, Field, Label, PersonPhoto, Place, PullQuote, Stars,
   btnPrimary, fieldInput,
@@ -17,7 +19,13 @@ import {
 // password only remains so accounts made before phone sign-up can still get in.
 type Step = PhoneStep | 'email'
 
+// The admin page's sign-up switch (app/admin) can put the older email page
+// back if texts stop getting through.
 export default function AuthPage() {
+  return useSignupMethod() === 'email' ? <EmailAuthPage /> : <PhoneAuthPage />
+}
+
+function PhoneAuthPage() {
   const router   = useRouter()
   const supabase = createClient()
 

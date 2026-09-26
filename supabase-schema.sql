@@ -751,3 +751,20 @@ begin
   return new;
 end;
 $$;
+
+-- Switches the admin page (/admin) can flip without a deploy. Today there's
+-- one: signup_method, 'phone' (texted codes, the default) or 'email' (the
+-- pre-phone email and password screens), for when texts stop getting
+-- through. Anyone can read it, since the sign-up screens need to
+-- (lib/signupMethod.ts). No write policy: /api/admin/settings writes it
+-- under the service role, after checking the caller is an admin.
+create table if not exists public.app_settings (
+  key        text primary key,
+  value      jsonb not null,
+  updated_at timestamp with time zone not null default now()
+);
+alter table public.app_settings enable row level security;
+drop policy if exists "app_settings_read" on public.app_settings;
+create policy "app_settings_read" on public.app_settings for select using (true);
+insert into public.app_settings (key, value) values ('signup_method', '"phone"')
+on conflict (key) do nothing;

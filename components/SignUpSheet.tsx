@@ -6,9 +6,24 @@ import { X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
 import { PhoneCodeForm } from '@/components/PhoneCodeForm'
+import { EmailSignUpSheet } from '@/components/EmailSignUpSheet'
+import { useSignupMethod } from '@/lib/signupMethod'
 import { ErrorNote, Field, Label, btnPrimary, fieldInput } from '@/components/ui'
 
 type Step = 'phone' | 'email' | 'username'
+
+type SheetProps = {
+  // Rendered with the accent full stop, so pass it without one.
+  title: string
+  blurb: string
+  // Which tab the email sheet opens on. Phone needs no such choice: the same
+  // number and code sign people up or back in.
+  initialMode?: 'signup' | 'signin'
+  signInLabel?: string
+  finishLabel?: string
+  onClose: () => void
+  onSignedIn: (userId: string) => void
+}
 
 // Asks for an account in place, over whatever the visitor was doing, rather
 // than sending them off to /auth. Signed-out visitors can browse and write a
@@ -17,22 +32,20 @@ type Step = 'phone' | 'email' | 'username'
 // Staying on the page is the point: the log screen holds attached photos in
 // memory, and navigating away would drop them.
 //
+// Phone by default. The admin page's sign-up switch (app/admin) can put the
+// older email sheet back if texts stop getting through.
+export function SignUpSheet(props: SheetProps) {
+  return useSignupMethod() === 'email' ? <EmailSignUpSheet {...props} /> : <PhoneSignUpSheet {...props} />
+}
+
 // The same phone number and code as /auth, which makes a new account or
 // signs a returning one in (components/PhoneCodeForm.tsx). A new account
 // then picks its username here. Email and password is sign-in only, for
 // accounts made before phone sign-up.
-export function SignUpSheet({
+function PhoneSignUpSheet({
   title, blurb, signInLabel = 'Sign in', finishLabel = 'Done',
   onClose, onSignedIn,
-}: {
-  // Rendered with the accent full stop, so pass it without one.
-  title: string
-  blurb: string
-  signInLabel?: string
-  finishLabel?: string
-  onClose: () => void
-  onSignedIn: (userId: string) => void
-}) {
+}: SheetProps) {
   const supabase = createClient()
 
   // Mounted at translateY(100%), flipped a tick after mount so the
