@@ -53,8 +53,15 @@ export interface AdminStats {
     // resends and sign-ins on earlier days aren't knowable from here.
     preludeEurAtLeast: number
   }
-  // null when app_settings doesn't exist yet.
+  // The admin page's switches; null when app_settings can't be read.
   signupMethod: 'phone' | 'email' | null
+  siteMode: 'auto' | 'normal' | 'crssd' | null
+  // Where the admin's own phone is, as far as the site mode can tell.
+  you: {
+    city: string | null
+    milesFromCrssd: number | null
+    modeByLocation: 'normal' | 'crssd'
+  }
   latestLogs: AdminLog[]
   latestSignups: AdminSignup[]
 }

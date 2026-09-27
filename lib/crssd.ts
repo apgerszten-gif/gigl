@@ -15,6 +15,9 @@ export const CRSSD = {
   venue:    'CRSSD Festival',
   city:     'San Diego',
   state:    'CA',
+  // Waterfront Park. Site mode's "by location" setting measures from here
+  // (lib/siteMode.ts).
+  site:     { lat: 32.7219, lng: -117.1727 },
   days: [
     { isoDate: '2026-09-26', label: 'Sat Sep 26' },
     { isoDate: '2026-09-27', label: 'Sun Sep 27' },

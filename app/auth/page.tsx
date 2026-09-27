@@ -8,7 +8,7 @@ import { pathAfterSignIn } from '@/lib/afterSignIn'
 import { Logo } from '@/components/Logo'
 import { PhoneCodeForm, type PhoneStep } from '@/components/PhoneCodeForm'
 import { EmailAuthPage } from '@/components/EmailAuthPage'
-import { useSignupMethod } from '@/lib/signupMethod'
+import { useSignupMethod } from '@/lib/appSettings'
 import {
   ArtistPhoto, Card, DateTag, ErrorNote, Field, Label, PersonPhoto, Place, PullQuote, Stars,
   btnPrimary, fieldInput,

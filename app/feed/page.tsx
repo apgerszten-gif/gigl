@@ -15,8 +15,10 @@ import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
-import { CrssdMark } from '@/components/CrssdMark'
+import { GiglTimesCrssd } from '@/components/CrssdMark'
 import { SignUpSheet } from '@/components/SignUpSheet'
+import { useSiteMode } from '@/lib/appSettings'
+import { logHref } from '@/lib/siteMode'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary, placeOf,
 } from '@/components/ui'
@@ -68,6 +70,7 @@ function FeedInner() {
   const router     = useRouter()
   const supabase   = createClient()
   const { user, loading: authLoading } = useAuth()
+  const siteMode = useSiteMode()
 
   const [globalFeed, setGlobalFeed]       = useState<GlobalLog[]>([])
   const [loading, setLoading]             = useState(true)
@@ -294,23 +297,44 @@ function FeedInner() {
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
-        {/* Gigl × CRSSD for the festival weekend. Retire it with the CRSSD
-            Log button (see BottomNav): put the bare Logo back and drop the
-            sunset from the card below. */}
-        <div className="flex items-center gap-2">
-          <Logo href="/feed" />
-          <span className="font-display text-[15px] font-bold text-ink-muted" aria-hidden>&times;</span>
-          <CrssdMark className="h-[15px] w-auto text-ink" />
-        </div>
+        {/* The site mode (lib/siteMode.ts, switched from /admin) decides
+            between Gigl × CRSSD and the bare logo, and which card is below. */}
+        {siteMode === 'crssd' ? <GiglTimesCrssd /> : <Logo href="/feed" />}
       </AppHeader>
 
       <div className="px-5 pt-3 space-y-3">
-        {/* The front door for someone who scanned a code: what this is, and
-            that writing a log doesn't need an account until it's posted.
-            "Log a show" goes straight to the CRSSD lineup; the small button
-            in the bottom corner is the way out to every other show. In full
-            ink throughout - ink-muted gets lost against the sunset's bands. */}
-        {!authLoading && !user && (
+        {/* The front door for someone who arrived signed out: what this is,
+            and that writing a log doesn't need an account until it's posted.
+            "Log a show" goes to show search. */}
+        {!authLoading && !user && siteMode === 'normal' && (
+          <div className="rounded-card bg-accent/10 border-1.5 border-accent/30 px-4 py-3.5">
+            <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
+              Rate the sets you saw<span className="text-accent">.</span>
+            </h2>
+            <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+              See what everyone thought, then add your own. You only need an account when you post.
+            </p>
+            <div className="mt-3 flex items-center gap-4">
+              <Link href={logHref('normal')} className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
+                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                Log a show
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSignUpMode('signin')}
+                className="text-[12px] font-semibold text-ink-muted underline underline-offset-[3px]"
+              >
+                I have an account
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* The same door in CRSSD mode, in the festival's sunset. "Log a
+            show" goes straight to the CRSSD lineup; the small button in the
+            bottom corner is the way out to every other show. In full ink
+            throughout - ink-muted gets lost against the sunset's bands. */}
+        {!authLoading && !user && siteMode === 'crssd' && (
           <div className="crssd-sunset rounded-card border-1.5 border-ink shadow-riso px-4 py-3.5">
             <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
               At CRSSD? Rate the sets you saw
@@ -319,7 +343,7 @@ function FeedInner() {
               See what everyone thought, then add your own. You only need an account when you post.
             </p>
             <div className="mt-3 flex items-center gap-4">
-              <Link href="/crssd" className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
+              <Link href={logHref('crssd')} className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                 Log a show
               </Link>

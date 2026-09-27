@@ -756,7 +756,8 @@ $$;
 -- one: signup_method, 'phone' (texted codes, the default) or 'email' (the
 -- pre-phone email and password screens), for when texts stop getting
 -- through. Anyone can read it, since the sign-up screens need to
--- (lib/signupMethod.ts). No write policy: /api/admin/settings writes it
+-- (lib/appSettings.ts; site_mode, added later, is read the same way - see
+-- lib/siteMode.ts). No write policy: /api/admin/settings writes it
 -- under the service role, after checking the caller is an admin.
 create table if not exists public.app_settings (
   key        text primary key,

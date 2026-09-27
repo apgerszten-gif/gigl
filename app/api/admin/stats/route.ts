@@ -3,6 +3,8 @@ import type { User } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { refuseUnlessAdmin } from '@/lib/adminAuth'
 import { CRSSD } from '@/lib/crssd'
+import { milesFromCrssd, resolveSiteMode, visitorCity, visitorCoords } from '@/lib/siteMode'
+import { readStoredSettings } from '@/lib/appSettingsServer'
 import type { AdminLog, AdminSignup, AdminStats } from '@/lib/adminStats'
 
 // GET /api/admin/stats — everything the admin page (app/admin) shows: today's
@@ -112,14 +114,16 @@ async function latestLogs(): Promise<AdminLog[]> {
   })
 }
 
-async function signupMethod(): Promise<'phone' | 'email' | null> {
-  const { data, error } = await supabaseAdmin()
-    .from('app_settings')
-    .select('value')
-    .eq('key', 'signup_method')
-    .maybeSingle()
-  if (error) return null // most likely the table hasn't been created yet
-  return data?.value === 'email' ? 'email' : 'phone'
+// The admin's own phone as the site mode sees it, so "by location" can be
+// checked from the festival itself.
+function you(req: NextRequest): AdminStats['you'] {
+  const coords = visitorCoords(req.headers)
+  const miles = milesFromCrssd(coords)
+  return {
+    city: visitorCity(req.headers),
+    milesFromCrssd: miles === null ? null : Math.round(miles),
+    modeByLocation: resolveSiteMode('auto', coords),
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -130,14 +134,14 @@ export async function GET(req: NextRequest) {
   const today = dayOf(new Date())
 
   try {
-    const [users, events, logsToday, crssdLogsToday, logsTotal, logs, method] = await Promise.all([
+    const [users, events, logsToday, crssdLogsToday, logsTotal, logs, settings] = await Promise.all([
       allUsers(),
       eventsSince(since),
       countLogs(since),
       countLogs(since, true),
       countLogs(),
       latestLogs(),
-      signupMethod(),
+      readStoredSettings(),
     ])
 
     // A phone account exists from the moment its code is requested; it only
@@ -192,7 +196,9 @@ export async function GET(req: NextRequest) {
         logs: logsTotal,
         preludeEurAtLeast: (users.filter(u => !!u.phone).length + returningPhoneSignIns.length) * PRELUDE_EUR_PER_CODE,
       },
-      signupMethod: method,
+      signupMethod: settings?.signupMethod ?? null,
+      siteMode: settings?.siteMode ?? null,
+      you: you(req),
       latestLogs: logs,
       latestSignups,
     }

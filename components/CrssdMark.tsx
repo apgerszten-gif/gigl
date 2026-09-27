@@ -1,8 +1,22 @@
 // The CRSSD Fest wordmark, from the festival's own site
 // (crssdfest.com, CF-S26-Logo-WM-Dark.svg), inlined so it can take the riso
 // palette: the source had a single flat grey, swapped here for currentColor.
-// Used in the feed's Gigl × CRSSD header. CRSSD's mark, used to point at
+// Used in the Gigl × CRSSD header below. CRSSD's mark, used to point at
 // CRSSD - drop the file if that ever needs to stop.
+
+import { Logo } from '@/components/Logo'
+
+// Gigl × CRSSD: the header on the feed in CRSSD mode (lib/siteMode.ts) and
+// on the CRSSD lineup.
+export function GiglTimesCrssd() {
+  return (
+    <div className="flex items-center gap-2">
+      <Logo href="/feed" />
+      <span className="font-display text-[15px] font-bold text-ink-muted" aria-hidden>&times;</span>
+      <CrssdMark className="h-[15px] w-auto text-ink" />
+    </div>
+  )
+}
 
 export function CrssdMark({ className = '' }: { className?: string }) {
   return (

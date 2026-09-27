@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
 import { PhoneCodeForm } from '@/components/PhoneCodeForm'
 import { EmailSignUpSheet } from '@/components/EmailSignUpSheet'
-import { useSignupMethod } from '@/lib/signupMethod'
+import { useSignupMethod } from '@/lib/appSettings'
 import { ErrorNote, Field, Label, btnPrimary, fieldInput } from '@/components/ui'
 
 type Step = 'phone' | 'email' | 'username'

@@ -12,6 +12,8 @@ import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
+import { GiglTimesCrssd } from '@/components/CrssdMark'
+import { SignUpSheet } from '@/components/SignUpSheet'
 import { ArtistPhoto, DjDecks, EmptyState, Label, Place, Segmented, Stars, inputBox } from '@/components/ui'
 
 interface Show {
@@ -33,10 +35,15 @@ interface Show {
 // exactly the same handoff as picking a search result - active show into
 // localStorage, then /log, which forwards to /log-show. Nothing about the
 // rating, the feed or the rankings knows this screen exists.
+//
+// In CRSSD mode (lib/siteMode.ts) a QR scan lands here rather than on the
+// feed, so the page opens as a front door: Gigl × CRSSD at the top, and for
+// anyone signed out the sunset banner the feed would otherwise have shown.
 export default function CrssdPage() {
   const router   = useRouter()
   const supabase = createClient()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const [signInOpen, setSignInOpen] = useState(false)
 
   const [shows, setShows]     = useState<Show[]>([])
   const [loading, setLoading] = useState(true)
@@ -143,15 +150,31 @@ export default function CrssdPage() {
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
-        <div className="min-w-0">
-          <Label>Waterfront Park, San Diego</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">
-            {CRSSD.name}<span className="text-accent">.</span>
-          </h1>
-        </div>
+        <GiglTimesCrssd />
       </AppHeader>
 
       <div className="px-5 pt-3 space-y-2.5">
+        {/* What this is and that no account is needed until posting, in the
+            festival's sunset like the feed's card. Full ink throughout -
+            ink-muted gets lost against the bands. */}
+        {!authLoading && !user && (
+          <div className="crssd-sunset rounded-card border-1.5 border-ink shadow-riso px-4 py-3.5">
+            <h1 className="font-display text-xl font-bold tracking-tight leading-tight">
+              At CRSSD? Rate the sets you saw
+            </h1>
+            <p className="mt-1 text-[13px] leading-snug text-ink">
+              Pick a set below and rate it. You only need an account when you post.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSignInOpen(true)}
+              className="mt-2.5 text-[12px] font-semibold text-ink underline underline-offset-[3px]"
+            >
+              I have an account
+            </button>
+          </div>
+        )}
+
         <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5`}>
           <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
           <input
@@ -271,6 +294,18 @@ export default function CrssdPage() {
           </div>
         )}
       </main>
+
+      {/* Signing in here keeps them on the lineup; the banner goes away with
+          the signed-out state and rated sets show their stars. */}
+      {signInOpen && (
+        <SignUpSheet
+          title="Good to have you back"
+          blurb="Sign in to post your ratings. New here? The same steps make you an account."
+          initialMode="signin"
+          onClose={() => setSignInOpen(false)}
+          onSignedIn={() => setSignInOpen(false)}
+        />
+      )}
 
       <BottomNav />
     </div>
