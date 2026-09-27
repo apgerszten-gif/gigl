@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 import { AuthProvider } from '@/components/AuthProvider'
@@ -12,12 +12,21 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 }
 
+// Declared here rather than as a <meta> in <head>: Next always emits its own
+// viewport tag, and a hand-written one ends up first and is overridden by it.
+// maximumScale stops iOS zooming in when a field under 16px is focused (pinch
+// zoom still works there); every input is text-base regardless.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <head>
         <meta name="theme-color" content="#EDE3D0" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>

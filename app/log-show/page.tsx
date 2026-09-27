@@ -103,7 +103,7 @@ function AutoGrowTextarea({
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={1}
-      className="block w-full resize-none overflow-hidden bg-transparent text-sm leading-normal text-ink placeholder:text-ink-faint focus:outline-none"
+      className="block w-full resize-none overflow-hidden bg-transparent text-base leading-normal text-ink placeholder:text-ink-faint focus:outline-none"
     />
   )
 }

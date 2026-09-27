@@ -197,7 +197,7 @@ export function TagFriendsModal({
                 onChange={e => setInviteValue(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addPendingInvite() }}
                 placeholder="Phone or email"
-                className={`${inputBox} flex-1 min-w-0 px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40`}
+                className={`${inputBox} flex-1 min-w-0 px-3 py-2.5 text-base text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40`}
               />
               <button type="button" onClick={addPendingInvite} className={`${btnPrimary} px-4 text-[11px]`}>Add</button>
             </div>
