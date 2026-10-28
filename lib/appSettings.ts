@@ -1,25 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { SiteMode } from '@/lib/siteMode'
 
-// The admin page's switches (app/admin) as they apply to this visitor, from
-// /api/settings:
+// The admin page's switches (app/admin), from /api/settings:
 //   signupMethod - phone normally; email when texts aren't getting through
-//   siteMode     - normal or crssd, already resolved for where the visitor
-//                  is (lib/siteMode.ts)
 export type SignupMethod = 'phone' | 'email'
 
 export interface AppSettings {
   signupMethod: SignupMethod
-  siteMode: SiteMode
 }
 
 // Remembered for the page load, so a sheet or page rendering later starts
 // from the last value seen. Anything unreadable keeps it, and it starts
-// from the defaults: phone sign-up, normal mode. Email sign-up and CRSSD
-// mode only ever show when the server said so.
-let lastKnown: AppSettings = { signupMethod: 'phone', siteMode: 'normal' }
+// from the default, phone sign-up. Email sign-up only ever shows when the
+// server said so.
+let lastKnown: AppSettings = { signupMethod: 'phone' }
 let inFlight: Promise<AppSettings> | null = null
 
 export function fetchAppSettings(): Promise<AppSettings> {
@@ -31,7 +26,6 @@ export function fetchAppSettings(): Promise<AppSettings> {
           const data = await res.json()
           lastKnown = {
             signupMethod: data.signupMethod === 'email' ? 'email' : 'phone',
-            siteMode: data.siteMode === 'crssd' ? 'crssd' : 'normal',
           }
         }
       } catch {
@@ -61,4 +55,3 @@ function useSetting<K extends keyof AppSettings>(key: K): AppSettings[K] {
 }
 
 export const useSignupMethod = () => useSetting('signupMethod')
-export const useSiteMode = () => useSetting('siteMode')

@@ -5,8 +5,6 @@ import { usePathname } from 'next/navigation'
 import { CircleUser, Newspaper, Plus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
-import { useSiteMode } from '@/lib/appSettings'
-import { logHref } from '@/lib/siteMode'
 
 export type DockTab = 'feed' | 'log' | 'profile'
 
@@ -26,10 +24,6 @@ export type DockTab = 'feed' | 'log' | 'profile'
 // `nudge` pulls the outer two tabs in towards Log. Padding rather than a
 // translate, so it shifts where the icon and label sit without moving the
 // tap target off them: each tab still spans its full third of the bar.
-//
-// Log's href here is normal mode's, show search. In CRSSD mode the routed
-// dock (BottomNav) points it at the CRSSD lineup instead, from which other
-// shows are one tap away ("Not at CRSSD?"). See lib/siteMode.ts.
 const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon; nudge?: string }[] = [
   { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper,  nudge: 'pl-7' },
   { id: 'log',     label: 'Log',  href: '/select-festival',  Icon: Plus },
@@ -54,29 +48,26 @@ export default function BottomNav(props: Props) {
   if (pathname.startsWith('/feed') || pathname.startsWith('/rankings')) active = 'feed'
   else if (pathname.startsWith('/profile')) active = 'profile'
   // /log and /log-show are both caught by the /log prefix.
-  else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log') || pathname.startsWith('/crssd')) active = 'log'
+  else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log')) active = 'log'
 
   // Someone who hasn't signed up has no profile to open, so You is where
   // they sign up or sign in.
   const profileHref = !loading && !user ? '/auth' : undefined
-  const siteMode = useSiteMode()
 
-  return <DockBar active={active} mode="links" profileHref={profileHref} logHref={logHref(siteMode)} {...props} />
+  return <DockBar active={active} mode="links" profileHref={profileHref} {...props} />
 }
 
 // The dock itself, without routing. `mode` picks what the tabs are: links
 // (the app), buttons calling onSelect (the style guide), or inert (the intro
 // demo, which sits it inside a mock phone with `contained`).
 export function DockBar({
-  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle, profileHref, logHref,
+  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle, profileHref,
 }: Props & {
   active: DockTab | null
   mode: 'links' | 'buttons' | 'static'
   onSelect?: (tab: DockTab) => void
   // Where You goes instead of /profile (sign-in, when signed out).
   profileHref?: string
-  // Where Log goes instead of show search (the CRSSD lineup, in CRSSD mode).
-  logHref?: string
   contained?: boolean
   logTip?: React.ReactNode
   logExtras?: React.ReactNode
@@ -95,7 +86,7 @@ export function DockBar({
             return (
               <div key={id} className="relative flex-1 flex flex-col items-center">
                 {logTip ?? (showLogTip && <LogTip onDismiss={onDismissLogTip} />)}
-                <Tab {...tab} id={id} href={logHref ?? href} className="flex flex-col items-center gap-1 pb-1">
+                <Tab {...tab} id={id} href={href} className="flex flex-col items-center gap-1 pb-1">
                   {/* The lift keeps this label level with the other tabs'.
                       It is (circle height - 34px), so it has to move whenever
                       the circle or the icon size does. */}

@@ -26,10 +26,10 @@ const nextConfig = {
       // bare domain is a QR scan instead - see rewrites below.
       { source: '/', missing: onOldHost, destination: '/feed', permanent: false },
 
-      // /log-menu was the CRSSD-or-elsewhere picker the Log button used to
-      // open. Log now goes straight to the lineup, so a tab still holding
-      // the old link follows it there too.
-      { source: '/log-menu', destination: '/crssd', permanent: false },
+      // /log-menu and /crssd were festival-weekend front doors into logging.
+      // A tab or link still holding either lands on show search instead.
+      { source: '/log-menu', destination: '/select-festival', permanent: false },
+      { source: '/crssd', destination: '/select-festival', permanent: false },
     ]
   },
   // A scan of an old code is counted by /qr, which forwards to the feed on

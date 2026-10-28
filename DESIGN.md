@@ -58,7 +58,7 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
 
   It used to be five. **Search** was removed because it opened the same screen as Log — both went to `/select-festival`, differing only in a heading — and once search returned only shows that had already happened, "find a show" stopped being a separate idea from "log a show". **Rankings** became a view on Feed rather than a destination: it is the same logged shows read as an aggregate instead of as a stream.
 
-  Log opens `/select-festival` in normal mode and the CRSSD lineup (`/crssd`) in CRSSD mode (see **Site mode** below). A small "Not at CRSSD?" link above the lineup leads to `/select-festival`. `/rankings` lights the Feed tab. Signed out, You opens sign-in (`/auth`), since there's no profile to show.
+  Log opens `/select-festival`. `/rankings` lights the Feed tab. Signed out, You opens sign-in (`/auth`), since there's no profile to show.
 - **Focused pages** (artist, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
 
 ---
@@ -110,7 +110,6 @@ Where the photos come from:
   - Everywhere else a logged show appears, the photo comes from `public.artist_images`, looked up by artist name (`lib/artistImages.ts`; `useArtistImages` in client components).
   - The nightly sync fills that table from the headliners of the shows it fetches, then looks up up to 40 logged artists a night that are still missing (`lib/shows/artistImageSync.ts`).
   - Small local acts are often not on Ticketmaster at all, and show the placeholder.
-  - Festival imports fill in acts Ticketmaster has no photo of. `scripts/import-crssd.mjs` copies CRSSD's own press photos into the public `artist-photos` storage bucket, and writes them to `artist_images` with `source = 'crssd'`.
   - Images load with a plain `<img>`, from Ticketmaster's CDN or the `artist-photos` bucket, so `next.config.js` needs no change.
 - **Profile photos**: `profiles.avatar_url`. You set it by tapping your photo on You, which crops the image to a 512px square and uploads it to the `show-photos` bucket under your own folder (`lib/avatar.ts`).
 - An artist or person without a photo falls back to the placeholders in section 4.
@@ -126,8 +125,7 @@ Where the photos come from:
   - the review as a pull quote, then its tags as chips
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
-- Signed out, a card above the controls. In normal mode it's an accent callout (`bg-accent/10 border-1.5 border-accent/30`): "Rate the sets you saw." with the accent full stop, the same line about accounts in `ink-muted`, a small "Log a show" primary button (to `/select-festival`) and an "I have an account" link. In CRSSD mode it wears the CRSSD sunset skin instead (`crssd-sunset`, with an ink border and riso shadow): "At CRSSD? Rate the sets you saw", a line saying an account is only needed to post, a small "Log a show" primary button (straight to `/crssd`) and an "I have an account" link. Tucked into the bottom-right corner below them is a small cream button with an ink border, "I'm rating a show / from somewhere else" on two 10px lines, which leads to `/select-festival`. All the text is full ink, since `ink-muted` gets lost against the bands. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
-- In CRSSD mode the header reads Gigl × CRSSD (`GiglTimesCrssd` in `components/CrssdMark.tsx`): the logo, a × in `ink-muted`, then `CrssdMark` at 15px tall. Normal mode has the bare logo.
+- Signed out, a card above the controls: an accent callout (`bg-accent/10 border-1.5 border-accent/30`): "Rate the sets you saw." with the accent full stop, the same line about accounts in `ink-muted`, a small "Log a show" primary button (to `/select-festival`) and an "I have an account" link. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
 
 ### Artist rankings (`/rankings`)
 - Reached from the Feed view switch, not the dock. Its own route, so the segmented control navigates rather than toggling state.
@@ -154,7 +152,7 @@ Where the photos come from:
 - `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
 
 ### Pick a show (`/select-festival`)
-- The first step of logging, and what the Log button opens. In CRSSD mode Log opens `/crssd` instead, and this screen is reached from there or from the feed's sunset card. `AppHeader` titled "What did you see?" under a "Log a show" label.
+- The first step of logging, and what the Log button opens. `AppHeader` titled "What did you see?" under a "Log a show" label.
 - Search input for artist, venue or city.
 - A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and while it's on, radius chips for 10 / 50 / 100 mi. Location is asked for on arrival, so the chip reports the filter rather than starting it; it reads "Locating…" and is disabled while the browser answers. Turning it off is remembered. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
 - A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on. Browsing shows the past week; a search reaches back a year. Only shows that have already happened appear — you log what you went to — so results run newest first, last night at the top.
@@ -188,5 +186,4 @@ Where the photos come from:
   - **Code:** the number the code went to, with a Change link; a large spaced code field that submits once all 6 digits are in; Continue; and a resend link with a 60-second countdown.
   - **Email:** email, password and Sign in, with a link back to the phone step.
 - **Choose username** follows the same layout, with a feed-card preview that shows your handle as you type.
-- **Site mode** (`lib/siteMode.ts`) is which front door a visitor gets. **CRSSD mode**: a QR scan opens the CRSSD lineup (`/crssd`), Log goes there too, and the feed has the Gigl × CRSSD header and sunset card. **Normal mode**: a scan opens the feed, Log opens show search, and the feed has the bare logo and the accent card. The CRSSD lineup always opens with Gigl × CRSSD as its header, and for anyone signed out the sunset banner, "At CRSSD? Rate the sets you saw" with a line about accounts and an "I have an account" link that opens the sign-up sheet on Sign in.
-- **Admin** (`/admin`, admin accounts only): a `BackHeader` with how long ago the numbers loaded and a refresh button, then stacked cards. **Today** and **Texting** are `Stat` rows with a line of detail in 12px `ink-muted`; Texting adds an accent callout when most of today's new numbers never entered their code. **Site mode** is a By location / CRSSD / Normal `Segmented` toggle, with a line saying where the server places this phone and which mode that gives it. **Sign-up method** is a Phone / Email `Segmented` toggle. Both ask before switching. Below them, **Latest logs** are flat cards (handle and time, artist, `Place`, `Stars`, review) with a quiet Remove button, and **Latest sign-ups** is one flat card divided into rows with compact `Chip`s for phone or email, QR, and "No code".
+- **Admin** (`/admin`, admin accounts only): a `BackHeader` with how long ago the numbers loaded and a refresh button, then stacked cards. **Today** and **Texting** are `Stat` rows with a line of detail in 12px `ink-muted`; Texting adds an accent callout when most of today's new numbers never entered their code. **Sign-up method** is a Phone / Email `Segmented` toggle that asks before switching. Below it, **Latest logs** are flat cards (handle and time, artist, `Place`, `Stars`, review) with a quiet Remove button, and **Latest sign-ups** is one flat card divided into rows with compact `Chip`s for phone or email, QR, and "No code".

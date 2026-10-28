@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { ExternalLink, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { AdminLog, AdminStats } from '@/lib/adminStats'
-import { CRSSD_RADIUS_MILES, type SiteModeSetting } from '@/lib/siteMode'
 import {
   BackHeader, Card, Chip, EmptyState, ErrorNote, Label, LoadingLabel, Place, Segmented, Stars, Stat,
   btnPrimary, btnQuiet, placeOf,
@@ -89,29 +88,21 @@ export default function AdminPage() {
     }
   }, [load])
 
-  // Both switches: ask, save, and show the new position straight away.
-  async function flip<K extends 'signupMethod' | 'siteMode'>(name: K, next: NonNullable<AdminStats[K]>, question: string) {
-    if (!stats || saving || next === stats[name]) return
-    if (!window.confirm(question)) return
+  // Ask, save, and show the new position straight away.
+  async function switchSignup(next: Method) {
+    if (!stats || saving || next === stats.signupMethod) return
+    if (!window.confirm(next === 'email'
+      ? 'Switch sign-up to email and password? New visitors get it within seconds.'
+      : 'Switch sign-up back to phone numbers?')) return
 
     setSaving(true)
-    const res = await call('/api/admin/settings', { method: 'POST', body: JSON.stringify({ [name]: next }) })
+    const res = await call('/api/admin/settings', { method: 'POST', body: JSON.stringify({ signupMethod: next }) })
     const data = await res.json().catch(() => ({}))
     setSaving(false)
     if (!res.ok) { setError(data.error ?? "Couldn't save the switch."); return }
     setError(null)
-    setStats(s => s && { ...s, [name]: data[name] })
+    setStats(s => s && { ...s, signupMethod: data.signupMethod })
   }
-
-  const switchSignup = (next: Method) => flip('signupMethod', next, next === 'email'
-    ? 'Switch sign-up to email and password? New visitors get it within seconds.'
-    : 'Switch sign-up back to phone numbers?')
-
-  const switchSiteMode = (next: SiteModeSetting) => flip('siteMode', next, {
-    auto:   `Decide the mode by location? Within ${CRSSD_RADIUS_MILES} miles of CRSSD gets CRSSD mode, everyone else normal.`,
-    crssd:  'Put everyone in CRSSD mode, wherever they are?',
-    normal: 'Put everyone in normal mode, including people at CRSSD?',
-  }[next])
 
   async function removeLog(log: AdminLog) {
     const whose = log.username ? `@${log.username}'s` : 'this'
@@ -188,7 +179,6 @@ export default function AdminPage() {
           <p className="text-[12px] leading-snug text-ink-muted">
             {plural(t.phonesScanned, 'phone')} scanned, {t.visitorsFromQr} visitors came from a QR code.
             {' '}Sign-ups: {t.signupsByPhone} by phone, {t.signupsByEmail} by email, {t.signupsFromQr} from a QR code.
-            {' '}{plural(t.crssdLogs, 'CRSSD log')}.
           </p>
           <p className="text-[12px] text-ink-muted">
             All time: {plural(stats.totals.accounts, 'account')}, {plural(stats.totals.logs, 'log')}.
@@ -220,40 +210,6 @@ export default function AdminPage() {
           >
             Check the balance on Prelude <ExternalLink className="w-3.5 h-3.5" strokeWidth={2} />
           </a>
-        </Card>
-
-        <Card className="p-4 space-y-3">
-          <Label>Site mode</Label>
-          {stats.siteMode === null ? (
-            <ErrorNote>The switch needs its settings table. Run the app_settings SQL in Supabase, then refresh.</ErrorNote>
-          ) : (
-            <>
-              <Segmented<SiteModeSetting>
-                options={[
-                  { value: 'auto', label: 'By location' },
-                  { value: 'crssd', label: 'CRSSD' },
-                  { value: 'normal', label: 'Normal' },
-                ]}
-                value={stats.siteMode}
-                onChange={switchSiteMode}
-              />
-              <p className="text-[12px] leading-snug text-ink-muted">
-                {{
-                  auto: `Within ${CRSSD_RADIUS_MILES} miles of CRSSD, a QR scan opens the CRSSD lineup and Log goes there too. Everyone else gets the feed and show search.`,
-                  crssd: 'Everyone gets CRSSD mode: a QR scan opens the CRSSD lineup, and Log goes there too.',
-                  normal: 'Everyone gets normal mode: a QR scan opens the feed, and Log opens show search.',
-                }[stats.siteMode]}
-              </p>
-              <p className="text-[12px] leading-snug text-ink-muted">
-                This phone:{' '}
-                {stats.you.milesFromCrssd === null
-                  ? 'location unknown, so normal mode by location.'
-                  : <>{stats.you.city ?? 'somewhere'}, about {plural(stats.you.milesFromCrssd, 'mile')} from CRSSD, so{' '}
-                      <span className="font-semibold text-ink">{stats.you.modeByLocation === 'crssd' ? 'CRSSD' : 'normal'} mode</span> by location.</>}
-                {' '}Locations come from the internet connection, and on mobile data can be a city or more off.
-              </p>
-            </>
-          )}
         </Card>
 
         <Card className="p-4 space-y-3">
@@ -290,7 +246,6 @@ export default function AdminPage() {
                       ? <Link href={`/u/${log.username}`} className="font-semibold text-ink">@{log.username}</Link>
                       : 'No username'}
                     {' · '}{ago(log.createdAt, now)}
-                    {log.crssd && ' · CRSSD'}
                     {log.photos > 0 && ` · ${plural(log.photos, 'photo')}`}
                   </p>
                   <p className="font-display text-[15px] font-bold leading-tight truncate">{log.artistName}</p>

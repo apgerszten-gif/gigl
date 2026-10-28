@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { refuseUnlessAdmin } from '@/lib/adminAuth'
-import { CRSSD } from '@/lib/crssd'
-import { milesFromCrssd, resolveSiteMode, visitorCity, visitorCoords } from '@/lib/siteMode'
 import { readStoredSettings } from '@/lib/appSettingsServer'
 import type { AdminLog, AdminSignup, AdminStats } from '@/lib/adminStats'
 
@@ -63,10 +61,9 @@ async function eventsSince(since: string): Promise<EventRow[]> {
   }
 }
 
-async function countLogs(since?: string, crssdOnly = false): Promise<number> {
+async function countLogs(since?: string): Promise<number> {
   let query = supabaseAdmin().from('logged_shows').select('id', { count: 'exact', head: true })
   if (since) query = query.gte('created_at', since)
-  if (crssdOnly) query = query.like('artist_id', `${CRSSD.idPrefix}%`)
   const { count, error } = await query
   if (error) throw error
   return count ?? 0
@@ -74,7 +71,6 @@ async function countLogs(since?: string, crssdOnly = false): Promise<number> {
 
 interface LogRow {
   id: string
-  artist_id: string
   artist_name: string
   venue: string | null
   stage: string | null
@@ -91,7 +87,7 @@ interface LogRow {
 async function latestLogs(): Promise<AdminLog[]> {
   const { data, error } = await supabaseAdmin()
     .from('logged_shows')
-    .select('id, artist_id, artist_name, venue, stage, day, performance_rating, venue_rating, crowd_rating, review, media_urls, created_at, profiles(username)')
+    .select('id, artist_name, venue, stage, day, performance_rating, venue_rating, crowd_rating, review, media_urls, created_at, profiles(username)')
     .order('created_at', { ascending: false })
     .limit(LATEST)
   if (error) throw error
@@ -108,22 +104,9 @@ async function latestLogs(): Promise<AdminLog[]> {
       score: rated ? (row.performance_rating! + row.venue_rating! + row.crowd_rating!) / 3 : 0,
       review: row.review?.trim() || null,
       photos: row.media_urls?.length ?? 0,
-      crssd: row.artist_id.startsWith(CRSSD.idPrefix),
       createdAt: row.created_at,
     }
   })
-}
-
-// The admin's own phone as the site mode sees it, so "by location" can be
-// checked from the festival itself.
-function you(req: NextRequest): AdminStats['you'] {
-  const coords = visitorCoords(req.headers)
-  const miles = milesFromCrssd(coords)
-  return {
-    city: visitorCity(req.headers),
-    milesFromCrssd: miles === null ? null : Math.round(miles),
-    modeByLocation: resolveSiteMode('auto', coords),
-  }
 }
 
 export async function GET(req: NextRequest) {
@@ -134,11 +117,10 @@ export async function GET(req: NextRequest) {
   const today = dayOf(new Date())
 
   try {
-    const [users, events, logsToday, crssdLogsToday, logsTotal, logs, settings] = await Promise.all([
+    const [users, events, logsToday, logsTotal, logs, settings] = await Promise.all([
       allUsers(),
       eventsSince(since),
       countLogs(since),
-      countLogs(since, true),
       countLogs(),
       latestLogs(),
       readStoredSettings(),
@@ -188,7 +170,6 @@ export async function GET(req: NextRequest) {
         unfinishedNumbers: newNumbers.filter(u => !finished(u)).length,
         returningPhoneSignIns: returningPhoneSignIns.length,
         logs: logsToday,
-        crssdLogs: crssdLogsToday,
         preludeEur: (newNumbers.length + returningPhoneSignIns.length) * PRELUDE_EUR_PER_CODE,
       },
       totals: {
@@ -197,8 +178,6 @@ export async function GET(req: NextRequest) {
         preludeEurAtLeast: (users.filter(u => !!u.phone).length + returningPhoneSignIns.length) * PRELUDE_EUR_PER_CODE,
       },
       signupMethod: settings?.signupMethod ?? null,
-      siteMode: settings?.siteMode ?? null,
-      you: you(req),
       latestLogs: logs,
       latestSignups,
     }

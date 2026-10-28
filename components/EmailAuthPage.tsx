@@ -7,8 +7,6 @@ import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
 import { signupMetadata } from '@/lib/visitor'
-import { useSiteMode } from '@/lib/appSettings'
-import { logHref } from '@/lib/siteMode'
 import { Logo } from '@/components/Logo'
 import { AuthCollage } from '@/components/AuthCollage'
 import { Card, ErrorNote, Field, Label, Segmented, btnPrimary, fieldInput } from '@/components/ui'
@@ -22,7 +20,6 @@ type Mode = 'signup' | 'signin'
 export function EmailAuthPage() {
   const router   = useRouter()
   const supabase = createClient()
-  const siteMode = useSiteMode()
 
   const [mode, setMode]         = useState<Mode>('signup')
   const [email, setEmail]       = useState('')
@@ -58,9 +55,7 @@ export function EmailAuthPage() {
 
     setLoading(false)
     const hasFestival = typeof window !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_KEY)
-    // Otherwise wherever Log goes in the current site mode: the CRSSD lineup
-    // in CRSSD mode, show search in normal mode (lib/siteMode.ts).
-    router.push(hasFestival ? '/feed' : logHref(siteMode))
+    router.push(hasFestival ? '/feed' : '/select-festival')
   }
 
   function switchMode(next: Mode) {

@@ -12,7 +12,6 @@ export interface AdminLog {
   score: number // 0 when a rating is missing
   review: string | null
   photos: number
-  crssd: boolean
   createdAt: string
 }
 
@@ -43,7 +42,6 @@ export interface AdminStats {
     unfinishedNumbers: number
     returningPhoneSignIns: number
     logs: number
-    crssdLogs: number
     preludeEur: number
   }
   totals: {
@@ -53,15 +51,8 @@ export interface AdminStats {
     // resends and sign-ins on earlier days aren't knowable from here.
     preludeEurAtLeast: number
   }
-  // The admin page's switches; null when app_settings can't be read.
+  // The admin page's sign-up switch; null when app_settings can't be read.
   signupMethod: 'phone' | 'email' | null
-  siteMode: 'auto' | 'normal' | 'crssd' | null
-  // Where the admin's own phone is, as far as the site mode can tell.
-  you: {
-    city: string | null
-    milesFromCrssd: number | null
-    modeByLocation: 'normal' | 'crssd'
-  }
   latestLogs: AdminLog[]
   latestSignups: AdminSignup[]
 }

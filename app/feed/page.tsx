@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -15,10 +15,7 @@ import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
-import { GiglTimesCrssd } from '@/components/CrssdMark'
 import { SignUpSheet } from '@/components/SignUpSheet'
-import { useSiteMode } from '@/lib/appSettings'
-import { logHref } from '@/lib/siteMode'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary, placeOf,
 } from '@/components/ui'
@@ -70,7 +67,6 @@ function FeedInner() {
   const router     = useRouter()
   const supabase   = createClient()
   const { user, loading: authLoading } = useAuth()
-  const siteMode = useSiteMode()
 
   const [globalFeed, setGlobalFeed]       = useState<GlobalLog[]>([])
   const [loading, setLoading]             = useState(true)
@@ -297,16 +293,14 @@ function FeedInner() {
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
-        {/* The site mode (lib/siteMode.ts, switched from /admin) decides
-            between Gigl × CRSSD and the bare logo, and which card is below. */}
-        {siteMode === 'crssd' ? <GiglTimesCrssd /> : <Logo href="/feed" />}
+        <Logo href="/feed" />
       </AppHeader>
 
       <div className="px-5 pt-3 space-y-3">
         {/* The front door for someone who arrived signed out: what this is,
             and that writing a log doesn't need an account until it's posted.
             "Log a show" goes to show search. */}
-        {!authLoading && !user && siteMode === 'normal' && (
+        {!authLoading && !user && (
           <div className="rounded-card bg-accent/10 border-1.5 border-accent/30 px-4 py-3.5">
             <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
               Rate the sets you saw<span className="text-accent">.</span>
@@ -315,7 +309,7 @@ function FeedInner() {
               See what everyone thought, then add your own. You only need an account when you post.
             </p>
             <div className="mt-3 flex items-center gap-4">
-              <Link href={logHref('normal')} className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
+              <Link href="/select-festival" className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                 Log a show
               </Link>
@@ -326,43 +320,6 @@ function FeedInner() {
               >
                 I have an account
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* The same door in CRSSD mode, in the festival's sunset. "Log a
-            show" goes straight to the CRSSD lineup; the small button in the
-            bottom corner is the way out to every other show. In full ink
-            throughout - ink-muted gets lost against the sunset's bands. */}
-        {!authLoading && !user && siteMode === 'crssd' && (
-          <div className="crssd-sunset rounded-card border-1.5 border-ink shadow-riso px-4 py-3.5">
-            <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
-              At CRSSD? Rate the sets you saw
-            </h2>
-            <p className="mt-1 text-[13px] leading-snug text-ink">
-              See what everyone thought, then add your own. You only need an account when you post.
-            </p>
-            <div className="mt-3 flex items-center gap-4">
-              <Link href={logHref('crssd')} className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
-                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
-                Log a show
-              </Link>
-              <button
-                type="button"
-                onClick={() => setSignUpMode('signin')}
-                className="text-[12px] font-semibold text-ink underline underline-offset-[3px]"
-              >
-                I have an account
-              </button>
-            </div>
-            <div className="mt-2 flex justify-end">
-              <Link
-                href="/select-festival"
-                className="inline-flex items-center gap-1 rounded-card border-1.5 border-ink bg-cream px-2 py-1 text-[10px] leading-tight font-semibold text-ink hover:bg-accent/5"
-              >
-                <span>I&apos;m rating a show<br />from somewhere else</span>
-                <ChevronRight className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
-              </Link>
             </div>
           </div>
         )}
