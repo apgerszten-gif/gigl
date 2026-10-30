@@ -12,7 +12,6 @@ export interface AdminLog {
   score: number // 0 when a rating is missing
   review: string | null
   photos: number
-  crssd: boolean
   createdAt: string
 }
 
@@ -28,7 +27,7 @@ export interface AdminSignup {
 
 export interface AdminStats {
   generatedAt: string
-  // Today runs from midnight San Diego time, like analytics.funnel_by_day.
+  // Today runs from midnight Pacific time, like analytics.funnel_by_day.
   today: {
     scans: number
     phonesScanned: number
@@ -43,7 +42,6 @@ export interface AdminStats {
     unfinishedNumbers: number
     returningPhoneSignIns: number
     logs: number
-    crssdLogs: number
     preludeEur: number
   }
   totals: {

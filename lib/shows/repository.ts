@@ -150,9 +150,9 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
 // exists so nobody is offered a show they cannot have been to yet, and it is
 // right for a search over the whole catalogue. A festival page is the other
 // case: on the Saturday of a two-day weekend the Sunday sets still belong on
-// screen, or the lineup looks half-missing. The page shows them locked
-// instead - see hasHappened in lib/crssd.ts - so the same rule is enforced,
-// just visibly rather than by omission.
+// screen, or the lineup looks half-missing. A festival page should show
+// those sets locked instead, so the same rule is enforced, just visibly
+// rather than by omission.
 //
 // `idPrefix` reaches a LIKE pattern, so callers must pass a known constant
 // rather than anything a visitor typed. /api/shows/festival whitelists it.

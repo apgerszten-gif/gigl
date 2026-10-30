@@ -1,21 +1,20 @@
-// Imports the CRSSD Fest Fall '26 lineup into public.shows, one row per set.
+// Imports one festival's lineup into public.shows, one row per set.
 //
-// Why a hand-typed lineup rather than a feed: Ticketmaster carries CRSSD as
-// two events ("CRSSD Fest - Friday/Saturday", ids Z7r9jZ1A70Mqd / ...MqA),
-// each with a single attraction called "CRSSD Fest". It never has the
-// lineup. The festival's own CMS does expose one at
-// crssdfest.com/wp-json/wp/v2/fc_em_lineups, but it is grouped by stage with
-// vc_ls_day blank on every entry, and it is missing Chris Lorenzo. The
-// day-split poster is the only complete, day-accurate source, so it is
-// transcribed below.
+// A template: fill in FESTIVAL, DAYS and (optionally) PRESS_PHOTOS below,
+// then add the lineup to LINEUPS in app/api/shows/festival/route.ts if a
+// screen needs to load it.
 //
-// Note the sync will never pick these up on its own: CRSSD is classified
-// "Miscellaneous / Fairs & Festivals" upstream and app/api/cron/sync-shows
-// asks for classificationName=music.
+// Why a hand-typed lineup rather than a feed: Ticketmaster usually carries a
+// festival as one event per day with a single attraction named after the
+// festival, never the bill. And the nightly sync won't pick festival rows up
+// on its own anyway - festivals are classified "Miscellaneous / Fairs &
+// Festivals" upstream and app/api/cron/sync-shows asks for
+// classificationName=music. The day-split poster is usually the only
+// complete, day-accurate source, so transcribe it.
 //
 // Run:
-//   node scripts/import-crssd.mjs --dry-run    (resolves photos, writes nothing)
-//   node scripts/import-crssd.mjs              (upserts)
+//   node scripts/import-festival.mjs --dry-run    (resolves photos, writes nothing)
+//   node scripts/import-festival.mjs              (upserts)
 //
 // Re-running is safe and is the intended way to correct the lineup: ids are
 // derived from the artist name, so a second run updates rows in place. It
@@ -26,59 +25,54 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 
+// ── The festival ─────────────────────────────────────────────────────────────
+
+const FESTIVAL = {
+  // A short slug for this edition, e.g. 'somefest-2027'. It prefixes every
+  // show id this script writes and names the folder its photos go in.
+  id:    '',
+  venue: '',
+  city:  '',
+  state: '',
+  // Set explicitly: a row with no coordinates is invisible to the Near me
+  // filter (lib/geo.ts), which is exactly how somebody standing at the
+  // festival would look for their set. Use Ticketmaster's geocode for the
+  // site when it has one.
+  lat:   null,
+  lng:   null,
+  // GENRE_EMOJI in lib/ticketmaster.ts has the per-genre choices; 🎧 is
+  // dance/electronic.
+  emoji: '🎶',
+}
+
 // ── The lineup ───────────────────────────────────────────────────────────────
-// Transcribed from the day-split poster, keeping each act's own styling
-// ("ear", "beginagain", "horsegiirL", "Rossi." with its full stop).
+// Transcribed from the day-split poster, keeping each act's own styling.
 //
 // A b2b is one set and is stored under its billed name. Search is a trigram
 // ILIKE over artist and venue (see lib/shows/repository.ts), so
-// "Chris Lake b2b Disclosure" is found by typing either name, while splitting
-// it into two rows would invent two sets that did not happen.
+// "A b2b B" is found by typing either name, while splitting it into two rows
+// would invent two sets that did not happen.
 //
-// Set types on the poster - horsegiirL (live), Chris Lake b2b Disclosure
-// (dj set), Groove Armada (dj set) - have nowhere to live in `shows` and are
-// left out rather than glued onto the artist name.
+// Set types on a poster ("live", "dj set") have nowhere to live in `shows`
+// and are left out rather than glued onto the artist name.
+//
+// Check spellings against the catalogue: search is a raw ILIKE, so an
+// accented name won't answer an unaccented query and would sit apart from
+// the artist's own tour dates.
 
-const SATURDAY = [
-  'Adam Sellouk', 'Ahadadream', 'AYYBO', 'BB Shaine', 'beginagain', 'Ben UFO',
-  'CHASEWEST', 'Dean Turnley', 'ear', 'Heminguey', 'horsegiirL', 'I Hate Models',
-  'Jamback', 'Layton Giordani', 'Locklead', 'Marlon Hoffstadt', 'Mind Enterprises',
-  'Mochakk', 'MPH', 'Notion', 'Pete Soul', 'Rafael', 'Rossi. b2b Carlita',
-  'salute', 'Sonny Fodera', 'Torren Foot', 'VTSS',
-]
-
-const SUNDAY = [
-  '999999999', 'ARODES', 'Balu Brigada', 'Big Wild', 'Boys Noize',
-  'Chris Lake b2b Disclosure', 'Chris Lorenzo', 'DRAMA', 'GENESI', 'GREG 99',
-  'Groove Armada', 'Helena Hauff', 'Jay de Lys', 'KAS:ST', 'KETTAMA',
-  'Marco Strous', 'Mathame', 'oskar med k', 'Prospa', 'Punkybutter', 'Rivka M',
-  // Unaccented, though the poster accents it, because the catalogue already
-  // holds three Ticketmaster rows for him spelled "Sebastien Tellier" and
-  // search is a raw ILIKE - an accented row would not answer "sebastien" and
-  // would sit apart from his own tour dates.
-  'ROYA', 'SAAND', 'Sam Alfred', 'Sebastien Tellier', 'Son of Son',
-]
-
-// Sep 26 2026 is a Saturday, Sep 27 a Sunday. (Ticketmaster's event titles say
-// "Friday"/"Saturday" against these same dates; the dates are right there and
-// the weekday words are not.)
 const DAYS = [
-  { isoDate: '2026-09-26', artists: SATURDAY },
-  { isoDate: '2026-09-27', artists: SUNDAY },
+  // { isoDate: '2027-04-10', artists: ['Artist One', 'Artist Two'] },
 ]
 
-const VENUE = 'CRSSD Festival'
-const CITY  = 'San Diego'
-const STATE = 'CA'
+// ── Press photos ─────────────────────────────────────────────────────────────
+// The last photo pass, for acts neither artist_images nor Ticketmaster has a
+// photo of. Festivals usually publish a press photo per act on their own
+// site; paste the image URLs here, keyed by the name as it appears in DAYS.
+// Leave it empty to skip the pass.
 
-// Waterfront Park, as Ticketmaster geocodes it. Set explicitly because a row
-// with no coordinates is invisible to the Near me filter (lib/geo.ts), which
-// is exactly how somebody standing in the park would look for their set.
-const LAT = 32.7253
-const LNG = -117.172096
-
-// GENRE_EMOJI in lib/ticketmaster.ts maps dance/edm to this.
-const EMOJI = '🎧'
+const PRESS_PHOTOS = {
+  // 'Artist One': 'https://example.com/artist-one.jpg',
+}
 
 // prunePastShows() deletes everything more than a year old except
 // source = 'user' - the one value it skips. These
@@ -87,7 +81,7 @@ const EMOJI = '🎧'
 // .neq('source', 'user') filter in lib/shows/repository.ts first.
 const SOURCE = 'user'
 
-const ID_PREFIX = 'crssd-fall-2026-'
+const ID_PREFIX = `${FESTIVAL.id}-`
 
 // ── Env ──────────────────────────────────────────────────────────────────────
 
@@ -110,6 +104,11 @@ const ANON_KEY     = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const SERVICE_KEY  = env.SUPABASE_SERVICE_ROLE_KEY
 const TM_KEY       = env.TICKETMASTER_API_KEY
 
+const missingConfig = ['id', 'venue', 'city', 'state'].filter(key => !FESTIVAL[key])
+if (missingConfig.length > 0 || DAYS.length === 0) {
+  console.error(`Fill in FESTIVAL (${missingConfig.join(', ') || 'done'}) and DAYS at the top of this script first.`)
+  process.exit(1)
+}
 if (!SUPABASE_URL || !ANON_KEY) {
   console.error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required.')
   process.exit(1)
@@ -197,51 +196,18 @@ const REQUEST_SPACING_MS = 250
 // Three passes, cheapest first. public.artist_images is the library the
 // nightly sync has already built from Ticketmaster, so most well-known acts
 // are answered without a request. The misses go to Ticketmaster's attraction
-// search, and whatever is still blank after that comes from CRSSD's own
-// artist pages. Everything found upstream is written back to artist_images,
-// so the next festival import - and every screen that shows a logged set -
-// gets it for free.
+// search, and whatever is still blank after that comes from PRESS_PHOTOS.
+// Everything found upstream is written back to artist_images, so the next
+// festival import - and every screen that shows a logged set - gets it for
+// free.
 
-// CRSSD's CMS has a press photo for every act on the bill: acf.vc_artist_photo
-// on each fc_em_artists post, a 700x560 crop. For Fall '26 that covered all
-// 28 acts Ticketmaster has no photo of. It is the last pass only because the
-// Ticketmaster photos were already in use when it was added.
-const CRSSD_ARTISTS_URL = 'https://crssdfest.com/wp-json/wp/v2/fc_em_artists'
-
-// The photos are copied into our own storage rather than hotlinked, so a
+// Press photos are copied into our own storage rather than hotlinked, so a
 // set's photo doesn't depend on the festival's server, or on it keeping a
 // past edition's uploads. Public read; only the service role writes, the
 // same arrangement as public.artist_images itself.
 const PHOTO_BUCKET = 'artist-photos'
-const PHOTO_FOLDER = ID_PREFIX.replace(/-$/, '')
+const PHOTO_FOLDER = FESTIVAL.id
 const PHOTO_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
-
-// CMS titles come back HTML-encoded and styled their own way ("Kas:st"), so
-// they are matched on letters and digits alone. That is loose, but only this
-// festival's own bill is searched, so unlike a Ticketmaster keyword search it
-// can't land on a different act.
-function looseKey(name) {
-  const decoded = name
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
-    .replace(/&amp;/g, '&')
-  return nameKey(decoded).replace(/[^a-z0-9]/g, '')
-}
-
-async function fetchCrssdPhotos() {
-  const photos = new Map()
-  for (let page = 1, pages = 1; page <= pages; page++) {
-    const res = await fetch(`${CRSSD_ARTISTS_URL}?per_page=100&page=${page}`)
-    if (!res.ok) throw new Error(`CRSSD artist list failed (${res.status})`)
-    pages = Number(res.headers.get('x-wp-totalpages') ?? 1)
-    for (const artist of await res.json()) {
-      // ACF gives false, not null, for an empty image field.
-      const url = artist.acf?.vc_artist_photo?.url
-      if (url) photos.set(looseKey(artist.title?.rendered ?? ''), url)
-    }
-  }
-  return photos
-}
 
 async function ensurePhotoBucket() {
   const { error } = await write.storage.getBucket(PHOTO_BUCKET)
@@ -268,31 +234,26 @@ async function copyPhoto(name, sourceUrl) {
   return write.storage.from(PHOTO_BUCKET).getPublicUrl(objectPath).data.publicUrl
 }
 
-// On --dry-run this only finds the photos; nothing is copied.
-async function crssdPass(names, byKey) {
-  let photos
-  try {
-    photos = await fetchCrssdPhotos()
-    if (!dryRun) await ensurePhotoBucket()
-  } catch (err) {
-    console.warn(`  ! skipping CRSSD's artist pages: ${err.message}`)
-    return []
-  }
+// On --dry-run this only lists the photos; nothing is copied.
+async function pressPhotoPass(names, byKey) {
+  const photos = new Map(Object.entries(PRESS_PHOTOS).map(([name, url]) => [nameKey(name), url]))
+  if (photos.size === 0) return []
+  if (!dryRun) await ensurePhotoBucket()
 
   const found = []
   for (const name of names) {
-    const sourceUrl = lookupNames(name).map(n => photos.get(looseKey(n))).find(Boolean)
+    const sourceUrl = lookupNames(name).map(n => photos.get(nameKey(n))).find(Boolean)
     if (!sourceUrl) continue
     try {
       const url = dryRun ? sourceUrl : await copyPhoto(name, sourceUrl)
       byKey.set(nameKey(name), url)
-      found.push({ artist_key: nameKey(name), artist_name: name, image_url: url, source: 'crssd' })
+      found.push({ artist_key: nameKey(name), artist_name: name, image_url: url, source: 'festival' })
     } catch (err) {
       console.warn(`  ! ${name}: ${err.message}`)
     }
     await sleep(REQUEST_SPACING_MS)
   }
-  console.log(`photos: ${found.length} from CRSSD's artist pages${dryRun ? ' (found, not copied)' : ', copied to storage'}`)
+  console.log(`photos: ${found.length} from PRESS_PHOTOS${dryRun ? ' (found, not copied)' : ', copied to storage'}`)
   return found
 }
 
@@ -333,7 +294,7 @@ async function resolvePhotos(names) {
   }
 
   const blank = missing.filter(name => !byKey.has(nameKey(name)))
-  if (blank.length > 0) discovered.push(...await crssdPass(blank, byKey))
+  if (blank.length > 0) discovered.push(...await pressPhotoPass(blank, byKey))
   console.log(`photos: ${missing.length - discovered.length} left blank`)
 
   return { byKey, discovered }
@@ -352,13 +313,13 @@ function buildRows(byKey) {
         source:       SOURCE,
         artist,
         support:      null,
-        venue:        VENUE,
-        city:         CITY,
-        state:        STATE,
+        venue:        FESTIVAL.venue,
+        city:         FESTIVAL.city,
+        state:        FESTIVAL.state,
         show_date:    isoDate,
-        lat:          LAT,
-        lng:          LNG,
-        emoji:        EMOJI,
+        lat:          FESTIVAL.lat,
+        lng:          FESTIVAL.lng,
+        emoji:        FESTIVAL.emoji,
         // Nothing synced these, so there is no SYNC_CITIES entry to name.
         metro:        null,
         image_url:    byKey.get(nameKey(artist)) ?? null,
@@ -380,7 +341,7 @@ function buildRows(byKey) {
 
 async function main() {
   const names = DAYS.flatMap(d => d.artists)
-  console.log(`${names.length} sets (${SATURDAY.length} Sat ${DAYS[0].isoDate}, ${SUNDAY.length} Sun ${DAYS[1].isoDate})`)
+  console.log(`${names.length} sets: ${DAYS.map(d => `${d.artists.length} on ${d.isoDate}`).join(', ')}`)
 
   const { byKey, discovered } = await resolvePhotos(names)
   const rows = buildRows(byKey)
@@ -389,9 +350,10 @@ async function main() {
   console.log(`rows: ${rows.length}, ${withPhoto} with a photo, ${rows.length - withPhoto} without`)
 
   if (dryRun) {
-    console.log('\n--dry-run, nothing written. Sample:')
-    for (const row of [rows[0], rows[SATURDAY.length]]) {
-      console.log('  ' + JSON.stringify({ ...row, image_url: row.image_url ? '<url>' : null }))
+    console.log('\n--dry-run, nothing written. Sample, the first set of each day:')
+    for (const { isoDate } of DAYS) {
+      const row = rows.find(r => r.show_date === isoDate)
+      if (row) console.log('  ' + JSON.stringify({ ...row, image_url: row.image_url ? '<url>' : null }))
     }
     console.log('\nWithout a photo: ' + rows.filter(r => !r.image_url).map(r => r.artist).join(', '))
     return

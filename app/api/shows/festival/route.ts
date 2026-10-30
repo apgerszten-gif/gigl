@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { festivalShows } from '@/lib/shows/repository'
-import { CRSSD } from '@/lib/crssd'
 
-// GET /api/shows/festival?lineup=crssd — every set from one imported festival
-// lineup, including days that haven't happened yet.
+// GET /api/shows/festival?lineup=<key> — every set from one imported festival
+// lineup, including days that haven't happened yet. No lineup is live right
+// now; scripts/import-festival.mjs imports one, and LINEUPS below exposes it.
 //
 // Separate from /api/shows/search on purpose. That route must never return a
 // show nobody can have been to; this one must return the whole lineup so the
@@ -16,10 +16,10 @@ import { CRSSD } from '@/lib/crssd'
 export const fetchCache = 'default-no-store'
 
 // The key picks a LIKE prefix, so it is whitelisted rather than passed
-// through - this is not a general-purpose query endpoint.
-const LINEUPS: Record<string, string> = {
-  crssd: CRSSD.idPrefix,
-}
+// through - this is not a general-purpose query endpoint. Each entry maps a
+// short key to the id prefix the import wrote, e.g.
+//   somefest: 'somefest-2027-',
+const LINEUPS: Record<string, string> = {}
 
 export async function GET(req: NextRequest) {
   const lineup = req.nextUrl.searchParams.get('lineup') ?? ''

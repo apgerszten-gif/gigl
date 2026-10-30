@@ -169,7 +169,7 @@ export default function AdminPage() {
         {error && <ErrorNote>{error}</ErrorNote>}
 
         <Card className="p-4 space-y-3">
-          <Label>Today, San Diego time</Label>
+          <Label>Today, Pacific time</Label>
           <div className="flex">
             <Stat value={t.scans} label="QR scans" />
             <Stat value={t.visitors} label="Visitors" />
@@ -179,7 +179,6 @@ export default function AdminPage() {
           <p className="text-[12px] leading-snug text-ink-muted">
             {plural(t.phonesScanned, 'phone')} scanned, {t.visitorsFromQr} visitors came from a QR code.
             {' '}Sign-ups: {t.signupsByPhone} by phone, {t.signupsByEmail} by email, {t.signupsFromQr} from a QR code.
-            {' '}{plural(t.crssdLogs, 'CRSSD log')}.
           </p>
           <p className="text-[12px] text-ink-muted">
             All time: {plural(stats.totals.accounts, 'account')}, {plural(stats.totals.logs, 'log')}.
@@ -247,7 +246,6 @@ export default function AdminPage() {
                       ? <Link href={`/u/${log.username}`} className="font-semibold text-ink">@{log.username}</Link>
                       : 'No username'}
                     {' · '}{ago(log.createdAt, now)}
-                    {log.crssd && ' · CRSSD'}
                     {log.photos > 0 && ` · ${plural(log.photos, 'photo')}`}
                   </p>
                   <p className="font-display text-[15px] font-bold leading-tight truncate">{log.artistName}</p>

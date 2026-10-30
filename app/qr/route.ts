@@ -6,7 +6,7 @@ import { isCountedHost } from '@/lib/visitor'
 // to the feed tagged ?src=qr, so the visit it turns into is counted as well
 // (components/VisitTracker.tsx).
 //
-// The codes already printed for CRSSD encode the bare gigl-review.vercel.app,
+// The codes already printed encode the bare gigl-review.vercel.app,
 // which next.config.js rewrites to here. Anything printed from now on can
 // encode gigl.space/qr directly.
 //

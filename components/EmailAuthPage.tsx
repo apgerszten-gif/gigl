@@ -57,9 +57,8 @@ export function EmailAuthPage() {
 
     setLoading(false)
     const hasFestival = typeof window !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_KEY)
-    // A brand new account lands on the CRSSD lineup rather than in search:
-    // this weekend most of them are signing up at the festival. See app/crssd.
-    router.push(hasFestival ? '/feed' : '/crssd')
+    // Someone who hasn't picked a show yet goes to the picker, to log one.
+    router.push(hasFestival ? '/feed' : '/select-festival')
   }
 
   function switchMode(next: Mode) {

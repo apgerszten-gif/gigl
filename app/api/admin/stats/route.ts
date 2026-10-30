@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { refuseUnlessAdmin } from '@/lib/adminAuth'
-import { CRSSD } from '@/lib/crssd'
 import type { AdminLog, AdminSignup, AdminStats } from '@/lib/adminStats'
 
 // GET /api/admin/stats — everything the admin page (app/admin) shows: today's
@@ -13,7 +12,7 @@ import type { AdminLog, AdminSignup, AdminStats } from '@/lib/adminStats'
 export const fetchCache = 'default-no-store'
 export const dynamic = 'force-dynamic'
 
-// "Today" is San Diego's, the same day analytics.funnel_by_day uses.
+// "Today" is Pacific time, the same day analytics.funnel_by_day uses.
 const TIME_ZONE = 'America/Los_Angeles'
 
 // Prelude's US price per code: €0.032 for the verification plus €0.0043 for
@@ -25,7 +24,7 @@ const PAGE = 1000 // PostgREST's row cap per request
 
 const dayOf = (at: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(new Date(at))
 
-// Midnight today in San Diego, as an instant.
+// Midnight today, Pacific time, as an instant.
 function startOfToday(): Date {
   const now = new Date()
   const offset = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, timeZoneName: 'longOffset' })
@@ -61,10 +60,9 @@ async function eventsSince(since: string): Promise<EventRow[]> {
   }
 }
 
-async function countLogs(since?: string, crssdOnly = false): Promise<number> {
+async function countLogs(since?: string): Promise<number> {
   let query = supabaseAdmin().from('logged_shows').select('id', { count: 'exact', head: true })
   if (since) query = query.gte('created_at', since)
-  if (crssdOnly) query = query.like('artist_id', `${CRSSD.idPrefix}%`)
   const { count, error } = await query
   if (error) throw error
   return count ?? 0
@@ -72,7 +70,6 @@ async function countLogs(since?: string, crssdOnly = false): Promise<number> {
 
 interface LogRow {
   id: string
-  artist_id: string
   artist_name: string
   venue: string | null
   stage: string | null
@@ -89,7 +86,7 @@ interface LogRow {
 async function latestLogs(): Promise<AdminLog[]> {
   const { data, error } = await supabaseAdmin()
     .from('logged_shows')
-    .select('id, artist_id, artist_name, venue, stage, day, performance_rating, venue_rating, crowd_rating, review, media_urls, created_at, profiles(username)')
+    .select('id, artist_name, venue, stage, day, performance_rating, venue_rating, crowd_rating, review, media_urls, created_at, profiles(username)')
     .order('created_at', { ascending: false })
     .limit(LATEST)
   if (error) throw error
@@ -106,7 +103,6 @@ async function latestLogs(): Promise<AdminLog[]> {
       score: rated ? (row.performance_rating! + row.venue_rating! + row.crowd_rating!) / 3 : 0,
       review: row.review?.trim() || null,
       photos: row.media_urls?.length ?? 0,
-      crssd: row.artist_id.startsWith(CRSSD.idPrefix),
       createdAt: row.created_at,
     }
   })
@@ -130,11 +126,10 @@ export async function GET(req: NextRequest) {
   const today = dayOf(new Date())
 
   try {
-    const [users, events, logsToday, crssdLogsToday, logsTotal, logs, method] = await Promise.all([
+    const [users, events, logsToday, logsTotal, logs, method] = await Promise.all([
       allUsers(),
       eventsSince(since),
       countLogs(since),
-      countLogs(since, true),
       countLogs(),
       latestLogs(),
       signupMethod(),
@@ -184,7 +179,6 @@ export async function GET(req: NextRequest) {
         unfinishedNumbers: newNumbers.filter(u => !finished(u)).length,
         returningPhoneSignIns: returningPhoneSignIns.length,
         logs: logsToday,
-        crssdLogs: crssdLogsToday,
         preludeEur: (newNumbers.length + returningPhoneSignIns.length) * PRELUDE_EUR_PER_CODE,
       },
       totals: {

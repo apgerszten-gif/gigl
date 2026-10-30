@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -15,7 +15,6 @@ import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
-import { CrssdMark } from '@/components/CrssdMark'
 import { SignUpSheet } from '@/components/SignUpSheet'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary, placeOf,
@@ -294,32 +293,22 @@ function FeedInner() {
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
       <AppHeader>
-        {/* Gigl × CRSSD for the festival weekend. Retire it with the CRSSD
-            Log button (see BottomNav): put the bare Logo back and drop the
-            sunset from the card below. */}
-        <div className="flex items-center gap-2">
-          <Logo href="/feed" />
-          <span className="font-display text-[15px] font-bold text-ink-muted" aria-hidden>&times;</span>
-          <CrssdMark className="h-[15px] w-auto text-ink" />
-        </div>
+        <Logo href="/feed" />
       </AppHeader>
 
       <div className="px-5 pt-3 space-y-3">
         {/* The front door for someone who scanned a code: what this is, and
-            that writing a log doesn't need an account until it's posted.
-            "Log a show" goes straight to the CRSSD lineup; the small button
-            in the bottom corner is the way out to every other show. In full
-            ink throughout - ink-muted gets lost against the sunset's bands. */}
+            that writing a log doesn't need an account until it's posted. */}
         {!authLoading && !user && (
-          <div className="crssd-sunset rounded-card border-1.5 border-ink shadow-riso px-4 py-3.5">
+          <Card className="px-4 py-3.5">
             <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
-              At CRSSD? Rate the sets you saw
+              Rate the shows you&apos;ve been to
             </h2>
-            <p className="mt-1 text-[13px] leading-snug text-ink">
+            <p className="mt-1 text-[13px] leading-snug text-ink-muted">
               See what everyone thought, then add your own. You only need an account when you post.
             </p>
             <div className="mt-3 flex items-center gap-4">
-              <Link href="/crssd" className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
+              <Link href="/select-festival" className={`${btnPrimary} px-4 py-2.5 text-[11px]`}>
                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                 Log a show
               </Link>
@@ -331,16 +320,7 @@ function FeedInner() {
                 I have an account
               </button>
             </div>
-            <div className="mt-2 flex justify-end">
-              <Link
-                href="/select-festival"
-                className="inline-flex items-center gap-1 rounded-card border-1.5 border-ink bg-cream px-2 py-1 text-[10px] leading-tight font-semibold text-ink hover:bg-accent/5"
-              >
-                <span>I&apos;m rating a show<br />from somewhere else</span>
-                <ChevronRight className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
-              </Link>
-            </div>
-          </div>
+          </Card>
         )}
 
         <FeedTabs

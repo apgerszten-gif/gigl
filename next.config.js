@@ -1,4 +1,4 @@
-// The printed festival QR codes encode gigl-review.vercel.app, the address
+// The printed QR codes encode gigl-review.vercel.app, the address
 // Gigl had before gigl.space. A printed code can't be changed, so the old
 // address forwards to the new one instead.
 const OLD_HOST = 'gigl-review.vercel.app'
@@ -26,10 +26,10 @@ const nextConfig = {
       // bare domain is a QR scan instead - see rewrites below.
       { source: '/', missing: onOldHost, destination: '/feed', permanent: false },
 
-      // /log-menu was the CRSSD-or-elsewhere picker the Log button used to
-      // open. Log now goes straight to the lineup, so a tab still holding
-      // the old link follows it there too.
-      { source: '/log-menu', destination: '/crssd', permanent: false },
+      // /log-menu was a festival-or-elsewhere picker the Log button used to
+      // open. A tab still holding the old link lands on the show picker Log
+      // opens now.
+      { source: '/log-menu', destination: '/select-festival', permanent: false },
     ]
   },
   // A scan of an old code is counted by /qr, which forwards to the feed on
