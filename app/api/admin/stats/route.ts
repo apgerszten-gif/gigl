@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { refuseUnlessAdmin } from '@/lib/adminAuth'
 import type { AdminLog, AdminSignup, AdminStats } from '@/lib/adminStats'
+import { readVenueSyncMode, readVenueSyncReport } from '@/lib/venues/settings'
 
 // GET /api/admin/stats — everything the admin page (app/admin) shows: today's
 // QR funnel, sign-ups, texting and logs, plus the latest logs and sign-ups.
@@ -126,13 +127,15 @@ export async function GET(req: NextRequest) {
   const today = dayOf(new Date())
 
   try {
-    const [users, events, logsToday, logsTotal, logs, method] = await Promise.all([
+    const [users, events, logsToday, logsTotal, logs, method, venueMode, venueReport] = await Promise.all([
       allUsers(),
       eventsSince(since),
       countLogs(since),
       countLogs(),
       latestLogs(),
       signupMethod(),
+      readVenueSyncMode(),
+      readVenueSyncReport(),
     ])
 
     // A phone account exists from the moment its code is requested; it only
@@ -189,6 +192,17 @@ export async function GET(req: NextRequest) {
       signupMethod: method,
       latestLogs: logs,
       latestSignups,
+      // The totals only; /admin/venues asks for the per-venue list.
+      venueSync: {
+        mode: venueMode,
+        lastRun: venueReport && {
+          ranAt: venueReport.ranAt,
+          mode: venueReport.mode,
+          durationMs: venueReport.durationMs,
+          deadlineHit: venueReport.deadlineHit,
+          totals: venueReport.totals,
+        },
+      },
     }
     return NextResponse.json(stats)
   } catch (err) {

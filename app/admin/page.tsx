@@ -5,15 +5,16 @@ import Link from 'next/link'
 import { ExternalLink, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { AdminLog, AdminStats } from '@/lib/adminStats'
+import type { VenueSyncMode } from '@/lib/venues/report'
 import {
   BackHeader, Card, Chip, EmptyState, ErrorNote, Label, LoadingLabel, Place, Segmented, Stars, Stat,
-  btnPrimary, btnQuiet, placeOf,
+  btnPrimary, btnQuiet, btnSecondary, placeOf,
 } from '@/components/ui'
 
 // The owner's control room: today's QR funnel, whether texts are getting
-// through, the sign-up switch, and the latest logs with a way to take one
-// down. The /api/admin routes decide who gets in (lib/adminAuth.ts); this
-// page only shows what they return.
+// through, the sign-up switch, the venue-website sync, and the latest logs
+// with a way to take one down. The /api/admin routes decide who gets in
+// (lib/adminAuth.ts); this page only shows what they return.
 
 const REFRESH_MS = 30_000
 
@@ -43,6 +44,8 @@ export default function AdminPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving]         = useState(false)
   const [removing, setRemoving]     = useState<string | null>(null)
+  const [venueSaving, setVenueSaving] = useState(false)
+  const [venueRunning, setVenueRunning] = useState(false)
 
   const call = useCallback(async (path: string, init?: RequestInit) => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -104,6 +107,44 @@ export default function AdminPage() {
     setStats(s => s && { ...s, signupMethod: data.signupMethod })
   }
 
+  async function switchVenueSync(next: VenueSyncMode) {
+    if (!stats || venueSaving || next === stats.venueSync.mode) return
+    const question = next === 'live'
+      ? 'Let the venue sync add shows to search? It writes on the next run.'
+      : 'Stop the venue sync writing? Shows it already added stay.'
+    if (!window.confirm(question)) return
+
+    setVenueSaving(true)
+    const res = await call('/api/admin/settings', { method: 'POST', body: JSON.stringify({ venueSyncMode: next }) })
+    const data = await res.json().catch(() => ({}))
+    setVenueSaving(false)
+    if (!res.ok) { setError(data.error ?? "Couldn't save the switch."); return }
+    setError(null)
+    setStats(s => s && { ...s, venueSync: { ...s.venueSync, mode: data.venueSyncMode } })
+  }
+
+  // Takes a few minutes. The run carries on if this page is closed; the
+  // card picks up the new report on its next refresh either way.
+  async function runVenueSync() {
+    if (!stats || venueRunning) return
+    const live = stats.venueSync.mode === 'live'
+    if (!window.confirm(live
+      ? 'Run the venue sync now? It is live, so it will add shows to search. Takes up to 5 minutes.'
+      : 'Run a dry venue sync now? Nothing is written. Takes up to 5 minutes.')) return
+
+    setVenueRunning(true)
+    try {
+      const res = await call('/api/cron/sync-venues')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) setError(data.error ?? 'The venue sync failed.')
+      else load()
+    } catch {
+      // A phone that slept mid-run drops the connection, not the run.
+    } finally {
+      setVenueRunning(false)
+    }
+  }
+
   async function removeLog(log: AdminLog) {
     const whose = log.username ? `@${log.username}'s` : 'this'
     if (!window.confirm(`Remove ${whose} log of ${log.artistName}? This can't be undone.`)) return
@@ -158,6 +199,7 @@ export default function AdminPage() {
   }
 
   const t = stats.today
+  const venueRun = stats.venueSync.lastRun
   // Many numbers asking for a code and few typing one in is what texts not
   // arriving looks like from here.
   const textsLookStuck = t.unfinishedNumbers >= 3 && t.unfinishedNumbers >= t.newNumbers / 2
@@ -230,6 +272,52 @@ export default function AdminPage() {
               </p>
             </>
           )}
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <Label>Venue websites</Label>
+          <Segmented<VenueSyncMode>
+            options={[{ value: 'dry', label: 'Dry run' }, { value: 'live', label: 'Live' }]}
+            value={stats.venueSync.mode}
+            onChange={switchVenueSync}
+          />
+          <p className="text-[12px] leading-snug text-ink-muted">
+            {venueSaving ? 'Saving…' : stats.venueSync.mode === 'dry'
+              ? 'Every night the sync reads independent venues’ own sites and reports what it would add, without adding it. Check the report, then switch to Live.'
+              : 'Every night the sync adds shows from independent venues’ own sites to search, leaving out any Ticketmaster already has.'}
+          </p>
+          {venueRun ? (
+            <>
+              <div className="flex">
+                <Stat value={venueRun.totals.ok} label="Venues read" />
+                <Stat value={venueRun.totals.shows} label="New shows" />
+                <Stat value={venueRun.totals.onCatalogue} label="Already had" />
+              </div>
+              <p className="text-[12px] leading-snug text-ink-muted">
+                Last run {ago(venueRun.ranAt, now)}, {venueRun.mode === 'dry' ? 'dry' : 'live'}:{' '}
+                {venueRun.totals.ok} of {plural(venueRun.totals.venues, 'venue')} had readable shows,{' '}
+                {venueRun.totals.noEvents} had none, {venueRun.totals.failed} refused or failed
+                {venueRun.totals.notReached > 0 && `, ${venueRun.totals.notReached} not reached in time`}.{' '}
+                {plural(venueRun.totals.shows, 'show')}, {venueRun.totals.past} already past.
+                {venueRun.mode === 'live' && ` ${venueRun.totals.written} written.`}
+              </p>
+            </>
+          ) : (
+            <p className="text-[12px] leading-snug text-ink-muted">No run yet. The first one is tonight, or run one now.</p>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={runVenueSync}
+              disabled={venueRunning}
+              className={`${btnSecondary} px-3 py-2 text-[11px]`}
+            >
+              {venueRunning ? 'Running… up to 5 min' : 'Run now'}
+            </button>
+            <Link href="/admin/venues" className="text-[12px] font-semibold text-accent">
+              Every venue &rarr;
+            </Link>
+          </div>
         </Card>
 
         <section className="space-y-2">

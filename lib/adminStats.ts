@@ -1,6 +1,8 @@
 // What GET /api/admin/stats returns to the admin page. Types only, so the
 // page can import them without pulling in anything server-side.
 
+import type { VenueSyncSummary } from './venues/report'
+
 export interface AdminLog {
   id: string
   username: string | null
@@ -55,4 +57,5 @@ export interface AdminStats {
   signupMethod: 'phone' | 'email' | null
   latestLogs: AdminLog[]
   latestSignups: AdminSignup[]
+  venueSync: VenueSyncSummary
 }

@@ -223,6 +223,73 @@ export async function upsertShows(shows: SyncShow[]): Promise<UpsertResult> {
   return { upserted, failed }
 }
 
+// -- Venue-website shows -----------------------------------------------------
+// Rows the venue sync (app/api/cron/sync-venues) reads off venues' own sites.
+// source = 'venue', and the id carries the venue: venue-<venue id>-<date>-<act>,
+// so a re-run updates the same row rather than adding another.
+
+export interface VenueShowRow {
+  id:        string
+  artist:    string
+  support:   string[] | null
+  venue:     string
+  city:      string
+  state:     string
+  show_date: string
+  lat:       number | null
+  lng:       number | null
+  metro:     string
+  image_url: string | null
+}
+
+export async function upsertVenueShows(rows: VenueShowRow[]): Promise<UpsertResult> {
+  const now = new Date().toISOString()
+  let upserted = 0
+  let failed   = 0
+
+  for (let i = 0; i < rows.length; i += UPSERT_BATCH_SIZE) {
+    const batch = rows.slice(i, i + UPSERT_BATCH_SIZE).map(row => ({
+      ...row,
+      source:       'venue',
+      emoji:        '🎵',
+      last_seen_at: now,
+    }))
+    const { error } = await supabaseAdmin().from('shows').upsert(batch, { onConflict: 'id' })
+    if (error) {
+      console.error(`[sync-venues] upsert batch ${i / UPSERT_BATCH_SIZE} failed:`, error.message)
+      failed += batch.length
+    } else {
+      upserted += batch.length
+    }
+  }
+  return { upserted, failed }
+}
+
+// Shows the catalogue already has at one venue, from any source but the
+// venue sync itself, so the sync can leave out the ones Ticketmaster or a
+// user got to first. Matched on one distinctive word of the venue's name
+// ("Mercury" for Mercury Lounge) because the two sources rarely spell a room
+// the same way; the artist and date comparison afterwards is what decides.
+export async function catalogueShowsAtVenue(
+  state: string, venueWord: string, fromIso: string, toIso: string,
+): Promise<{ artist: string; show_date: string }[]> {
+  const word = venueWord.replace(/[%_\\]/g, '')
+  if (!word) return []
+  const { data, error } = await supabase
+    .from('shows')
+    .select('artist, show_date')
+    .eq('state', state)
+    .neq('source', 'venue')
+    .ilike('venue', `%${word}%`)
+    .gte('show_date', fromIso)
+    .lte('show_date', toIso)
+    // Supabase answers at most 1,000 rows a request; one room over two and a
+    // half years stays well under that.
+    .limit(1000)
+  if (error) throw new Error(`catalogue lookup failed: ${error.message}`)
+  return (data ?? []) as { artist: string; show_date: string }[]
+}
+
 // Drops shows more than a year old - only those, and this is the
 // load-bearing part of the whole feature.
 //

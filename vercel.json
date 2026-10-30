@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/sync-shows",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/sync-venues",
+      "schedule": "0 10 * * *"
     }
   ]
 }
