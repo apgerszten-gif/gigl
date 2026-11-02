@@ -415,8 +415,9 @@ function ProfileScreen() {
       <header className={headerClass}>
         <div className="flex-1 flex items-center justify-between gap-3">
           <Logo />
-          <button type="button" className={iconBtn} aria-label="Share profile">
-            <Share2 className="w-4 h-4" strokeWidth={1.75} />
+          <button type="button" className={`${btnSecondary} shadow-riso px-2.5 py-2 text-[10px] whitespace-nowrap`}>
+            <Share2 className="w-3.5 h-3.5" strokeWidth={2} />
+            Invite friends to Gigl
           </button>
         </div>
       </header>
@@ -431,6 +432,13 @@ function ProfileScreen() {
               <Place className="mt-0.5">Los Angeles, CA</Place>
             </div>
           </div>
+          <label className={`${inputBox} flex items-center gap-2 px-3 py-2`}>
+            <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
+            <input
+              placeholder="Search for people"
+              className="flex-1 min-w-0 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none"
+            />
+          </label>
           <div className="flex border-t border-ink/10 pt-3">
             <div className="flex-1 flex">
               <Stat value="42" label="Gigs" />

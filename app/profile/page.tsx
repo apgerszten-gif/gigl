@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { MediaGrid } from '@/components/MediaGrid'
+import { UserSearch } from '@/components/UserSearch'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
@@ -17,7 +18,7 @@ import BottomNav from '@/components/BottomNav'
 import { Logo } from '@/components/Logo'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, ErrorNote, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf,
-  btnPrimary, btnQuiet, iconBtn, inputBox,
+  btnPrimary, btnQuiet, btnSecondary, inputBox,
 } from '@/components/ui'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
 import { uploadAvatar, removeAvatar } from '@/lib/avatar'
@@ -134,13 +135,15 @@ export default function ProfilePage() {
     load(user.id)
   }, [authLoading, user, router])
 
-  async function copyLink() {
+  // Your own profile link rather than the home page, so whoever joins from it
+  // lands on someone to follow.
+  async function invite() {
     if (!profile) return
     const url = `${window.location.origin}/u/${profile.username}`
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Gigl', text: 'Check out my rankings on Gigl', url })
+        await navigator.share({ title: 'Gigl', text: 'Join me on Gigl', url })
       } catch {
         // user backed out of the native share sheet — nothing to do
       }
@@ -268,16 +271,16 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
-      {/* Your own profile, so the header carries a share button rather than your photo. */}
+      {/* Your own profile, so the header carries an invite button rather than your photo. */}
       <AppHeader showProfile={false}>
         <Logo href="/feed" />
         <button
           type="button"
-          onClick={copyLink}
-          aria-label={copied ? 'Link copied' : 'Share my rankings with friends'}
-          className={`${iconBtn} ${copied ? 'text-accent' : ''}`}
+          onClick={invite}
+          className={`${btnSecondary} shadow-riso px-2.5 py-2 text-[10px] whitespace-nowrap ${copied ? 'text-accent' : ''}`}
         >
-          {copied ? <Check className="w-4 h-4" strokeWidth={2.5} /> : <Share2 className="w-4 h-4" strokeWidth={1.75} />}
+          {copied ? <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> : <Share2 className="w-3.5 h-3.5" strokeWidth={2} />}
+          {copied ? 'Link copied' : 'Invite friends to Gigl'}
         </button>
       </AppHeader>
 
@@ -315,6 +318,8 @@ export default function ProfilePage() {
           </div>
 
           {avatarError && <ErrorNote>{avatarError}</ErrorNote>}
+
+          <UserSearch />
 
           {/* Two pairs - your own numbers, then your social graph - split by a heavier rule. */}
           <div className="flex border-t border-ink/10 pt-3">

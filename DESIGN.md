@@ -163,9 +163,10 @@ Where the photos come from:
 - A dashed "Can't find your show?" tile, linking to **Add a show**.
 
 ### You (`/profile`)
-- `AppHeader` with the logo and a share button, which shares or copies your public profile link. There's no profile photo in the header, since this page is your profile.
+- `AppHeader` with the logo and an "Invite friends to Gigl" button (`btnSecondary`, with the share icon), which shares or copies your public profile link. There's no profile photo in the header, since this page is your profile.
 - Profile card:
   - your photo (`w-16 h-16`) with a sienna camera badge; tapping it adds or changes the photo. Under your name and handle, "+ Add a photo" or "Remove photo".
+  - a "Search for people" field (`components/UserSearch.tsx`) that looks up other accounts by name or handle, listing them in the follower-list row with a Follow button; tapping a row opens their profile
   - a stats row in two pairs, split by a 1.5px ink rule: gigs and average rating (stars), then followers and following
   - the style guide also shows a city place line *(mockup)*
 - "My rankings": ranked cards like the Rankings page, with any media, the review and tags. Each card's edit button opens an inline editor for the photo, review and tags, with options to update the ratings or remove the log.
