@@ -9,6 +9,7 @@ import { showScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { MediaGrid } from '@/components/MediaGrid'
 import { UserSearch } from '@/components/UserSearch'
+import { SavedShowsSection } from '@/components/SavedShowsSection'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
@@ -277,7 +278,7 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={invite}
-          className={`${btnSecondary} shadow-riso px-2.5 py-2 text-[10px] whitespace-nowrap ${copied ? 'text-accent' : ''}`}
+          className={`${btnSecondary} shadow-riso px-2.5 py-2 text-[10px] whitespace-nowrap`}
         >
           {copied ? <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> : <Share2 className="w-3.5 h-3.5" strokeWidth={2} />}
           {copied ? 'Link copied' : 'Invite friends to Gigl'}
@@ -342,6 +343,8 @@ export default function ProfilePage() {
             </div>
           </div>
         </Card>
+
+        <SavedShowsSection />
 
         <section>
           <Label className="mb-2.5">My rankings</Label>

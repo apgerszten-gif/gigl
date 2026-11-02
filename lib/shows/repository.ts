@@ -8,7 +8,7 @@
 
 import { supabase } from '../supabase'
 import { supabaseAdmin } from '../supabaseAdmin'
-import { formatShowDate, retainStartIso, windowEndIso, windowStartIso } from '../dates'
+import { formatShowDate, retainStartIso, upcomingEndIso, windowEndIso, windowStartIso } from '../dates'
 import { nameKey } from '../nameKey'
 import { boundingBox, distanceInMiles, type Coords, type NamedPlace } from '../geo'
 import { SYNC_CITIES } from './cities'
@@ -84,6 +84,9 @@ export interface SearchOptions {
   // carrying its `distanceMiles`. Rows with no coordinates are excluded
   // rather than guessed at.
   nearby?: NearbyFilter | null
+  // Shows that haven't happened yet, soonest first, for saving. Everything
+  // else below stays the same; only the date range and its direction flip.
+  upcoming?: boolean
 }
 
 // Blank keyword -> browse mode: the past week's shows, most recent first,
@@ -101,7 +104,7 @@ export interface SearchOptions {
 // particular show, however long ago. Browsing stays on the past week, where
 // "what happened around here recently" is still the right reading.
 export async function searchStoredShows(keyword: string, options: SearchOptions = {}): Promise<Show[]> {
-  const { limit = DEFAULT_LIMIT, nearby } = options
+  const { limit = DEFAULT_LIMIT, nearby, upcoming = false } = options
   const trimmed = escapeForOrFilter(keyword)
 
   let query = supabase
@@ -109,9 +112,9 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
     .select(SHOW_COLUMNS)
     // The upper bound matters as much as the lower one: a show that hasn't
     // happened yet is not something anyone can have been to.
-    .gte('show_date', trimmed ? retainStartIso() : windowStartIso())
-    .lte('show_date', windowEndIso())
-    .order('show_date', { ascending: false })
+    .gte('show_date', upcoming ? windowEndIso() : trimmed ? retainStartIso() : windowStartIso())
+    .lte('show_date', upcoming ? upcomingEndIso() : windowEndIso())
+    .order('show_date', { ascending: upcoming })
     .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
 
   if (nearby) {

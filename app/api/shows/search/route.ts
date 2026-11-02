@@ -3,6 +3,10 @@ import { searchStoredShows } from '@/lib/shows/repository'
 import { readNearby } from '@/lib/shows/nearby'
 import { artistPhotos } from '@/lib/shows/artistImageSync'
 
+// A date-ordered list of what's coming up fills quickly, so the Upcoming list
+// gets more room than the past week does.
+const UPCOMING_LIMIT = 50
+
 // Ticketmaster photo lookups per request for rows with none (see below).
 // Fewer than /api/shows/past allows: this is the list people wait on.
 const PHOTO_LOOKUPS = 2
@@ -23,6 +27,10 @@ const PHOTO_LOOKUPS = 2
 // coordinates from the Near me control on /select-festival; they're read
 // per-request and never stored.
 //
+// The one exception is `when=upcoming`, the list people save shows from on
+// /select-festival. It returns shows that haven't happened, soonest first, and
+// nothing on that list can be logged until the date has passed.
+//
 // This used to proxy Ticketmaster on every request, which made each visitor
 // cost an upstream call against a 5000/day cap. Reading Postgres makes that a
 // fixed nightly cost instead, and lets search be fuzzy across artist *and*
@@ -42,12 +50,13 @@ export const fetchCache = 'default-no-store'
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? ''
   const nearby = readNearby(req.nextUrl.searchParams)
+  const upcoming = req.nextUrl.searchParams.get('when') === 'upcoming'
 
   try {
     // An empty result is returned as-is, whether it means "no matches" or
     // "the catalogue hasn't captured a week yet". Nothing upstream can fill
     // that gap, so there is nothing to fall back to.
-    const shows = await searchStoredShows(q, { nearby })
+    const shows = await searchStoredShows(q, upcoming ? { nearby, upcoming, limit: UPCOMING_LIMIT } : { nearby })
 
     // About one catalogue row in twelve came without a photo on its event.
     // The artist often has one from another listing, or on Ticketmaster.

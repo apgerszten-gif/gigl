@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { MediaGrid } from '@/components/MediaGrid'
+import { ReviewReminders } from '@/components/ReviewReminders'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { ReactionBar } from '@/components/ReactionBar'
 import { CommentsModal } from '@/components/CommentsModal'
@@ -322,6 +323,8 @@ function FeedInner() {
             </div>
           </Card>
         )}
+
+        <ReviewReminders />
 
         <FeedTabs
           value={activeFilter}

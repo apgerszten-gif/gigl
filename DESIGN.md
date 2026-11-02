@@ -117,6 +117,7 @@ Where the photos come from:
 
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
+- Review reminders (`components/ReviewReminders.tsx`) above the controls, only when a saved show has passed: a card per show, up to three, with the artist photo and date sticker, a "How was it?" accent label, the artist and place, a small "Rate it" primary button and a quiet "Didn't go".
 - Two stacked segmented controls: **All activity / Following** on top, then **Artist rankings** below. The first two filter the stream in place; Artist rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. They're stacked rather than a row of three because "whose logs" and "the aggregate view" are different questions, and because a three-up row crushes the longer label. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
 - Review cards, at **85% of the default component scale** so more fit on screen — `Place`, `PullQuote` and `Chip` take a `compact` prop for this rather than shrinking everywhere, since the same pieces set a slower density on rankings, profiles and the artist page. Each card has:
   - any photos or videos the reviewer attached, full-bleed at the top
@@ -154,7 +155,7 @@ Where the photos come from:
 
 ### Pick a show (`/select-festival`)
 - The first step of logging, and what the Log button opens. `AppHeader` titled "What did you see?" under a "Log a show" label.
-- Search input for artist or venue.
+- A **Been to / Upcoming** segmented control above the search input for artist or venue. Upcoming changes the title to "What are you seeing?" under a "Save a show" label, and the list to shows that haven't happened, soonest first, labelled "Coming up". Its rows use the same pattern, but only their Save button acts: `btnSecondary` with a `Bookmark`, turning into a primary "Saved" with a `Check`. Signed out, Save opens the sign-up sheet. Signed in with a phone number, an unticked 11px checkbox under the chips asks to text reminders too. There's no More shows card or "Can't find your show?" tile on Upcoming.
 - A row of filter chips under the input: a **Near me** toggle (`MapPin` icon), and while it's on, radius chips for 10 / 50 / 100 mi. Location is asked for on arrival, so the chip reports the filter rather than starting it; it reads "Locating…" and is disabled while the browser answers. Turning it off is remembered. When location is blocked or unavailable, an 11px `ink-faint` line under the chips says so.
 - Beside it, a **Search city** chip (`Building2` icon) for searching a place without sharing a location. It opens a "Type a city" input with matches in a card below; picking one turns the chip on, showing the city with an `X` to clear it, and the radius chips apply to that city. Picking a city turns Near me off, and tapping Near me clears the city. The city is remembered on the device.
 - A "This past week" label that changes to "Results for …" while typing, and carries "within N mi" while Near me is on ("within N mi of Portland" for a typed city). Browsing shows the past week; a search reaches back a year. Only shows that have already happened appear — you log what you went to — so results run newest first, last night at the top.
@@ -169,6 +170,7 @@ Where the photos come from:
   - a "Search for other users" field (`components/UserSearch.tsx`) that looks up other accounts by name or handle, listing them in the follower-list row with a Follow button; tapping a row opens their profile
   - a stats row in two pairs, split by a 1.5px ink rule: gigs and average rating (stars), then followers and following
   - the style guide also shows a city place line *(mockup)*
+- "Saved shows" (`components/SavedShowsSection.tsx`): your upcoming saved shows in alternating rows with a remove `X`, then a dashed "Going to a show soon?" tile linking to the Upcoming list. It's private, and doesn't appear on the public profile.
 - "My rankings": ranked cards like the Rankings page, with any media, the review and tags. Each card's edit button opens an inline editor for the photo, review and tags, with options to update the ratings or remove the log.
 - Footer links: Sign out, Privacy Policy, Terms of Service.
 - The style guide also shows live streak, soundprint and yearly goal cards *(mockup)*.

@@ -768,3 +768,35 @@ drop policy if exists "app_settings_read" on public.app_settings;
 create policy "app_settings_read" on public.app_settings for select using (true);
 insert into public.app_settings (key, value) values ('signup_method', '"phone"')
 on conflict (key) do nothing;
+
+-- Upcoming shows someone plans to go to (lib/savedShows.ts). Once one has
+-- passed, the Feed asks them to review it. Carries its own artist/venue/date
+-- like logged_shows does, and show_id has no foreign key, because catalogue
+-- rows get pruned and this shouldn't go with them. Owner-only, unlike
+-- logged_shows: where someone is going to be is theirs to share.
+-- text_opt_in_at records when they agreed to be texted about this one.
+create table if not exists public.saved_shows (
+  id             uuid default gen_random_uuid() primary key,
+  user_id        uuid references public.profiles(id) on delete cascade not null,
+  show_id        text not null,
+  artist         text not null,
+  venue          text not null,
+  city           text not null default '',
+  state          text not null default '',
+  show_date      date not null,
+  image_url      text,
+  text_opt_in_at timestamp with time zone,
+  dismissed_at   timestamp with time zone,
+  created_at     timestamp with time zone not null default now(),
+  unique (user_id, show_id)
+);
+create index if not exists saved_shows_user_date_idx on public.saved_shows (user_id, show_date);
+alter table public.saved_shows enable row level security;
+drop policy if exists "saved_shows_read" on public.saved_shows;
+create policy "saved_shows_read" on public.saved_shows for select using (auth.uid() = user_id);
+drop policy if exists "saved_shows_insert" on public.saved_shows;
+create policy "saved_shows_insert" on public.saved_shows for insert with check (auth.uid() = user_id);
+drop policy if exists "saved_shows_update" on public.saved_shows;
+create policy "saved_shows_update" on public.saved_shows for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "saved_shows_delete" on public.saved_shows;
+create policy "saved_shows_delete" on public.saved_shows for delete using (auth.uid() = user_id);

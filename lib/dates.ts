@@ -50,6 +50,29 @@ export function windowStartIso(): string {
   return isoDay(start)
 }
 
+// How far ahead the Upcoming list on /select-festival reaches. Ticketmaster has
+// placeholder dates years out (the catalogue's latest is 2039), and nobody is
+// planning that far ahead.
+export const UPCOMING_WINDOW_DAYS = 365
+
+// Inclusive upper bound of the Upcoming list. Its lower bound is windowEndIso:
+// tonight's show is both loggable and still worth saving.
+export function upcomingEndIso(): string {
+  const end = new Date()
+  end.setUTCDate(end.getUTCDate() + UPCOMING_WINDOW_DAYS)
+  return isoDay(end)
+}
+
+// Today on this device, for browser code deciding whether a saved show has
+// passed. The window functions above are UTC, which is already tomorrow by a
+// US evening: a reminder would turn up while the show was still on.
+export function localTodayIso(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
 // How long a show is kept once it has happened, which is longer than search
 // reaches: people want to look back on shows from months ago, and since
 // Ticketmaster has no past events these rows are the only history of them we
