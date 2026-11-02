@@ -68,8 +68,8 @@ export function UserSearch() {
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Search for people"
-          aria-label="Search for people"
+          placeholder="Search for other users"
+          aria-label="Search for other users"
           className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
         />
       </label>

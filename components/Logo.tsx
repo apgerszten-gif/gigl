@@ -8,7 +8,7 @@ import Link from 'next/link'
 // username screens (no feed to go to yet), the intro demo, and the style
 // guide. Headers that already have a back control pass the logo to
 // BackHeader instead, which is its own route home.
-export function Logo({ size = 'text-[21px]', className = '', href }: {
+export function Logo({ size = 'text-[23px]', className = '', href }: {
   size?: string; className?: string; href?: string
 }) {
   const mark = (
