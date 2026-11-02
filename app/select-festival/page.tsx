@@ -288,7 +288,7 @@ export default function SelectShowPage() {
             <Chip active={searchCity.city != null}>
               <span className="inline-flex items-center gap-1">
                 <Building2 className="w-3 h-3" strokeWidth={2.5} />
-                {searchCity.city ? placeName(searchCity.city) : 'City'}
+                {searchCity.city ? placeName(searchCity.city) : 'Search city'}
                 {searchCity.city && <X className="w-3 h-3" strokeWidth={2.5} />}
               </span>
             </Chip>
