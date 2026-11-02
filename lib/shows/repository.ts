@@ -84,9 +84,6 @@ export interface SearchOptions {
   // carrying its `distanceMiles`. Rows with no coordinates are excluded
   // rather than guessed at.
   nearby?: NearbyFilter | null
-  // Shows that haven't happened yet, soonest first, for saving. Everything
-  // else below stays the same; only the date range and its direction flip.
-  upcoming?: boolean
 }
 
 // Blank keyword -> browse mode: the past week's shows, most recent first,
@@ -104,7 +101,7 @@ export interface SearchOptions {
 // particular show, however long ago. Browsing stays on the past week, where
 // "what happened around here recently" is still the right reading.
 export async function searchStoredShows(keyword: string, options: SearchOptions = {}): Promise<Show[]> {
-  const { limit = DEFAULT_LIMIT, nearby, upcoming = false } = options
+  const { limit = DEFAULT_LIMIT, nearby } = options
   const trimmed = escapeForOrFilter(keyword)
 
   let query = supabase
@@ -112,9 +109,9 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
     .select(SHOW_COLUMNS)
     // The upper bound matters as much as the lower one: a show that hasn't
     // happened yet is not something anyone can have been to.
-    .gte('show_date', upcoming ? windowEndIso() : trimmed ? retainStartIso() : windowStartIso())
-    .lte('show_date', upcoming ? upcomingEndIso() : windowEndIso())
-    .order('show_date', { ascending: upcoming })
+    .gte('show_date', trimmed ? retainStartIso() : windowStartIso())
+    .lte('show_date', windowEndIso())
+    .order('show_date', { ascending: false })
     .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
 
   if (nearby) {
@@ -146,6 +143,66 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
   return rows
     .filter(show => show.distanceMiles != null && show.distanceMiles <= nearby.radiusMiles)
     .slice(0, limit)
+}
+
+export interface UpcomingPage {
+  shows: Show[]
+  // Pass back as `offset` for the next page; null when there's nothing left.
+  next:  number | null
+}
+
+// One page of shows that haven't happened yet, soonest first, for saving.
+//
+// `offset` counts database rows, not shows returned: a nearby search trims the
+// bounding box's corners after the read, so the two drift apart, and paging by
+// shows returned would skip or repeat rows. `next` is therefore the row after
+// the last one this page used. Ordered by id as well as date because hundreds
+// of shows can share a date, and without a fixed order among them a row could
+// land on two pages or none.
+export async function upcomingShows(
+  keyword: string,
+  options: { limit: number; offset?: number; nearby?: NearbyFilter | null },
+): Promise<UpcomingPage> {
+  const { limit, offset = 0, nearby } = options
+  const trimmed = escapeForOrFilter(keyword)
+  const rowsToRead = nearby ? limit * NEARBY_OVERFETCH : limit
+
+  let query = supabase
+    .from('shows')
+    .select(SHOW_COLUMNS)
+    // Today counts: tonight's show is both loggable and still worth saving.
+    .gte('show_date', windowEndIso())
+    .lte('show_date', upcomingEndIso())
+    .order('show_date', { ascending: true })
+    .order('id', { ascending: true })
+    .range(offset, offset + rowsToRead - 1)
+
+  if (nearby) {
+    const box = boundingBox(nearby.centre, nearby.radiusMiles)
+    query = query
+      .gte('lat', box.minLat).lte('lat', box.maxLat)
+      .gte('lng', box.minLng).lte('lng', box.maxLng)
+  }
+  if (trimmed) query = query.or(`artist.ilike.%${trimmed}%,venue.ilike.%${trimmed}%`)
+
+  const { data, error } = await query
+  if (error) throw new Error(`upcoming shows failed: ${error.message}`)
+  const rows = data ?? []
+
+  const shows: Show[] = []
+  let used = 0
+  for (const row of rows) {
+    if (shows.length === limit) break
+    used += 1
+    const show = toShow(row, nearby?.centre)
+    if (nearby && (show.distanceMiles == null || show.distanceMiles > nearby.radiusMiles)) continue
+    shows.push(show)
+  }
+
+  // A read that came back short has reached the end. One that came back full
+  // may have more beyond it, even if this page used every row it was given.
+  const more = used < rows.length || rows.length === rowsToRead
+  return { shows, next: more ? offset + used : null }
 }
 
 const CITY_MATCH_LIMIT = 6

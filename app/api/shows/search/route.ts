@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchStoredShows } from '@/lib/shows/repository'
+import { searchStoredShows, upcomingShows } from '@/lib/shows/repository'
 import { readNearby } from '@/lib/shows/nearby'
 import { artistPhotos } from '@/lib/shows/artistImageSync'
 
-// A date-ordered list of what's coming up fills quickly, so the Upcoming list
-// gets more room than the past week does.
+// Shows per page of the Upcoming list.
 const UPCOMING_LIMIT = 50
 
 // Ticketmaster photo lookups per request for rows with none (see below).
@@ -28,8 +27,9 @@ const PHOTO_LOOKUPS = 2
 // per-request and never stored.
 //
 // The one exception is `when=upcoming`, the list people save shows from on
-// /select-festival. It returns shows that haven't happened, soonest first, and
-// nothing on that list can be logged until the date has passed.
+// /select-festival. It returns shows that haven't happened, soonest first, a
+// page at a time: pass the response's `next` back as `offset` for more. Nothing
+// on that list can be logged until the date has passed.
 //
 // This used to proxy Ticketmaster on every request, which made each visitor
 // cost an upstream call against a 5000/day cap. Reading Postgres makes that a
@@ -51,21 +51,25 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? ''
   const nearby = readNearby(req.nextUrl.searchParams)
   const upcoming = req.nextUrl.searchParams.get('when') === 'upcoming'
+  const requestedOffset = Number(req.nextUrl.searchParams.get('offset'))
+  const offset = Number.isInteger(requestedOffset) && requestedOffset > 0 ? requestedOffset : 0
 
   try {
     // An empty result is returned as-is, whether it means "no matches" or
     // "the catalogue hasn't captured a week yet". Nothing upstream can fill
     // that gap, so there is nothing to fall back to.
-    const shows = await searchStoredShows(q, upcoming ? { nearby, upcoming, limit: UPCOMING_LIMIT } : { nearby })
+    const page = upcoming ? await upcomingShows(q, { nearby, offset, limit: UPCOMING_LIMIT }) : null
+    const shows = page ? page.shows : await searchStoredShows(q, { nearby })
+    const next = page ? { next: page.next } : {}
 
     // About one catalogue row in twelve came without a photo on its event.
     // The artist often has one from another listing, or on Ticketmaster.
     const unphotographed = shows.filter(s => !s.imageUrl).map(s => s.artist)
     if (unphotographed.length > 0) {
       const photo = await artistPhotos(unphotographed, PHOTO_LOOKUPS)
-      return NextResponse.json({ shows: shows.map(s => (s.imageUrl ? s : { ...s, imageUrl: photo(s.artist) })) })
+      return NextResponse.json({ shows: shows.map(s => (s.imageUrl ? s : { ...s, imageUrl: photo(s.artist) })), ...next })
     }
-    return NextResponse.json({ shows })
+    return NextResponse.json({ shows, ...next })
   } catch (err) {
     console.error('shows/search failed:', err)
     return NextResponse.json({ error: 'Show search is temporarily unavailable.' }, { status: 502 })

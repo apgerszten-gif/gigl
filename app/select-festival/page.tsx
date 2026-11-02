@@ -146,6 +146,13 @@ export default function SelectShowPage() {
   const [error, setError]     = useState(false)
   const [retryToken, setRetryToken] = useState(0)
 
+  // Where the next page of the Upcoming list starts, and which search the list
+  // on screen belongs to, so a page that lands after the search has changed is
+  // dropped rather than appended.
+  const [upcomingNext, setUpcomingNext]       = useState<number | null>(null)
+  const [upcomingMoreLoading, setUpcomingMoreLoading] = useState(false)
+  const upcomingSearch = useRef('')
+
   // Debounced so typing doesn't fire a request per keystroke — a cleared or
   // empty query still fetches (the trending/browse list), but fires
   // immediately rather than waiting out the debounce, so first paint and
@@ -156,6 +163,9 @@ export default function SelectShowPage() {
     if (!nearby.ready) return
 
     const trimmed = query.trim()
+    upcomingSearch.current = `${view}|${trimmed}|${nearbyLat}|${nearbyLng}|${nearbyRadius}|${retryToken}`
+    setUpcomingNext(null)
+    setUpcomingMoreLoading(false)
     const controller = new AbortController()
     const timeoutId = setTimeout(async () => {
       setLoading(true)
@@ -172,6 +182,7 @@ export default function SelectShowPage() {
         if (!res.ok) throw new Error(`search failed: ${res.status}`)
         const data = await res.json()
         setResults(data.shows ?? [])
+        setUpcomingNext(data.next ?? null)
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('show search failed:', err)
@@ -185,6 +196,34 @@ export default function SelectShowPage() {
 
     return () => { clearTimeout(timeoutId); controller.abort() }
   }, [query, view, retryToken, nearby.ready, nearbyLat, nearbyLng, nearbyRadius])
+
+  async function loadMoreUpcoming() {
+    if (upcomingNext == null || upcomingMoreLoading) return
+    const search = upcomingSearch.current
+    setUpcomingMoreLoading(true)
+    try {
+      const params = new URLSearchParams({ q: query.trim(), when: 'upcoming', offset: String(upcomingNext) })
+      if (nearbyLat && nearbyLng) {
+        params.set('lat', nearbyLat)
+        params.set('lng', nearbyLng)
+        params.set('radius', String(nearbyRadius))
+      }
+      const res = await fetch(`/api/shows/search?${params.toString()}`)
+      const data = res.ok ? await res.json() : null
+      if (upcomingSearch.current !== search) return
+      if (data) {
+        setResults(shown => {
+          const ids = new Set(shown.map(s => s.id))
+          return [...shown, ...(data.shows ?? []).filter((s: Show) => !ids.has(s.id))]
+        })
+        setUpcomingNext(data.next ?? null)
+      }
+    } catch (err) {
+      console.error('more upcoming shows failed:', err)
+    } finally {
+      if (upcomingSearch.current === search) setUpcomingMoreLoading(false)
+    }
+  }
 
   // Shows from before the catalogue began, from setlist.fm. Fetched beside
   // the catalogue search rather than inside it, so the catalogue's results
@@ -463,6 +502,17 @@ export default function SelectShowPage() {
           view === 'upcoming'
             ? <UpcomingList shows={results} savedIds={savedIds} onToggle={toggleSave} />
             : <ShowList shows={results} onSelect={select} />
+        )}
+
+        {!loading && !error && view === 'upcoming' && upcomingNext != null && (
+          <button
+            type="button"
+            onClick={loadMoreUpcoming}
+            disabled={upcomingMoreLoading}
+            className={`${btnSecondary} w-full py-2.5 text-[11px]`}
+          >
+            {upcomingMoreLoading ? 'Loading…' : 'Show more'}
+          </button>
         )}
 
         {/* setlist.fm's terms ask for a credit wherever its data appears,
