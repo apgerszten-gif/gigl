@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MapPin, Plus, Search } from 'lucide-react'
+import { Building2, MapPin, Plus, Search, X } from 'lucide-react'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { setActiveShow } from '@/lib/activeShow'
 import { formatDistance } from '@/lib/geo'
 import { useNearby, RADIUS_OPTIONS } from '@/lib/useNearby'
+import { useSearchCity } from '@/lib/useSearchCity'
+import { CityPicker, placeName } from '@/components/CityPicker'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { AppHeader } from '@/components/AppHeader'
@@ -57,10 +59,20 @@ export default function SelectShowPage() {
   const [query, setQuery] = useState('')
   const nearby = useNearby()
 
+  // A typed city is the way to search by place without sharing a location.
+  // It goes down the same lat/lng/radius path as Near me, and wins while set.
+  const searchCity = useSearchCity()
+  const [pickingCity, setPickingCity] = useState(false)
+  const nearMeOn = nearby.active && !searchCity.city
+  const centre = searchCity.city ?? (nearby.active ? nearby.coords : null)
+  const area = centre
+    ? `within ${nearby.radiusMiles} mi${searchCity.city ? ` of ${searchCity.city.city}` : ''}`
+    : null
+
   // Primitives, so the search effect below re-runs when the location
   // actually changes rather than on every render that makes a new object.
-  const nearbyLat = nearby.active ? nearby.coords!.lat.toFixed(COORD_PRECISION) : null
-  const nearbyLng = nearby.active ? nearby.coords!.lng.toFixed(COORD_PRECISION) : null
+  const nearbyLat = centre ? centre.lat.toFixed(COORD_PRECISION) : null
+  const nearbyLng = centre ? centre.lng.toFixed(COORD_PRECISION) : null
   const nearbyRadius = nearby.radiusMiles
 
   const [results, setResults] = useState<Show[]>([])
@@ -233,7 +245,7 @@ export default function SelectShowPage() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Artist, venue or city"
+            placeholder="Artist or venue"
             className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
           />
         </label>
@@ -245,11 +257,16 @@ export default function SelectShowPage() {
         <div className="pt-2.5 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            aria-pressed={nearby.active}
+            aria-pressed={nearMeOn}
             disabled={nearby.status === 'locating'}
-            onClick={() => (nearby.active ? nearby.disable() : nearby.enable())}
+            onClick={() => {
+              if (nearMeOn) { nearby.disable(); return }
+              searchCity.clear()
+              setPickingCity(false)
+              if (!nearby.active) nearby.enable()
+            }}
           >
-            <Chip active={nearby.active}>
+            <Chip active={nearMeOn}>
               <span className="inline-flex items-center gap-1">
                 <MapPin className="w-3 h-3" strokeWidth={2.5} />
                 {nearby.status === 'locating' ? 'Locating…' : 'Near me'}
@@ -257,7 +274,27 @@ export default function SelectShowPage() {
             </Chip>
           </button>
 
-          {nearby.active && RADIUS_OPTIONS.map(miles => (
+          {/* Picking a city also turns Near me off, which is remembered, so
+              someone who chose this over sharing a location isn't asked
+              again next time. */}
+          <button
+            type="button"
+            aria-pressed={searchCity.city != null}
+            onClick={() => {
+              if (searchCity.city) searchCity.clear()
+              else setPickingCity(open => !open)
+            }}
+          >
+            <Chip active={searchCity.city != null}>
+              <span className="inline-flex items-center gap-1">
+                <Building2 className="w-3 h-3" strokeWidth={2.5} />
+                {searchCity.city ? placeName(searchCity.city) : 'City'}
+                {searchCity.city && <X className="w-3 h-3" strokeWidth={2.5} />}
+              </span>
+            </Chip>
+          </button>
+
+          {centre && RADIUS_OPTIONS.map(miles => (
             <button
               key={miles}
               type="button"
@@ -269,19 +306,30 @@ export default function SelectShowPage() {
           ))}
         </div>
 
-        {(nearby.status === 'denied' || nearby.status === 'unavailable') && (
+        {pickingCity && !searchCity.city && (
+          <CityPicker
+            onPick={city => {
+              searchCity.choose(city)
+              setPickingCity(false)
+              nearby.disable()
+            }}
+            onClose={() => setPickingCity(false)}
+          />
+        )}
+
+        {!searchCity.city && !pickingCity && (nearby.status === 'denied' || nearby.status === 'unavailable') && (
           <p className="pt-1.5 text-[11px] leading-snug text-ink-faint">
             {nearby.status === 'denied'
-              ? 'Gigl can’t see your location. Allow it in your browser’s site settings to see shows near you.'
-              : 'Couldn’t get your location. Check that location services are on, then tap Near me again.'}
+              ? 'Gigl can’t see your location. Allow it in your browser’s site settings, or pick a city.'
+              : 'Couldn’t get your location. Check that location services are on, then tap Near me again, or pick a city.'}
           </p>
         )}
       </div>
 
       <Label className="px-5 pt-4 pb-2">
         {trimmedQuery
-          ? <>Results for &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` · within ${nearby.radiusMiles} mi` : ''}</>
-          : nearby.active ? `This past week within ${nearby.radiusMiles} mi` : 'This past week'}
+          ? <>Results for &ldquo;{trimmedQuery}&rdquo;{area ? ` · ${area}` : ''}</>
+          : area ? `This past week ${area}` : 'This past week'}
       </Label>
 
       <main className="px-5 space-y-3">
@@ -306,9 +354,9 @@ export default function SelectShowPage() {
         {!loading && !error && results.length === 0 && !showPast && (
           <EmptyState>
             {trimmedQuery
-              ? <>Nothing from the past year matched &ldquo;{trimmedQuery}&rdquo;{nearby.active ? ` within ${nearby.radiusMiles} miles` : ''}.</>
-              : nearby.active
-              ? `No shows in the past week within ${nearby.radiusMiles} miles. Try a wider radius.`
+              ? <>Nothing from the past year matched &ldquo;{trimmedQuery}&rdquo;{area ? ` ${area}` : ''}.</>
+              : area
+              ? `No shows in the past week ${area}. Try a wider radius.`
               : 'No shows from the past week to show right now.'}
           </EmptyState>
         )}

@@ -178,7 +178,7 @@ function SearchScene() {
           <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
           <span className="relative flex-1 text-sm">
             <span className="text-ink-faint" style={{ animation: 'introFadeOut 0.15s linear 4s forwards' }}>
-              Artist, venue or city
+              Artist or venue
             </span>
             <span className="absolute inset-0 opacity-0" style={{ animation: 'introFadeIn 0.3s ease-out 4.05s forwards' }}>
               turn<span className="ml-px inline-block w-px h-4 align-middle bg-ink" style={{ animation: 'introBlink 1s steps(1) infinite' }} />

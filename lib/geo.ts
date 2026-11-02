@@ -22,6 +22,12 @@ export interface Coords {
   lng: number
 }
 
+// A place someone can pick by name instead of sharing their location.
+export interface NamedPlace extends Coords {
+  city:  string
+  state: string
+}
+
 // Great-circle distance in miles. Accurate to well under a mile at the
 // distances this app cares about, which is far finer than a metro centroid
 // deserves anyway.

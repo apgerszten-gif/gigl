@@ -10,7 +10,8 @@ import { supabase } from '../supabase'
 import { supabaseAdmin } from '../supabaseAdmin'
 import { formatShowDate, retainStartIso, windowEndIso, windowStartIso } from '../dates'
 import { nameKey } from '../nameKey'
-import { boundingBox, distanceInMiles, type Coords } from '../geo'
+import { boundingBox, distanceInMiles, type Coords, type NamedPlace } from '../geo'
+import { SYNC_CITIES } from './cities'
 import type { Show, SyncShow } from '../ticketmaster'
 
 // Matches the `shows` table's columns; the API layer maps this to the `Show`
@@ -142,6 +143,80 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
   return rows
     .filter(show => show.distanceMiles != null && show.distanceMiles <= nearby.radiusMiles)
     .slice(0, limit)
+}
+
+const CITY_MATCH_LIMIT = 6
+
+// One read is plenty to tell which cities a prefix can mean, and Supabase
+// answers at most 1,000 rows a request anyway. SYNC_CITIES covers whatever
+// the cap crowds out, so "san" always offers every big San.
+const CITY_SAMPLE_ROWS = 1000
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b)
+  return sorted[Math.floor(sorted.length / 2)]
+}
+
+// The places a typed city could mean, busiest first. There's no geocoder
+// behind this: the catalogue already knows where its shows are, and a town
+// with no shows has nothing to search anyway. SYNC_CITIES supplies the
+// measured coordinates for the big metros; anywhere else gets the median of
+// its own rows, which one badly placed venue can't drag out of town.
+//
+// "Portland, OR" narrows by state. "Portland, Oregon" doesn't try to, because
+// `state` holds codes, so it offers every Portland to choose from.
+export async function findCities(input: string): Promise<NamedPlace[]> {
+  const [namePart, statePart = ''] = input.split(',').map(part => part.trim())
+  const name = namePart.replace(/[%_\\]/g, '')
+  if (name.length < 2) return []
+  const state = statePart.length <= 2 ? statePart.toUpperCase().replace(/[%_\\]/g, '') : ''
+
+  let query = supabase
+    .from('shows')
+    .select('city, state, lat, lng')
+    .ilike('city', `${name}%`)
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+    .limit(CITY_SAMPLE_ROWS)
+  if (state) query = query.ilike('state', `${state}%`)
+
+  const { data, error } = await query
+  if (error) throw new Error(`city lookup failed: ${error.message}`)
+
+  const keyOf = (city: string, region: string) => `${city.toLowerCase()}|${region.toUpperCase()}`
+  const found = new Map<string, { city: string; state: string; lats: number[]; lngs: number[] }>()
+  for (const row of (data ?? []) as { city: string; state: string; lat: number; lng: number }[]) {
+    const key = keyOf(row.city, row.state)
+    const place = found.get(key) ?? { city: row.city, state: row.state, lats: [], lngs: [] }
+    place.lats.push(row.lat)
+    place.lngs.push(row.lng)
+    found.set(key, place)
+  }
+
+  const metros = new Map(SYNC_CITIES.map(metro => [keyOf(metro.city, metro.stateCode), metro]))
+  const places = Array.from(found.entries()).map(([key, place]) => {
+    const metro = metros.get(key)
+    return {
+      city:  metro?.city ?? place.city,
+      state: metro?.stateCode ?? place.state,
+      lat:   metro?.lat ?? median(place.lats),
+      lng:   metro?.lng ?? median(place.lngs),
+      shows: place.lats.length,
+    }
+  })
+
+  const lowerName = name.toLowerCase()
+  for (const metro of SYNC_CITIES) {
+    if (!metro.city.toLowerCase().startsWith(lowerName)) continue
+    if (state && !metro.stateCode.startsWith(state)) continue
+    if (found.has(keyOf(metro.city, metro.stateCode))) continue
+    places.push({ city: metro.city, state: metro.stateCode, lat: metro.lat, lng: metro.lng, shows: 0 })
+  }
+
+  return places
+    .sort((a, b) => b.shows - a.shows)
+    .slice(0, CITY_MATCH_LIMIT)
+    .map(({ city, state: region, lat, lng }) => ({ city, state: region, lat, lng }))
 }
 
 // Every set from one imported festival lineup, whichever day it falls on.

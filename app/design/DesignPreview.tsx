@@ -364,7 +364,7 @@ function PickShowScreen({ onProfile, onPick, onAdd }: { onProfile: () => void; o
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Artist, venue or city"
+            placeholder="Artist or venue"
             className="flex-1 min-w-0 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none"
           />
         </label>
