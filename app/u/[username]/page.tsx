@@ -6,6 +6,7 @@ import { getArtistImages } from '@/lib/artistImages'
 import { resolveMediaUrls } from '@/lib/media'
 import { MediaGrid } from '@/components/MediaGrid'
 import { FollowButton } from '@/components/FollowButton'
+import { ContentMenu } from '@/components/ContentMenu'
 import { Logo } from '@/components/Logo'
 import {
   ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf, btnPrimary,
@@ -53,6 +54,7 @@ export default async function PublicProfile({ params }: { params: { username: st
               <p className="text-xs text-ink-muted">@{profile.username}</p>
             </div>
             <FollowButton targetUserId={profile.id} />
+            <ContentMenu kind="profile" targetId={profile.id} ownerId={profile.id} ownerName={profile.username} />
           </div>
 
           <div className="flex border-t border-ink/10 pt-3">

@@ -25,6 +25,7 @@ import { timeQuery, timeMark } from '@/lib/queryTiming'
 import { uploadAvatar, removeAvatar } from '@/lib/avatar'
 import { updateMyProfile } from '@/lib/useMyProfile'
 import { useArtistImages } from '@/lib/useArtistImages'
+import { SUPPORT_MAILTO } from '@/lib/contact'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
@@ -523,10 +524,12 @@ export default function ProfilePage() {
           )}
         </section>
 
-        <footer className="pt-2 pb-4 flex justify-center gap-4 text-[11px] text-ink-faint">
+        <footer className="pt-2 pb-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] text-ink-faint">
           <button type="button" onClick={signOut} className="underline underline-offset-[3px]">Sign out</button>
           <Link href="/privacy" className="underline underline-offset-[3px]">Privacy Policy</Link>
           <Link href="/terms" className="underline underline-offset-[3px]">Terms of Service</Link>
+          <a href={SUPPORT_MAILTO} className="underline underline-offset-[3px]">Contact us</a>
+          <Link href="/delete-account" className="underline underline-offset-[3px]">Delete account</Link>
         </footer>
       </div>
 

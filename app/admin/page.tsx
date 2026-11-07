@@ -6,14 +6,15 @@ import { ExternalLink, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { AdminLog, AdminStats } from '@/lib/adminStats'
 import type { VenueSyncMode } from '@/lib/venues/report'
+import { AdminReports } from '@/components/AdminReports'
 import {
   BackHeader, Card, Chip, EmptyState, ErrorNote, Label, LoadingLabel, Place, Segmented, Stars, Stat,
   btnPrimary, btnQuiet, btnSecondary, placeOf,
 } from '@/components/ui'
 
-// The owner's control room: today's QR funnel, whether texts are getting
-// through, the sign-up switch, the venue-website sync, and the latest logs
-// with a way to take one down. The /api/admin routes decide who gets in
+// The owner's control room: reports waiting on a decision, today's QR
+// funnel, whether texts are getting through, the sign-up switch, the
+// venue-website sync, and the latest logs with a way to take one down. The /api/admin routes decide who gets in
 // (lib/adminAuth.ts); this page only shows what they return.
 
 const REFRESH_MS = 30_000
@@ -209,6 +210,8 @@ export default function AdminPage() {
       {header}
       <main className="px-4 pt-4 max-w-md mx-auto space-y-4">
         {error && <ErrorNote>{error}</ErrorNote>}
+
+        <AdminReports call={call} now={now} refreshKey={stats.generatedAt} />
 
         <Card className="p-4 space-y-3">
           <Label>Today, Pacific time</Label>

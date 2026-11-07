@@ -7,6 +7,7 @@ import { getArtistImages } from '@/lib/artistImages'
 import { formatShowDate } from '@/lib/dates'
 import { resolveMediaUrls } from '@/lib/media'
 import { Logo } from '@/components/Logo'
+import { ContentMenu } from '@/components/ContentMenu'
 import {
   ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat,
 } from '@/components/ui'
@@ -37,7 +38,7 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
 
   const { data: logs } = await timeQuery(`artist:logged_shows(${params.artistId})`, supabase
     .from('logged_shows')
-    .select('user_id, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls, artist_name, stage, day, venue, show_date')
+    .select('id, user_id, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls, artist_name, stage, day, venue, show_date')
     .eq('artist_id', params.artistId))
 
   if (!logs || logs.length === 0) notFound()
@@ -143,13 +144,16 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
                 const reviewer = profileMap[log.user_id]
                 const username = reviewer?.username ?? 'anonymous'
                 return (
-                  <Card key={i} className="p-4 space-y-3">
+                  <Card key={log.id ?? i} className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <Link href={`/u/${username}`} className="flex items-center gap-2.5 min-w-0">
                         <PersonPhoto name={username} src={reviewer?.avatar_url} className="w-8 h-8 text-sm border border-ink/15" />
                         <span className="text-sm font-semibold truncate">@{username}</span>
                       </Link>
-                      <Stars score={log.score} size={15} />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Stars score={log.score} size={15} />
+                        <ContentMenu kind="log" targetId={log.id} ownerId={log.user_id} ownerName={reviewer?.username ?? null} />
+                      </div>
                     </div>
                     <PullQuote>{log.review}</PullQuote>
                     {log.tags && log.tags.length > 0 && (

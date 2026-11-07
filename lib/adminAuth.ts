@@ -9,6 +9,10 @@ const ADMIN_USER_IDS = new Set([
   '6913da75-a093-4887-bfad-56fcb275c656',
 ])
 
+export function isAdminId(userId: string): boolean {
+  return ADMIN_USER_IDS.has(userId)
+}
+
 // null when the caller is an admin; otherwise the response to send back.
 export async function refuseUnlessAdmin(req: NextRequest): Promise<NextResponse | null> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
