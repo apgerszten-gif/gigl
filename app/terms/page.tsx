@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { LegalPageShell, LegalH2 as H2, LegalP as P, LegalUl as Ul } from '@/components/LegalPageShell'
 
 export default function TermsPage() {
@@ -40,7 +41,7 @@ export default function TermsPage() {
       <P>Festival and artist names, logos, and marks referenced within Gigl (for example, festival names or performing artists) are the property of their respective owners. Gigl is an independent platform for fan-submitted ratings and rankings and is not affiliated with, endorsed by, or sponsored by any festival organizer, artist, or venue unless explicitly stated.</P>
 
       <H2>6. Third-Party Services</H2>
-      <P>The Service uses third-party providers (including Supabase for backend infrastructure, Google for optional sign-in, and Vercel for hosting) to operate. Your use of sign-in options like Google is also subject to that provider&apos;s own terms.</P>
+      <P>The Service uses third-party providers to operate, including Supabase for backend infrastructure, Vercel for hosting, and Prelude and Twilio for text messages. The <Link href="/privacy" className="text-accent underline underline-offset-[3px]">Privacy Policy</Link> explains what each of them receives.</P>
 
       <H2>7. Disclaimers</H2>
       <P>The Service is provided &quot;as is&quot; and &quot;as available,&quot; without warranties of any kind, whether express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. We do not guarantee the Service will be uninterrupted, error-free, or secure at all times.</P>
