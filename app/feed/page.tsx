@@ -13,6 +13,7 @@ import { BattleModeCard } from '@/components/BattleModeCard'
 import { ReactionBar } from '@/components/ReactionBar'
 import { CommentsModal } from '@/components/CommentsModal'
 import { ContentMenu } from '@/components/ContentMenu'
+import { ReviewText, WithLine } from '@/components/TagDisplay'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
@@ -63,6 +64,9 @@ interface GlobalLog {
   media_urls:  string[] | null
   review:      string | null
   tags:        string[] | null
+  // Everyone tagged on it (show_tags). Missing on feed caches written
+  // before tagging came back.
+  tagged?:     { username: string; avatar_url: string | null }[]
 }
 
 function FeedInner() {
@@ -114,7 +118,7 @@ function FeedInner() {
 
     const logsQuery = supabase
       .from('logged_shows')
-      .select('id, artist_id, artist_name, performance_rating, venue_rating, crowd_rating, created_at, user_id, stage, day, venue, show_date, photo_url, media_urls, review, tags')
+      .select('id, artist_id, artist_name, performance_rating, venue_rating, crowd_rating, created_at, user_id, stage, day, venue, show_date, photo_url, media_urls, review, tags, show_tags(tagged_user_id)')
       .order('created_at', { ascending: false })
       .limit(200)
 
@@ -162,16 +166,20 @@ function FeedInner() {
 
     if (!logs) { setLoading(false); timeMark('feed:load total (no logs)', loadStart); return }
 
-    const userIds = logs.map(l => l.user_id).filter((id, i, arr) => arr.indexOf(id) === i)
+    // Posters and the people they tagged, in one profiles read.
+    const taggedIdsOf = (l: { show_tags?: { tagged_user_id: string | null }[] | null }) =>
+      (l.show_tags ?? []).map(t => t.tagged_user_id).filter((id): id is string => !!id)
+    const userIds = Array.from(new Set([...logs.map(l => l.user_id), ...logs.flatMap(taggedIdsOf)]))
     const { data: profiles } = await timeQuery(`feed:profiles-by-id(${userIds.length} ids)`, supabase.from('profiles').select('id, username, avatar_url').in('id', userIds))
 
     const profileMap: Record<string, { username: string; avatar_url: string | null }> = {}
     profiles?.forEach(p => { profileMap[p.id] = p })
 
-    const withUsernames = logs.map(l => ({
+    const withUsernames: GlobalLog[] = logs.map(({ show_tags, ...l }) => ({
       ...l,
       username:   profileMap[l.user_id]?.username ?? null,
       avatar_url: profileMap[l.user_id]?.avatar_url ?? null,
+      tagged:     taggedIdsOf({ show_tags }).flatMap(id => profileMap[id] ? [profileMap[id]] : []),
     }))
     setGlobalFeed(withUsernames)
     writeCache(FEED_CACHE_KEY, withUsernames)
@@ -418,13 +426,19 @@ function FeedInner() {
                   </Link>
                 </div>
 
-                {item.review && <PullQuote compact>{item.review}</PullQuote>}
+                {item.review && (
+                  <PullQuote compact>
+                    <ReviewText text={item.review} tagged={(item.tagged ?? []).map(p => p.username)} />
+                  </PullQuote>
+                )}
 
                 {hasTags && (
                   <div className="flex flex-wrap gap-1">
                     {item.tags!.map(tag => <Chip key={tag} compact>{tag}</Chip>)}
                   </div>
                 )}
+
+                <WithLine people={item.tagged ?? []} />
               </div>
 
               <ReactionBar

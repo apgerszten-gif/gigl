@@ -26,6 +26,8 @@ import { uploadAvatar, removeAvatar } from '@/lib/avatar'
 import { updateMyProfile } from '@/lib/useMyProfile'
 import { useArtistImages } from '@/lib/useArtistImages'
 import { SUPPORT_MAILTO } from '@/lib/contact'
+import { TaggedInList } from '@/components/TagDisplay'
+import { loadTaggedIn, type TaggedInLog } from '@/lib/tags'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
@@ -98,6 +100,19 @@ export default function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const [avatarBusy, setAvatarBusy]         = useState(false)
   const [avatarError, setAvatarError]       = useState<string | null>(null)
+  const [taggedIn, setTaggedIn]             = useState<TaggedInLog[]>([])
+
+  // Taking yourself off someone else's log. If their review still has your
+  // @name, saving that log again would tag you again.
+  async function untagMe(log: TaggedInLog) {
+    if (!user) return
+    setTaggedIn(prev => prev.filter(t => t.logId !== log.logId))
+    const { error } = await supabase.from('show_tags').delete().eq('logged_show_id', log.logId).eq('tagged_user_id', user.id)
+    if (error) {
+      console.error('untagging yourself failed:', error.message)
+      setTaggedIn(prev => [...prev, log])
+    }
+  }
 
   useEffect(() => {
     if (authLoading) return
@@ -130,6 +145,8 @@ export default function ProfilePage() {
       ])
       setFollowerCount(followers ?? 0)
       setFollowingCount(following ?? 0)
+
+      setTaggedIn(await loadTaggedIn(supabase, userId))
 
       setLoading(false)
       timeMark(`profile:load total (${(showData || []).length} shows)`, loadStart)
@@ -261,7 +278,7 @@ export default function ProfilePage() {
     }
   }
 
-  const artistImage = useArtistImages(shows.map(s => s.artist_name))
+  const artistImage = useArtistImages([...shows.map(s => s.artist_name), ...taggedIn.map(t => t.artistName)])
 
   if (loading) return (
     <div className="min-h-screen bg-paper flex items-center justify-center">
@@ -523,6 +540,8 @@ export default function ProfilePage() {
             </div>
           )}
         </section>
+
+        <TaggedInList logs={taggedIn} artistImage={artistImage} onRemove={untagMe} />
 
         <footer className="pt-2 pb-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] text-ink-faint">
           <button type="button" onClick={signOut} className="underline underline-offset-[3px]">Sign out</button>

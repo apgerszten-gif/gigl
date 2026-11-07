@@ -124,7 +124,8 @@ Where the photos come from:
   - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
   - the reviewer's photo, handle (`text-[12.6px] font-semibold`) and timestamp, with the star rating on the right
   - the artist heading and place line, with the artist photo and date sticker beside them (festival logs show the stage and day instead, with the festival in parentheses)
-  - the review as a pull quote, then its tags as chips
+  - the review as a pull quote, with tagged people's `@username` as sienna underlined links to their profiles, then its tags as chips
+  - when anyone is tagged, a "with @mo and @mei" line (`WithLine` in `components/TagDisplay.tsx`): up to three overlapping 18px photos, then the handles in `ink`, "and 2 others" past three
   - the reaction bar (heart, fire, laugh, wow, comments)
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
 - Signed out, a `Card` above the controls: "Rate the shows you've been to", a line in `ink-muted` saying an account is only needed to post, a small "Log a show" primary button (to `/select-festival`) and an "I have an account" link. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
@@ -148,7 +149,10 @@ Where the photos come from:
 - Title bar ("Log a show" or "Update log") with a close button. There's no dock or profile photo in this flow.
 - Selected-show card: the artist photo, the date as a sienna label, the artist and the place line.
 - Rating card: the overall stars once all three are set, then tappable Performance / Venue / Crowd star rows.
-- Field notes (the review) and "Photos & video" (up to 1 video and 2 photos). Highlight tags and "Went with" (friend tagging) were taken off to keep logging quick; a log re-rated here keeps any tags it already had, and tags still show on feed cards and can be edited from You.
+- Field notes (the review) and "Photos & video" (up to 1 video and 2 photos). Highlight tags were taken off to keep logging quick; a log re-rated here keeps any it already had, and they still show on feed cards and can be edited from You.
+- Tagging who you went with (`components/TagPeople.tsx`), in two places that add nothing to the screen until they're used:
+  - Typing `@` in Field notes opens a list under the box: "People you follow" while nothing's typed after the @, then "Following" and "Everyone on Gigl" as you type. Each row is the person's photo, name and handle, with a small "+ Follow" (`btnSecondary`) on anyone you don't follow, which tags and follows in one tap; tapping the row just tags. Picking writes `@username` into the review, tinted `bg-accent/15 text-accent`.
+  - Under Photos & video, a search field reading "Did you go with another Gigl user?" with the same list. Once anyone is tagged, a "Went with" label and their chips (round photo, `@username` in sienna, an × to untag) sit above it and the field reads "Anyone else?".
 - Full-width primary button: "Save log".
 - Signed out, the whole screen works. An 11px `ink-faint` line under Save says posting asks for an account, and Save opens the sign-up sheet over the log rather than leaving it.
 - `/log` is the older festival-lineup picker that leads here. It uses the same list-row pattern.
@@ -172,7 +176,8 @@ Where the photos come from:
   - the style guide also shows a city place line *(mockup)*
 - "Saved shows" (`components/SavedShowsSection.tsx`): your upcoming saved shows in alternating rows with a remove `X`, then a dashed "Going to a show soon?" tile linking to the Upcoming list. It's private, and doesn't appear on the public profile.
 - "My rankings": ranked cards like the Rankings page, with any media, the review and tags. Each card's edit button opens an inline editor for the photo, review and tags, with options to update the ratings or remove the log.
-- Footer links: Sign out, Privacy Policy, Terms of Service.
+- "Tagged in" (`TaggedInList`), when anyone has tagged you: a card per log with the artist photo and date sticker, the artist, the place and "Tagged by @them", and an × that untags you. Public profiles show the same list without the ×.
+- Footer links: Sign out, Privacy Policy, Terms of Service, Contact us, Delete account.
 - The style guide also shows live streak, soundprint and yearly goal cards *(mockup)*.
 
 ### Other screens

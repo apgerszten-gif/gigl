@@ -901,3 +901,29 @@ alter table public.reports enable row level security;
 drop policy if exists "reports_insert" on public.reports;
 create policy "reports_insert" on public.reports for insert
   with check (auth.uid() = reporter_id and resolved_at is null and resolution is null);
+
+-- ── Tagging who you went with, back on the log screen ────────────────────────
+-- show_tags (above) holds the tags. They're made by writing @username in a
+-- review or from the "Did you go with another Gigl user?" bar, and show on
+-- feed cards and under "Tagged in" on profiles (lib/tags.ts). Needs the
+-- reporting-and-blocking SQL above first, for private.is_blocked_with.
+--
+-- Insert: only on your own log, only a real account (the old invite flow's
+-- placeholder rows aren't made any more), never yourself, and never someone
+-- either of you has blocked.
+drop policy if exists "show_tags_insert" on public.show_tags;
+create policy "show_tags_insert" on public.show_tags for insert with check (
+  exists (select 1 from public.logged_shows where id = show_tags.logged_show_id and user_id = auth.uid())
+  and tagged_user_id is not null
+  and tagged_user_id <> auth.uid()
+  and not private.is_blocked_with(tagged_user_id)
+);
+-- Delete: the log's owner, or the person tagged, who can untag themselves
+-- from "Tagged in" on their own profile.
+drop policy if exists "show_tags_delete" on public.show_tags;
+create policy "show_tags_delete" on public.show_tags for delete using (
+  tagged_user_id = auth.uid()
+  or exists (select 1 from public.logged_shows where id = show_tags.logged_show_id and user_id = auth.uid())
+);
+-- "Tagged in" reads by the person tagged.
+create index if not exists show_tags_tagged_user_idx on public.show_tags (tagged_user_id, created_at desc);
