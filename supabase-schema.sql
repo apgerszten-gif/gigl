@@ -800,3 +800,104 @@ drop policy if exists "saved_shows_update" on public.saved_shows;
 create policy "saved_shows_update" on public.saved_shows for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 drop policy if exists "saved_shows_delete" on public.saved_shows;
 create policy "saved_shows_delete" on public.saved_shows for delete using (auth.uid() = user_id);
+
+-- ── Reporting and blocking (App Store guideline 1.2) ─────────────────────────
+-- Apple only lists an app with user posts if people can report what they see
+-- and block whoever posted it. Both live in the ••• menu on feed cards,
+-- comments, artist-page reviews and profiles (components/ContentMenu.tsx).
+--
+-- Functions the policies below call live in their own `private` schema
+-- rather than `public`, which PostgREST serves: is_blocked_with() can see
+-- blocks other people made, and shouldn't be callable as an RPC that tells
+-- you who blocked you.
+create schema if not exists private;
+grant usage on schema private to anon, authenticated;
+
+-- One row per block. Blocking is mutual for what you see: once either person
+-- blocks the other, neither sees the other's logs or comments while signed
+-- in, and neither can follow the other. Server-rendered pages read Supabase
+-- without a session (/u/<name>, /artist/<id>), so they still show everything,
+-- as they do to anyone signed out.
+create table if not exists public.blocks (
+  blocker_id uuid references public.profiles(id) on delete cascade not null,
+  blocked_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamp with time zone not null default now(),
+  primary key (blocker_id, blocked_id),
+  check (blocker_id <> blocked_id)
+);
+create index if not exists blocks_blocked_idx on public.blocks (blocked_id);
+alter table public.blocks enable row level security;
+-- Your own blocks only: nobody can read who has blocked them.
+drop policy if exists "blocks_read" on public.blocks;
+create policy "blocks_read" on public.blocks for select using (auth.uid() = blocker_id);
+drop policy if exists "blocks_insert" on public.blocks;
+create policy "blocks_insert" on public.blocks for insert with check (auth.uid() = blocker_id);
+drop policy if exists "blocks_delete" on public.blocks;
+create policy "blocks_delete" on public.blocks for delete using (auth.uid() = blocker_id);
+
+-- Whether the signed-in user and `other` have blocked each other, either way
+-- round. Security definer so it sees the block the other person made, which
+-- blocks_read hides. Always false when signed out (auth.uid() is null).
+create or replace function private.is_blocked_with(other uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.blocks
+    where (blocker_id = auth.uid() and blocked_id = other)
+       or (blocker_id = other and blocked_id = auth.uid())
+  )
+$$;
+grant execute on function private.is_blocked_with(uuid) to anon, authenticated;
+
+-- A block ends any follow between the two, in both directions. The person
+-- blocking can only delete their own follow under follows_delete, so this
+-- runs as the table owner.
+create or replace function private.unfollow_on_block()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  delete from public.follows
+  where (follower_id = new.blocker_id and following_id = new.blocked_id)
+     or (follower_id = new.blocked_id and following_id = new.blocker_id);
+  return new;
+end;
+$$;
+drop trigger if exists blocks_unfollow on public.blocks;
+create trigger blocks_unfollow after insert on public.blocks
+  for each row execute function private.unfollow_on_block();
+
+-- Replaces the read policies at the top of this file (both were `using
+-- (true)`) and the follow insert policy.
+drop policy if exists "shows_read" on public.logged_shows;
+create policy "shows_read" on public.logged_shows for select using (not private.is_blocked_with(user_id));
+drop policy if exists "show_comments_read" on public.show_comments;
+create policy "show_comments_read" on public.show_comments for select using (not private.is_blocked_with(user_id));
+drop policy if exists "follows_insert" on public.follows;
+create policy "follows_insert" on public.follows for insert with check (auth.uid() = follower_id and not private.is_blocked_with(following_id));
+
+-- Reports of a log, a comment or a whole profile, for /admin to act on.
+-- target_id is that row's id. There's no foreign key, since it points at
+-- one of three tables; when the content is removed the report stays, marked
+-- resolved, as the record of what was done. Anyone signed in can file one;
+-- nobody can read them back except through the service role (/api/admin).
+-- Reporting the same thing twice is refused by reports_once_idx, which the
+-- app treats as success.
+create table if not exists public.reports (
+  id          uuid default gen_random_uuid() primary key,
+  created_at  timestamp with time zone not null default now(),
+  reporter_id uuid references public.profiles(id) on delete set null,
+  kind        text not null check (kind in ('log', 'comment', 'profile')),
+  target_id   uuid not null,
+  reason      text not null check (reason in ('spam', 'harassment', 'hate', 'sexual', 'violence', 'other')),
+  details     text check (char_length(details) <= 500),
+  resolved_at timestamp with time zone,
+  resolution  text check (resolution in ('removed', 'dismissed'))
+);
+create unique index if not exists reports_once_idx on public.reports (reporter_id, kind, target_id);
+create index if not exists reports_open_idx on public.reports (created_at desc) where resolved_at is null;
+alter table public.reports enable row level security;
+drop policy if exists "reports_insert" on public.reports;
+create policy "reports_insert" on public.reports for insert
+  with check (auth.uid() = reporter_id and resolved_at is null and resolution is null);

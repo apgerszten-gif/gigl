@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Send } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
+import { ContentMenu } from '@/components/ContentMenu'
 import { createClient } from '@/lib/supabase/client'
 import { BackHeader, LoadingLabel, PersonPhoto, btnSecondary } from '@/components/ui'
 
@@ -108,6 +109,14 @@ export function CommentsModal({
     onCountChange(1)
   }
 
+  // After a block, their comments go from this sheet and from the count on
+  // the card behind it.
+  function hidePerson(userId: string) {
+    const theirs = comments.filter(c => c.user_id === userId).length
+    setComments(prev => prev.filter(c => c.user_id !== userId))
+    if (theirs > 0) onCountChange(-theirs)
+  }
+
   return (
     <div className={`fixed inset-0 z-[100] mx-auto max-w-md bg-paper text-ink flex flex-col transition-transform duration-[280ms] ease-out ${
       shown ? 'translate-y-0' : 'translate-y-full'
@@ -129,6 +138,14 @@ export function CommentsModal({
                     {c.display_name || (c.username ? `@${c.username}` : 'someone')}
                   </span>
                   <span className="text-[10px] text-ink-faint">{timeAgo(c.created_at)}</span>
+                  <ContentMenu
+                    kind="comment"
+                    targetId={c.id}
+                    ownerId={c.user_id}
+                    ownerName={c.username}
+                    onBlocked={hidePerson}
+                    className="ml-auto self-center"
+                  />
                 </div>
                 <p className="text-[13px] leading-normal mt-0.5">{c.body}</p>
               </div>

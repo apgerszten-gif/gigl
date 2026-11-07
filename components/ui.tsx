@@ -22,6 +22,12 @@ export const btnQuiet =
   'inline-flex items-center justify-center gap-1.5 rounded-card border-1.5 border-ink/15 bg-cream text-ink-muted ' +
   'font-semibold disabled:opacity-50'
 
+// For a step that can't be undone (delete an account, block someone), in the
+// same red as ErrorNote and the profile's Delete button.
+export const btnDanger =
+  'inline-flex items-center justify-center gap-1.5 rounded-card border-1.5 border-[#B03030]/30 bg-[#B03030]/10 text-[#B03030] ' +
+  'font-bold disabled:opacity-50'
+
 export const iconBtn = 'p-2 rounded-card border-1.5 border-ink bg-cream shadow-riso'
 
 export const inputBox = 'rounded-card border-1.5 border-ink bg-cream'

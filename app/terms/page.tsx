@@ -4,7 +4,7 @@ import { LegalPageShell, LegalH2 as H2, LegalP as P, LegalUl as Ul } from '@/com
 
 export default function TermsPage() {
   return (
-    <LegalPageShell title="Terms of Service" updated="Last updated: July 26, 2026">
+    <LegalPageShell title="Terms of Service" updated="Last updated: November 6, 2026">
       <P>Welcome to Gigl. These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Gigl website and application (the &quot;Service&quot;), operated by Gigl, Inc. (&quot;Gigl,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). By creating an account or using the Service, you agree to these Terms.</P>
 
       <H2>1. Eligibility</H2>
@@ -21,8 +21,10 @@ export default function TermsPage() {
         <li>Contains someone else&apos;s private information without their consent</li>
         <li>Infringes copyright or other intellectual property rights</li>
         <li>Impersonates another person or entity</li>
+        <li>Is hateful, threatening, sexually explicit, violent, or otherwise objectionable</li>
+        <li>Is spam</li>
       </Ul>
-      <P>We may remove User Content that violates these Terms at our discretion.</P>
+      <P>Gigl has no tolerance for objectionable content or abusive users. You can report any log, comment, or profile, or block the person who posted it, from the &bull;&bull;&bull; menu beside it. We review reports within 24 hours, remove content that violates these Terms, and may remove the accounts that posted it. We may also remove User Content that violates these Terms at our discretion without a report.</P>
 
       <H2>4. Acceptable Use</H2>
       <P>You agree not to:</P>
@@ -47,7 +49,7 @@ export default function TermsPage() {
       <P>To the fullest extent permitted by law, Gigl and its operators will not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data, arising from your use of the Service.</P>
 
       <H2>9. Termination</H2>
-      <P>We may suspend or terminate your access to the Service at any time, with or without notice, for conduct that violates these Terms or is otherwise harmful to the Service or other users. You may stop using the Service and request account deletion at any time.</P>
+      <P>We may suspend or terminate your access to the Service at any time, with or without notice, for conduct that violates these Terms or is otherwise harmful to the Service or other users. You may stop using the Service at any time, and can delete your account from the bottom of your profile page.</P>
 
       <H2>10. Changes to These Terms</H2>
       <P>We may update these Terms from time to time. Continued use of the Service after changes take effect constitutes acceptance of the updated Terms.</P>

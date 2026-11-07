@@ -12,6 +12,7 @@ import { ReviewReminders } from '@/components/ReviewReminders'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { ReactionBar } from '@/components/ReactionBar'
 import { CommentsModal } from '@/components/CommentsModal'
+import { ContentMenu } from '@/components/ContentMenu'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
@@ -264,6 +265,20 @@ function FeedInner() {
     })
   }
 
+  // After a block, their logs go now rather than on the next load (which
+  // leaves them out anyway, under the logged_shows read policy). The cache
+  // too, or a repeat visit would flash them back in before that load.
+  function hidePerson(userId: string) {
+    const remaining = globalFeed.filter(item => item.user_id !== userId)
+    setGlobalFeed(remaining)
+    writeCache(FEED_CACHE_KEY, remaining)
+    setFollowingIds(prev => {
+      const next = new Set(prev)
+      next.delete(userId)
+      return next
+    })
+  }
+
   function dismissBattleCard() {
     setBattleCardDismissed(true)
     if (user) {
@@ -381,7 +396,10 @@ function FeedInner() {
                       <p className="text-[9.4px] text-ink-muted">{timeAgo(item.created_at)}</p>
                     </div>
                   </Link>
-                  {score !== null && <Stars score={score} size={13} />}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {score !== null && <Stars score={score} size={13} />}
+                    <ContentMenu kind="log" targetId={item.id} ownerId={item.user_id} ownerName={item.username} onBlocked={hidePerson} />
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2.5">

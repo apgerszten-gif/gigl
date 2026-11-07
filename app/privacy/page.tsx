@@ -1,10 +1,11 @@
 'use client'
 
+import Link from 'next/link'
 import { LegalPageShell, LegalH2 as H2, LegalP as P, LegalUl as Ul } from '@/components/LegalPageShell'
 
 export default function PrivacyPage() {
   return (
-    <LegalPageShell title="Privacy Policy" updated="Last updated: July 26, 2026">
+    <LegalPageShell title="Privacy Policy" updated="Last updated: November 6, 2026">
       <P>This Privacy Policy explains how Gigl (&quot;Gigl,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) collects, uses, and shares information when you use our website and application (the &quot;Service&quot;).</P>
 
       <H2>1. Information We Collect</H2>
@@ -44,7 +45,8 @@ export default function PrivacyPage() {
       <P>Some content you submit — such as your username, public ratings, reviews, and rankings — may be visible to other users or visible publicly (for example, on a shareable profile page). Please don&apos;t include information in reviews or profile fields that you don&apos;t want to be seen publicly.</P>
 
       <H2>5. Data Retention &amp; Deletion</H2>
-      <P>We retain your account information and content for as long as your account is active. You may request deletion of your account and associated data by contacting us at <a href="mailto:a.p.gerszten@gmail.com" className="text-accent underline underline-offset-[3px]">a.p.gerszten@gmail.com</a>. Some information may be retained where required for legal, security, or fraud-prevention purposes.</P>
+      <P>We retain your account information and content for as long as your account is active. You can delete your account at any time from inside Gigl: tap <strong>Delete account</strong> at the bottom of your profile, or go to <Link href="/delete-account" className="text-accent underline underline-offset-[3px]">gigl.space/delete-account</Link>. This immediately deletes your profile, phone number or email address, profile photo, logged shows, ratings, reviews, photos and videos, comments, reactions, follows, and saved shows. Shows you added to Gigl&apos;s search stay listed, without your name attached. Reports you made about other people&apos;s content are kept, without your name, as a record of what we reviewed.</P>
+      <P>If you can&apos;t sign in, you can also ask us to delete your account at <a href="mailto:a.p.gerszten@gmail.com" className="text-accent underline underline-offset-[3px]">a.p.gerszten@gmail.com</a>. Some information may be retained where required for legal, security, or fraud-prevention purposes.</P>
 
       <H2>6. Children&apos;s Privacy</H2>
       <P>Gigl is not directed to children under 13 (or the relevant minimum age in your jurisdiction), and we do not knowingly collect personal information from children under that age. If you believe a child has provided us with personal information, please contact us so we can remove it.</P>
