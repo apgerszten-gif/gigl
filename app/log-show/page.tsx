@@ -11,10 +11,12 @@ import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
 import { useAuth } from '@/components/AuthProvider'
-import { ArtistPhoto, Card, Label, Place, Stars, btnPrimary, headerClass, inputBox } from '@/components/ui'
+import { ArtistPhoto, Card, Label, Place, Stars, btnPrimary, headerClass } from '@/components/ui'
 import { SignUpSheet } from '@/components/SignUpSheet'
+import { NotesWithMentions, WentWithField, usePeopleGraph } from '@/components/TagPeople'
+import { mentionedUsernames, unmention, type TaggedPerson } from '@/lib/tags'
 import {
-  enqueuePendingLog, getPendingLogForArtist, flushPendingLogs,
+  enqueuePendingLog, getPendingLogForArtist, getPendingTagsForArtist, flushPendingLogs,
   saveGuestDraft, getGuestDraftForArtist, clearGuestDraft, type GuestDraft,
 } from '@/lib/pendingLogs'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
@@ -79,32 +81,6 @@ function StarRow({
         ))}
       </div>
     </div>
-  )
-}
-
-function AutoGrowTextarea({
-  value, onChange, placeholder,
-}: {
-  value: string; onChange: (v: string) => void; placeholder: string
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [value])
-
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={1}
-      className="block w-full resize-none overflow-hidden bg-transparent text-base leading-normal text-ink placeholder:text-ink-faint focus:outline-none"
-    />
   )
 }
 
@@ -181,6 +157,56 @@ function LogShowInner() {
   const [media, setMedia] = useState<MediaItem[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Who you went with (lib/tags.ts). @mentions in the review are tags for as
+  // long as the @ stays in the text; `wentWith` is everyone tagged from the
+  // bar instead, plus anyone already tagged on this log whom the review
+  // doesn't mention. `known` maps a username to its person, for the
+  // mentions. `tagsReady` is false while an existing log's tags are loading
+  // (or if they couldn't be), and saving then leaves its tags alone.
+  const graph = usePeopleGraph()
+  const [wentWith, setWentWith]   = useState<TaggedPerson[]>([])
+  const [known, setKnown]         = useState<Record<string, TaggedPerson>>({})
+  const [tagsReady, setTagsReady] = useState(true)
+  const lookedUp = useRef(new Set<string>())
+
+  function remember(people: TaggedPerson[]) {
+    if (people.length === 0) return
+    setKnown(prev => ({ ...prev, ...Object.fromEntries(people.map(p => [p.username, p])) }))
+  }
+
+  const mentioned = mentionedUsernames(thoughts)
+  const tagged: TaggedPerson[] = []
+  for (const person of [...mentioned.map(u => known[u]), ...wentWith]) {
+    if (!person || person.id === user?.id || graph.blocked.has(person.id)) continue
+    if (!tagged.some(p => p.id === person.id)) tagged.push(person)
+  }
+
+  // An @username typed out by hand, rather than picked from the list: look
+  // it up once it has sat still for a moment. One that isn't anyone stays
+  // plain text.
+  useEffect(() => {
+    const unknown = mentioned.filter(u => !known[u] && !lookedUp.current.has(u))
+    if (unknown.length === 0) return
+    const timer = setTimeout(async () => {
+      unknown.forEach(u => lookedUp.current.add(u))
+      const { data } = await supabase.from('profiles').select('id, username, display_name, avatar_url').in('username', unknown)
+      remember(data ?? [])
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [thoughts, known])
+
+  function addWentWith(person: TaggedPerson) {
+    remember([person])
+    setWentWith(prev => prev.some(p => p.id === person.id) ? prev : [...prev, person])
+  }
+
+  // Untagging from a chip also takes the @ off their name in the review,
+  // which would otherwise tag them again.
+  function untag(person: TaggedPerson) {
+    setWentWith(prev => prev.filter(p => p.id !== person.id))
+    if (mentioned.includes(person.username)) setThoughts(text => unmention(text, person.username))
+  }
+
   const [saving, setSaving] = useState(false)
   const [celebration, setCelebration] = useState<{ username: string | null } | null>(null)
   const [battleUnlock, setBattleUnlock] = useState(false)
@@ -241,13 +267,37 @@ function LogShowInner() {
       // synced (e.g. the connection dropped right after saving) — prefer it
       // over the server row above since it reflects the user's most recent
       // intent.
-      applyDraft(getPendingLogForArtist(userId, artistId))
+      const pending = getPendingLogForArtist(userId, artistId)
+      applyDraft(pending)
       // Newer still: a draft written while signed out that never got posted
       // (they signed in some other way, or the page reloaded mid sign-up).
-      applyDraft(getGuestDraftForArtist(artistId))
+      const guest = getGuestDraftForArtist(artistId)
+      applyDraft(guest)
 
       setLoadingExisting(false)
       timeMark('log-show:prefill total', loadStart)
+
+      // Who's tagged: a queued save's list if there is one, since it's newer,
+      // or else the log's own tags. Loaded after the screen is up; until it
+      // arrives, saving leaves the tags as they are.
+      const review = guest ? guest.review : pending ? pending.review : data?.review
+      let tagIds = getPendingTagsForArtist(userId, artistId)
+      if (!tagIds && data) {
+        setTagsReady(false)
+        const { data: rows, error } = await supabase
+          .from('show_tags').select('tagged_user_id').eq('logged_show_id', data.id).not('tagged_user_id', 'is', null)
+        if (error) { console.error('show_tags prefill failed:', error.message); return }
+        tagIds = (rows ?? []).map(r => r.tagged_user_id as string)
+      }
+      if (!tagIds || tagIds.length === 0) { setTagsReady(true); return }
+
+      const { data: people, error: peopleError } = await supabase
+        .from('profiles').select('id, username, display_name, avatar_url').in('id', tagIds)
+      if (peopleError) { console.error('tagged profiles prefill failed:', peopleError.message); return }
+      remember(people ?? [])
+      const inReview = new Set(mentionedUsernames(review))
+      setWentWith((people ?? []).filter(p => !inReview.has(p.username)))
+      setTagsReady(true)
     }
     load(user.id)
   }, [artistId, authLoading, user, router])
@@ -324,6 +374,8 @@ function LogShowInner() {
 
     const draft = currentDraft()
     const score = computeShowScore(performance, venue, crowd)
+    // Undefined leaves the log's tags as they are (see tagsReady).
+    let tagIds: string[] | undefined = tagsReady ? tagged.filter(p => p.id !== userId).map(p => p.id) : undefined
 
     // Queue the rating locally before anything else touches the network.
     // From this line on, the rating itself can't be lost to a dropped
@@ -334,10 +386,22 @@ function LogShowInner() {
       photo_url:  null,
       media_urls: null,
       emoji:      deriveLegacyEmoji(score),
-    })
+    }, tagIds)
     // Safely queued under a real account now, so a signed-out draft of it
     // has nothing left to do.
     clearGuestDraft()
+
+    // An @username typed just before saving may not have been looked up yet.
+    const unresolved = mentioned.filter(u => !known[u])
+    if (tagIds && unresolved.length > 0) {
+      try {
+        const { data: found } = await supabase.from('profiles').select('id').in('username', unresolved)
+        const extra = (found ?? []).map(p => p.id as string).filter(id => id !== userId && !graph.blocked.has(id) && !tagIds!.includes(id))
+        if (extra.length > 0) tagIds = [...tagIds, ...extra]
+      } catch {
+        // tagged without them
+      }
+    }
 
     // Best-effort media upload — if this fails, the rating above is already
     // safe; the show just gets logged without its photo/video for now.
@@ -360,15 +424,13 @@ function LogShowInner() {
         mediaUrls.push(item.url)
       }
     }
-    if (mediaUrls.length > 0) {
-      enqueuePendingLog({
-        ...draft,
-        user_id:    userId,
-        photo_url:  mediaUrls[0],
-        media_urls: mediaUrls,
-        emoji:      deriveLegacyEmoji(score),
-      })
-    }
+    enqueuePendingLog({
+      ...draft,
+      user_id:    userId,
+      photo_url:  mediaUrls[0] ?? null,
+      media_urls: mediaUrls.length > 0 ? mediaUrls : null,
+      emoji:      deriveLegacyEmoji(score),
+    }, tagIds)
 
     let isFirstShow = false
     let wasUnlocked = true
@@ -473,13 +535,14 @@ function LogShowInner() {
 
         <section className="space-y-1.5">
           <Label tone="ink">Field notes</Label>
-          <div className={`${inputBox} px-3 py-2.5 focus-within:ring-2 focus-within:ring-accent/40`}>
-            <AutoGrowTextarea
-              value={thoughts}
-              onChange={setThoughts}
-              placeholder="What made this set stand out?"
-            />
-          </div>
+          <NotesWithMentions
+            value={thoughts}
+            onChange={setThoughts}
+            placeholder="What made this set stand out?"
+            graph={graph}
+            exclude={new Set(tagged.map(p => p.id))}
+            onPicked={person => remember([person])}
+          />
         </section>
 
         <section className="space-y-1.5">
@@ -524,6 +587,8 @@ function LogShowInner() {
             )}
           </div>
         </section>
+
+        <WentWithField tagged={tagged} graph={graph} onAdd={addWentWith} onRemove={untag} />
 
         <button
           type="button"

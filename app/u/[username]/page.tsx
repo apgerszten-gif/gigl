@@ -7,6 +7,8 @@ import { resolveMediaUrls } from '@/lib/media'
 import { MediaGrid } from '@/components/MediaGrid'
 import { FollowButton } from '@/components/FollowButton'
 import { ContentMenu } from '@/components/ContentMenu'
+import { TaggedInList } from '@/components/TagDisplay'
+import { loadTaggedIn } from '@/lib/tags'
 import { Logo } from '@/components/Logo'
 import {
   ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf, btnPrimary,
@@ -28,14 +30,15 @@ export default async function PublicProfile({ params }: { params: { username: st
 
   if (!profile) notFound()
 
-  const [{ data: showsRaw }, { count: followerCount }, { count: followingCount }] = await Promise.all([
+  const [{ data: showsRaw }, { count: followerCount }, { count: followingCount }, taggedIn] = await Promise.all([
     supabase.from('logged_shows').select('*').eq('user_id', profile.id),
     supabase.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', profile.id),
     supabase.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', profile.id),
+    loadTaggedIn(supabase, profile.id),
   ])
 
   const shows = (showsRaw ?? []).slice().sort((a, b) => showScore(b) - showScore(a))
-  const artistImage = await getArtistImages(supabase, shows.map(s => s.artist_name))
+  const artistImage = await getArtistImages(supabase, [...shows.map(s => s.artist_name), ...taggedIn.map(t => t.artistName)])
   const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.crowd_rating != null)
   const avgScore = ratedShows.length > 0
     ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
@@ -126,6 +129,8 @@ export default async function PublicProfile({ params }: { params: { username: st
             </div>
           )}
         </section>
+
+        <TaggedInList logs={taggedIn} artistImage={artistImage} />
 
         <div className="pt-4 text-center">
           <p className="text-[11px] text-ink-faint mb-3">Want to rank the shows you&apos;ve seen?</p>

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
+import { syncShowTags } from '@/lib/tags'
 
 const QUEUE_KEY = 'gigl_pending_logs'
 
@@ -27,6 +28,10 @@ interface QueuedLog {
   localId:   string
   createdAt: number
   payload:   PendingLogPayload
+  // Everyone tagged on the log (lib/tags.ts). Kept beside the payload, not
+  // in it, because the payload is written to logged_shows as it stands.
+  // Missing means leave the log's tags as they are.
+  taggedUserIds?: string[]
 }
 
 function readQueue(): QueuedLog[] {
@@ -48,11 +53,11 @@ function writeQueue(queue: QueuedLog[]) {
 // lose it. Re-queuing for the same user/artist (e.g. once media finishes
 // uploading a moment later) replaces the earlier entry rather than
 // duplicating it.
-export function enqueuePendingLog(payload: PendingLogPayload): void {
+export function enqueuePendingLog(payload: PendingLogPayload, taggedUserIds?: string[]): void {
   const queue = readQueue().filter(q =>
     !(q.payload.user_id === payload.user_id && q.payload.artist_id === payload.artist_id)
   )
-  queue.push({ localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, createdAt: Date.now(), payload })
+  queue.push({ localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, createdAt: Date.now(), payload, taggedUserIds })
   writeQueue(queue)
 }
 
@@ -60,6 +65,11 @@ export function enqueuePendingLog(payload: PendingLogPayload): void {
 // the user re-opens the same artist before the background sync completes.
 export function getPendingLogForArtist(userId: string, artistId: string): PendingLogPayload | null {
   return readQueue().find(q => q.payload.user_id === userId && q.payload.artist_id === artistId)?.payload ?? null
+}
+
+// The tags waiting with that rating, if it carries any.
+export function getPendingTagsForArtist(userId: string, artistId: string): string[] | undefined {
+  return readQueue().find(q => q.payload.user_id === userId && q.payload.artist_id === artistId)?.taggedUserIds
 }
 
 let flushing = false
@@ -75,11 +85,19 @@ export async function flushPendingLogs(): Promise<void> {
   try {
     const supabase = createClient()
     for (const entry of readQueue()) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('logged_shows')
         .upsert(entry.payload, { onConflict: 'user_id,artist_id' })
+        .select('id')
+        .single()
 
       if (!error) {
+        // A new log only has an id now, so its tags can only be written
+        // here. Best-effort: the rating is what this queue protects.
+        if (entry.taggedUserIds && data?.id) {
+          await syncShowTags(supabase, data.id, entry.taggedUserIds)
+            .catch(err => console.error('syncing tags failed:', err))
+        }
         writeQueue(readQueue().filter(q => q.localId !== entry.localId))
       }
     }
