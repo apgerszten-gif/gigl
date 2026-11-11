@@ -215,6 +215,9 @@ export interface PastShowSearch {
   // Where the last load stopped, as it returned it in `next`. Omitted for
   // the first load.
   cursor?: string | null
+  // Narrows a venue search to one city, for a venue page: setlist.fm has
+  // Fillmores in nine of them.
+  city?: string | null
 }
 
 export interface PastShowPage {
@@ -271,7 +274,9 @@ export async function searchPastShows(query: string, options: PastShowSearch = {
   if (cursor?.kind === 'v' || fewFromArtist) {
     const from = cursor?.page ?? 1
     const typed = looseName(value)
-    const read = await readPages('/search/setlists', { venueName: value }, from, since, until)
+    const params: Record<string, string> = { venueName: value }
+    if (options.city) params.cityName = options.city
+    const read = await readPages('/search/setlists', params, from, since, until)
     const atVenue = read.setlists.filter(s => looseName(s.venue.name).startsWith(typed))
     setlists = cursor ? atVenue : [...setlists, ...atVenue]
     next = read.more ? `v:${from + PAGES_PER_LOAD}` : null

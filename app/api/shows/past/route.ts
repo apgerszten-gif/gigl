@@ -15,6 +15,10 @@ import { readNearby } from '@/lib/shows/nearby'
 // shows"), passed back as `cursor`; null when there's nothing older.
 // Takes the same optional `lat`, `lng` and `radius` as the search route.
 //
+// The artist and venue pages pass a first `cursor` of their own: `a:1` reads
+// the query only as an artist, `v:1` only as a venue, and `city` keeps a
+// venue search to one city (see lib/setlistfm.ts).
+//
 // A show both sources know about is left to the catalogue's copy, which has
 // Ticketmaster's photo and the id anyone who already logged it used.
 
@@ -46,10 +50,11 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? ''
   const nearby = readNearby(req.nextUrl.searchParams)
   const cursor = req.nextUrl.searchParams.get('cursor')
+  const city = req.nextUrl.searchParams.get('city')
 
   try {
     const [past, stored] = await Promise.all([
-      searchPastShows(q, { nearby, cursor }),
+      searchPastShows(q, { nearby, cursor, city }),
       searchStoredShows(q, { limit: 200 }),
     ])
 
