@@ -125,7 +125,7 @@ Where the photos come from:
   - The dashed "Can't find your show?" tile last, and "Nothing on Gigl matches …" when every section is empty.
   - The search is kept in the URL (`/feed?q=…`), so back from an artist or venue page lands on the same results. Nothing in it is filtered by location.
 - Review reminders (`components/ReviewReminders.tsx`) above the controls, only when a saved show has passed: a card per show, up to three, with the artist photo and date sticker, a "How was it?" accent label, the artist and place, a small "Rate it" primary button and a quiet "Didn't go".
-- Two stacked segmented controls: **All activity / Following** on top, then **Artist rankings** below. The first two filter the stream in place; Artist rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. They're stacked rather than a row of three because "whose logs" and "the aggregate view" are different questions, and because a three-up row crushes the longer label. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
+- Two stacked segmented controls: **All activity / Following** on top, then **Artist rankings / Venue rankings** below. The first two filter the stream in place; the rankings navigate to `/rankings` (`?view=venues` for venues), and arriving back from there carries the filter as `?filter=`. They're stacked rather than one row because "whose logs" and "the aggregate views" are different questions, and because a four-up row crushes the labels. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
 - Review cards, at **85% of the default component scale** so more fit on screen — `Place`, `PullQuote` and `Chip` take a `compact` prop for this rather than shrinking everywhere, since the same pieces set a slower density on rankings, profiles and the artist page. Each card has:
   - any photos or videos the reviewer attached, full-bleed at the top
   - a compact body (`px-4 pt-3 pb-3 space-y-2`) holding the rows below
@@ -137,11 +137,14 @@ Where the photos come from:
 - The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
 - Signed out, a `Card` above the controls: "Rate the shows you've been to", a line in `ink-muted` saying an account is only needed to post, a small "Log a show" primary button (to `/select-festival`) and an "I have an account" link. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
 
-### Artist rankings (`/rankings`)
-- Reached from the Feed view switch, not the dock. Its own route, so the segmented control navigates rather than toggling state.
-- `AppHeader` with an "Everyone's ratings" label and the title, then the same two controls as Feed with Artist rankings selected.
-- One list, no day tabs. Splitting by day made sense when every logged show came from a festival lineup and "Saturday" named a real section of the event; with search covering the whole Ticketmaster catalogue it would slice a year of unrelated gigs by weekday. `day` still shows in the place line on festival-sourced rows.
-- Ranked cards: a sienna rank number, the artist photo with its date sticker, the artist with stars, the place line, a rating-count chip and any battle record.
+### Rankings (`/rankings`)
+- Reached from the Feed's view switch, not the dock. Its own route; the two filter options navigate back to Feed, while **Artist rankings / Venue rankings** switch in place.
+- `AppHeader` with an "Everyone's ratings" label and the title ("Artist rankings" or "Venue rankings"), then the same two controls as Feed with a rankings option selected.
+- A search box (`inputBox` with `shadow-riso`, a `Search` icon and an `X` to clear): "Search artists", or "Search venues or cities". It narrows the list as you type, and every card keeps its real rank number ("#12"), not its place among the matches.
+- A **Rank by** row: a `Label`, then **Both / Performance / Venue** as `Chip` toggles. Both averages the Performance and Venue stars; the other two rank on one alone. Crowd isn't part of either. The view and the choice are kept in the URL (`?view=venues&by=venue`).
+- **Artist rankings** are one card per artist across every show of theirs anyone has rated (names matched loosely, so "Charli XCX" and "Charli xcx" are one artist), not one card per show. **Venue rankings** are one card per venue and city: the city comes from the catalogue, so a venue only known from setlist.fm logs has no place line, and festival stages aren't venues.
+- Ranked cards: a sienna rank number, the artist photo (or a halftone `Building2` tile for a venue), the name with the stars it's ranked on, a venue's place line, then both averages small ("PERFORMANCE ★★★★★ VENUE ★★★★☆", the one not in use faint), and chips for shows and ratings. An artist's card carries their battle record summed over all their shows. Tapping a card opens the artist's or venue's page. Ties go to the one with more ratings.
+- One list, no day tabs. Splitting by day made sense when every logged show came from a festival lineup and "Saturday" named a real section of the event; with search covering the whole Ticketmaster catalogue it would slice a year of unrelated gigs by weekday.
 - The style guide also shows a milestone callout and a "View gig map" pill *(mockup)*.
 
 ### Add a show (`/add-show`)

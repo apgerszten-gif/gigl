@@ -116,7 +116,10 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
           onChange={setFilter}
         />
         <Segmented
-          options={[{ value: 'rankings', label: 'Artist rankings' }]}
+          options={[
+            { value: 'rankings', label: 'Artist rankings' },
+            { value: 'venues', label: 'Venue rankings' },
+          ]}
           value=""
           onChange={onRankings}
         />
@@ -167,10 +170,12 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
 
 // ── Screen 2: Rankings ───────────────────────────────────────────────────────
 
+// One row per artist across every show of theirs, ranked on Performance and
+// Venue stars averaged (or either alone - the "Rank by" chips).
 const RANKED = [
-  { artist: 'Tame Impala',  place: 'Kia Forum, Inglewood, CA',     date: '2026-08-21', count: 38, score: 5 },
-  { artist: 'Fred again..', place: 'LA Coliseum, Los Angeles, CA', date: '2026-07-30', count: 51, score: 14 / 3 },
-  { artist: 'Mitski',       place: 'The Wiltern, Los Angeles, CA', date: '2026-09-02', count: 17, score: 14 / 3 },
+  { artist: 'Tame Impala',  shows: 4, count: 38, performance: 5,   venue: 5 },
+  { artist: 'Fred again..', shows: 6, count: 51, performance: 5,   venue: 4.5 },
+  { artist: 'Mitski',       shows: 2, count: 17, performance: 4.5, venue: 4.5 },
 ]
 
 function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: () => void }) {
@@ -193,10 +198,23 @@ function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: 
           onChange={onFeed}
         />
         <Segmented
-          options={[{ value: 'rankings', label: 'Artist rankings' }]}
+          options={[
+            { value: 'rankings', label: 'Artist rankings' },
+            { value: 'venues', label: 'Venue rankings' },
+          ]}
           value="rankings"
           onChange={() => {}}
         />
+        <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5`}>
+          <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
+          <input placeholder="Search artists" className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none" />
+        </label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Label className="mr-0.5">Rank by</Label>
+          <Chip active>Both</Chip>
+          <Chip>Performance</Chip>
+          <Chip>Venue</Chip>
+        </div>
       </div>
 
       <div className="mx-5 mt-4 p-3 rounded-card bg-accent/10 border-1.5 border-accent/30 flex items-center justify-between gap-3">
@@ -211,16 +229,23 @@ function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: 
         {RANKED.map((row, i) => (
           <Card key={row.artist} className="p-3 flex items-center gap-3">
             <span className="font-display text-3xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
-            <ArtistPhoto name={row.artist} className="w-14 h-14">
-              <DateTag isoDate={row.date} />
-            </ArtistPhoto>
+            <ArtistPhoto name={row.artist} className="w-14 h-14" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-display text-base font-bold leading-tight truncate">{row.artist}</h3>
-                <Stars score={row.score} size={12} />
+                <Stars score={(row.performance + row.venue) / 2} size={12} />
               </div>
-              <Place className="mt-0.5">{row.place}</Place>
-              <div className="mt-1.5"><Chip>{row.count} ratings</Chip></div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-[9px] font-semibold uppercase tracking-label text-ink-muted">Performance</span>
+                  <Stars score={row.performance} size={9} />
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-[9px] font-semibold uppercase tracking-label text-ink-muted">Venue</span>
+                  <Stars score={row.venue} size={9} />
+                </span>
+              </div>
+              <div className="mt-1.5 flex gap-1.5"><Chip>{row.shows} shows</Chip><Chip>{row.count} ratings</Chip></div>
             </div>
           </Card>
         ))}
