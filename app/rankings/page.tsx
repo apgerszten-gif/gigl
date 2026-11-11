@@ -1,13 +1,13 @@
 import { supabase } from '@/lib/supabase'
-import { aggregateArtistRows, RANKINGS_SELECT } from '@/lib/rankings'
+import { isRankMetric, loadRankings } from '@/lib/rankings'
 import { RankingsClient } from '@/components/RankingsClient'
-import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
+import { markInvocation, timeMark } from '@/lib/queryTiming'
 
 // Server component: the leaderboard read has no per-user filter (RLS already
-// allows public select on logged_shows), so it's fetched and aggregated here
-// at request time instead of client-side behind a loading spinner. Filtering
-// by day, sign-out, and navigation stay in RankingsClient since they need
-// localStorage/interactivity that only exists in the browser.
+// allows public select on logged_shows), so it's fetched and ranked here at
+// request time instead of client-side behind a loading spinner. Switching
+// between artists and venues, the search, and what the stars rank on stay in
+// RankingsClient, since they're interactive.
 //
 // This route has no dynamic segment, so without this Next.js would prerender
 // it once at build time and serve that frozen snapshot to every visitor
@@ -15,21 +15,22 @@ import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
 // data changes as soon as anyone logs a show.
 export const dynamic = 'force-dynamic'
 
-export default async function RankingsPage() {
+interface Props { searchParams: { view?: string | string[]; by?: string | string[] } }
+
+export default async function RankingsPage({ searchParams }: Props) {
   const pageStart = Date.now()
   const { cold } = markInvocation()
   console.log(`[perf] rankings:page start cold=${cold}`)
 
-  const { data: logs, error } = await timeQuery('rankings:logged_shows', supabase
-    .from('logged_shows')
-    .select(RANKINGS_SELECT))
-
-  // Previously swallowed: a failed query (RLS, bad column, etc.) looked
-  // identical to "no ratings yet" with nothing in the logs to tell them apart.
-  if (error) console.error('[rankings] logged_shows query failed:', error.message)
-
-  const rows = aggregateArtistRows(logs)
-
+  const rankings = await loadRankings(supabase)
   timeMark('rankings:page total', pageStart)
-  return <RankingsClient initialRows={rows} />
+
+  const by = Array.isArray(searchParams.by) ? searchParams.by[0] : searchParams.by
+  return (
+    <RankingsClient
+      initial={rankings}
+      initialView={searchParams.view === 'venues' ? 'venues' : 'rankings'}
+      initialMetric={isRankMetric(by) ? by : 'both'}
+    />
+  )
 }
