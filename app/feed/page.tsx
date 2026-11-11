@@ -19,6 +19,7 @@ import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
 import { SignUpSheet } from '@/components/SignUpSheet'
+import { FEED_SEARCH_MIN, FeedSearchBar, FeedSearchResults } from '@/components/FeedSearch'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary, placeOf,
 } from '@/components/ui'
@@ -92,6 +93,20 @@ function FeedInner() {
   // Signed-out visitors can read everything here. Reacting, commenting or
   // filtering to Following opens the sign-up sheet in this mode instead.
   const [signUpMode, setSignUpMode]       = useState<'signup' | 'signin' | null>(null)
+
+  // The search box at the top. While it holds a search, its results stand in
+  // for the stream below. Kept in the URL (?q=), so coming back from an
+  // artist or venue page it opened lands on the same results.
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '')
+  const searching = searchQuery.trim().length >= FEED_SEARCH_MIN
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (searchQuery.trim()) params.set('q', searchQuery)
+    else params.delete('q')
+    const qs = params.toString()
+    window.history.replaceState(null, '', qs ? `/feed?${qs}` : '/feed')
+  }, [searchQuery])
 
   // Stale-while-revalidate: show whatever we last fetched immediately, so a
   // repeat visit never has to sit on a blank spinner while the real fetch
@@ -321,9 +336,11 @@ function FeedInner() {
       </AppHeader>
 
       <div className="px-5 pt-3 space-y-3">
+        <FeedSearchBar value={searchQuery} onChange={setSearchQuery} />
+
         {/* The front door for someone who scanned a code: what this is, and
             that writing a log doesn't need an account until it's posted. */}
-        {!authLoading && !user && (
+        {!searching && !authLoading && !user && (
           <Card className="px-4 py-3.5">
             <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
               Rate the shows you&apos;ve been to
@@ -347,18 +364,22 @@ function FeedInner() {
           </Card>
         )}
 
-        <ReviewReminders />
+        {!searching && (
+          <>
+            <ReviewReminders />
 
-        <FeedTabs
-          value={activeFilter}
-          onFilterChange={next => {
-            if (next === 'following' && !user) { setSignUpMode('signup'); return }
-            setFilterMode(next)
-          }}
-        />
+            <FeedTabs
+              value={activeFilter}
+              onFilterChange={next => {
+                if (next === 'following' && !user) { setSignUpMode('signup'); return }
+                setFilterMode(next)
+              }}
+            />
+          </>
+        )}
       </div>
 
-      <main className="px-5 pt-4 space-y-4">
+      {searching ? <FeedSearchResults query={searchQuery} /> : <main className="px-5 pt-4 space-y-4">
         {loading && <LoadingLabel />}
 
         {battleModeUnlocked && !battleCardDismissed && (
@@ -454,7 +475,7 @@ function FeedInner() {
             </Card>
           )
         })}
-      </main>
+      </main>}
 
       <BottomNav showLogTip={showLogTip} onDismissLogTip={() => setShowLogTip(false)} />
 

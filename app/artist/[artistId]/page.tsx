@@ -12,6 +12,7 @@ import {
   ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat,
 } from '@/components/ui'
 import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
+import { artistHref, venueHref } from '@/lib/showLinks'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -55,7 +56,14 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
   const day        = logs[0]?.day   ?? ''
   const venueName  = logs[0]?.venue ?? ''
   const showDate   = logs[0]?.show_date ?? null
-  const artistImage = await getArtistImages(supabase, [artistName])
+  // The catalogue row, when it has this show, is what knows the venue's city:
+  // a log keeps only the venue's name, and nine cities have a Fillmore.
+  const [artistImage, { data: listing }] = await Promise.all([
+    getArtistImages(supabase, [artistName]),
+    venueName && !stage
+      ? supabase.from('shows').select('venue, city, state').eq('id', params.artistId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
 
   const rated = logs
     .filter(l => l.performance_rating != null && l.venue_rating != null && l.crowd_rating != null)
@@ -92,8 +100,14 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
             <DateTag isoDate={showDate} />
           </ArtistPhoto>
           <div className="flex-1 min-w-0 space-y-1.5">
-            <h1 className="font-display text-[28px] font-bold tracking-tight leading-none">{artistName}</h1>
-            {place && <Place>{place}</Place>}
+            {/* The artist and the venue each open every show Gigl has for
+                them, past and coming up (/artists, /venues). */}
+            <h1 className="font-display text-[28px] font-bold tracking-tight leading-none">
+              <Link href={artistHref(artistName)} className="hover:text-accent">{artistName}</Link>
+            </h1>
+            {place && (listing
+              ? <Link href={venueHref({ name: listing.venue, city: listing.city, state: listing.state })} className="block hover:text-accent"><Place>{place}</Place></Link>
+              : <Place>{place}</Place>)}
             {rated.length > 0 && <Stars score={avgScore} size={20} />}
           </div>
         </div>

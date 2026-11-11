@@ -59,7 +59,7 @@ Use opacity modifiers for tints: `bg-accent/10`, `border-accent/30`, `border-ink
   It used to be five. **Search** was removed because it opened the same screen as Log — both went to `/select-festival`, differing only in a heading — and once search returned only shows that had already happened, "find a show" stopped being a separate idea from "log a show". **Rankings** became a view on Feed rather than a destination: it is the same logged shows read as an aggregate instead of as a stream.
 
   Log opens `/select-festival`. `/rankings` lights the Feed tab. Signed out, You opens sign-in (`/auth`), since there's no profile to show.
-- **Focused pages** (artist, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
+- **Focused pages** (a show's reviews, an artist's or venue's shows, stage, public profile, follower lists, legal pages, battle, and the comment and tag-friends sheets) use `BackHeader` (a back chevron plus a title) and no dock. The log flow uses its own title bar with a close button.
 
 ---
 
@@ -97,6 +97,7 @@ Use the component rather than retyping its classes. The class lists are here so 
 | Loading | `LoadingLabel` | Centred 11px uppercase `ink-faint` text |
 | Form error | `ErrorNote` | Red-tinted box with `text-[#B03030]` |
 | Back header | `BackHeader` | Sticky header with a back chevron and a title |
+| Show rows | `PastShowRows`, `UpcomingShowRows`, `ShimmerRows` (`components/ShowRows.tsx`) | One `Card` of rows alternating `cream` / `cream-alt`, divided by `border-ink/10`: the artist photo (`w-14 h-14`) with its date sticker, a 15px display title, the place line, an 11px `ink-faint` note (support acts), and one action on the right — "+ Log" (`btnSecondary`, 10px) for a show that's happened, Save (`btnSecondary` with `Bookmark`, turning into a primary "Saved" with `Check`) for one that hasn't. A past row Gigl has ratings for shows small stars and "N ratings" under the place line, and tapping it opens that show's reviews; otherwise tapping a past row starts logging it |
 
 ---
 
@@ -117,6 +118,12 @@ Where the photos come from:
 
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
+- A search box at the top (`components/FeedSearch.tsx`), shown signed in or out: `inputBox` with `shadow-riso`, a `Search` icon, "Artists, venues, shows, people", and an `X` to clear once something's typed (Escape clears too). From two characters, its results replace everything below it, in sections under small `Label`s:
+  - **Artists** and **Venues**: one card of link rows (photo, or a halftone tile with a `Building2` icon for a venue; the name; a venue's place line; "N shows" in 10px uppercase `ink-faint`; a `ChevronRight`), each opening that artist's or venue's page.
+  - **Coming up** (Save) and **Past shows** (+ Log), up to six each, in the show-row pattern. Tonight's shows go under Past.
+  - **People**, as the follower-list rows with a Follow button.
+  - The dashed "Can't find your show?" tile last, and "Nothing on Gigl matches …" when every section is empty.
+  - The search is kept in the URL (`/feed?q=…`), so back from an artist or venue page lands on the same results. Nothing in it is filtered by location.
 - Review reminders (`components/ReviewReminders.tsx`) above the controls, only when a saved show has passed: a card per show, up to three, with the artist photo and date sticker, a "How was it?" accent label, the artist and place, a small "Rate it" primary button and a quiet "Didn't go".
 - Two stacked segmented controls: **All activity / Following** on top, then **Artist rankings** below. The first two filter the stream in place; Artist rankings navigates to `/rankings`, and arriving back from there carries the filter as `?filter=`. They're stacked rather than a row of three because "whose logs" and "the aggregate view" are different questions, and because a three-up row crushes the longer label. The style guide also shows filter chips for weekend, city and genre *(mockup)*.
 - Review cards, at **85% of the default component scale** so more fit on screen — `Place`, `PullQuote` and `Chip` take a `compact` prop for this rather than shrinking everywhere, since the same pieces set a slower density on rankings, profiles and the artist page. Each card has:
@@ -180,9 +187,18 @@ Where the photos come from:
 - Footer links: Sign out, Privacy Policy, Terms of Service, Contact us, Delete account.
 - The style guide also shows live streak, soundprint and yearly goal cards *(mockup)*.
 
+### Artist and venue pages (`/artists?name=…`, `/venues?name=…&city=…&state=…`)
+- Opened from the Feed's search, and from the artist name and the place line on a show's page. A venue is its name and its city: nine cities have a Fillmore. Query strings rather than path segments, because names carry slashes (`lib/showLinks.ts`).
+- `BackHeader` with the logo, going back to wherever you came from (the Feed's search results).
+- A header like a show's page: the artist photo (`w-24 h-24`), or a halftone tile with a `Building2` icon for a venue; an "Artist" or "Venue" `Label`; the name in 28px display; a venue's place line, or an artist's average stars across every rated show.
+- A `Stat` card: Coming up, Past shows (Past year on a venue) and Ratings.
+- **Coming up**: every listed show ahead, soonest first, in show rows with Save. **Past shows**: newest first, with + Log, and stars on any Gigl has ratings for. Ten of each, then a full-width `btnSecondary` "Show more" adds 25. On an artist's page a row is titled by the venue, with "Supporting <headliner>" when they weren't top of the bill; on a venue's page, by the act.
+- **More past shows**, from setlist.fm, with the "via setlist.fm" link on its label row: loaded straight away when the page has fewer than five past shows, otherwise behind a "Look for older shows" button, then "Show earlier shows" for each older batch. Nights the page already lists are left out, so a show's openers don't turn up as shows of their own.
+- An artist's page also lists shows people have logged that the catalogue doesn't have (setlist.fm logs, festival sets). A festival set has no + Log, since it's logged from its lineup.
+
 ### Other screens
 - **Public profile** (`/u/[username]`): the You layout, read-only, with a Follow button and a "Join Gigl" call to action.
-- **Artist** (`/artist/[id]`):
+- **Show** (`/artist/[id]`), one show's reviews. The artist's name links to their page, and the place line to the venue's page when the catalogue knows the venue's city:
   - a large artist photo with the place line and average stars
   - a strip of fan photos
   - a stats card: number of ratings, plus average and top rating as stars

@@ -205,6 +205,161 @@ export async function upcomingShows(
   return { shows, next: more ? offset + used : null }
 }
 
+// -- Global search, and the artist and venue pages --------------------------
+// The Feed's search bar (/api/search) names artists and venues as well as
+// shows, and each of those opens a page of everything the catalogue has for
+// it, past and upcoming (/artists, /venues).
+
+// How far a row has to be from today to belong on those pages: everything the
+// catalogue keeps behind it, everything the Upcoming list reaches ahead.
+function pageWindow<T extends { gte: (c: string, v: string) => T; lte: (c: string, v: string) => T }>(query: T): T {
+  return query.gte('show_date', retainStartIso()).lte('show_date', upcomingEndIso())
+}
+
+// For an exact, case-insensitive match through ILIKE: the pattern's own
+// wildcards are escaped so "Sunn O)))" or "100%" match only themselves.
+function exactPattern(input: string): string {
+  return input.trim().replace(/[\\%_]/g, ch => `\\${ch}`)
+}
+
+// How well a name answers what was typed: the whole name, then its start,
+// then the start of any word in it, then anywhere. Lower is better.
+function matchRank(name: string, typed: string): number {
+  const n = nameKey(name)
+  const t = nameKey(typed)
+  if (n === t) return 0
+  if (n.startsWith(t) || n.replace(/^the /, '').startsWith(t)) return 1
+  if (n.split(/[^a-z0-9]+/).some(word => word.startsWith(t))) return 2
+  return 3
+}
+
+// Supabase answers at most 1,000 rows a request, and PostgREST has no
+// DISTINCT, so artists and venues are counted from a sample. A broad term
+// ("the") can crowd a sample; a name anyone is actually looking for can't.
+const NAME_SAMPLE_ROWS = 1000
+
+export interface ArtistMatch {
+  name:     string
+  // Distinct shows across the catalogue and Gigl's own logs.
+  shows:    number
+  imageUrl: string | null
+}
+
+// Artists whose name contains `keyword`, best match first. The catalogue only
+// reaches back a year, and setlist.fm shows and festival sets are never stored
+// in it, so artists people have logged are searched as well - otherwise
+// someone who's only on Gigl through a setlist.fm log could never be found.
+export async function searchArtists(keyword: string, limit: number): Promise<ArtistMatch[]> {
+  const trimmed = escapeForOrFilter(keyword)
+  if (trimmed.length < 2) return []
+
+  const [catalogue, logged] = await Promise.all([
+    pageWindow(supabase.from('shows').select('id, artist, image_url').ilike('artist', `%${trimmed}%`)).limit(NAME_SAMPLE_ROWS),
+    supabase.from('logged_shows').select('artist_id, artist_name').ilike('artist_name', `%${trimmed}%`).limit(NAME_SAMPLE_ROWS),
+  ])
+  if (catalogue.error) throw new Error(`artist search failed: ${catalogue.error.message}`)
+  if (logged.error) console.error('artist search (logs) failed:', logged.error.message)
+
+  const found = new Map<string, { name: string; ids: Set<string>; imageUrl: string | null }>()
+  const add = (name: string, id: string, imageUrl: string | null) => {
+    const key = nameKey(name)
+    if (!key) return
+    const artist = found.get(key) ?? { name, ids: new Set<string>(), imageUrl: null }
+    artist.ids.add(id)
+    artist.imageUrl ??= imageUrl
+    found.set(key, artist)
+  }
+  for (const row of catalogue.data ?? []) add(row.artist, row.id, row.image_url)
+  for (const row of logged.data ?? []) add(row.artist_name, row.artist_id, null)
+
+  return Array.from(found.values())
+    .map(artist => ({ name: artist.name, shows: artist.ids.size, imageUrl: artist.imageUrl, rank: matchRank(artist.name, keyword) }))
+    .sort((a, b) => a.rank - b.rank || b.shows - a.shows || a.name.length - b.name.length)
+    .slice(0, limit)
+    .map(({ rank: _rank, ...artist }) => artist)
+}
+
+export interface VenueMatch {
+  name:  string
+  city:  string
+  state: string
+  shows: number
+}
+
+// Venues whose name contains `keyword`, best match first. A venue is its name
+// *and* its city: there are Fillmores in nine cities, and each is its own room.
+export async function searchVenues(keyword: string, limit: number): Promise<VenueMatch[]> {
+  const trimmed = escapeForOrFilter(keyword)
+  if (trimmed.length < 2) return []
+
+  const { data, error } = await pageWindow(
+    supabase.from('shows').select('venue, city, state').ilike('venue', `%${trimmed}%`),
+  ).limit(NAME_SAMPLE_ROWS)
+  if (error) throw new Error(`venue search failed: ${error.message}`)
+
+  const found = new Map<string, VenueMatch>()
+  for (const row of data ?? []) {
+    const key = `${nameKey(row.venue)}|${nameKey(row.city)}|${row.state}`
+    const venue = found.get(key) ?? { name: row.venue, city: row.city, state: row.state, shows: 0 }
+    venue.shows += 1
+    found.set(key, venue)
+  }
+
+  return Array.from(found.values())
+    .map(venue => ({ ...venue, rank: matchRank(venue.name, keyword) }))
+    .sort((a, b) => a.rank - b.rank || b.shows - a.shows || a.name.length - b.name.length)
+    .slice(0, limit)
+    .map(({ rank: _rank, ...venue }) => venue)
+}
+
+// Every show the catalogue has for one artist, soonest first: headlining, and
+// on the bill as support. The name match is exact (ignoring case), because
+// "Turnstile" and "Turnstile Tribute Band" are different pages.
+export async function showsByArtist(name: string): Promise<Show[]> {
+  const exact = exactPattern(name)
+  if (!exact) return []
+
+  // `support` is matched as an array literal, which a comma, brace or quote
+  // in the name would break apart ("Tyler, the Creator" would become two
+  // names), so those names only match as headliners.
+  const supportable = !/[,{}"\\]/.test(name)
+
+  const [headlining, supporting] = await Promise.all([
+    pageWindow(supabase.from('shows').select(SHOW_COLUMNS).ilike('artist', exact))
+      .order('show_date', { ascending: true }).order('id', { ascending: true }).limit(NAME_SAMPLE_ROWS),
+    supportable
+      ? pageWindow(supabase.from('shows').select(SHOW_COLUMNS).contains('support', [name.trim()])).limit(200)
+      : Promise.resolve({ data: [] as ShowRow[], error: null }),
+  ])
+  if (headlining.error) throw new Error(`artist shows failed: ${headlining.error.message}`)
+  if (supporting.error) console.error('artist shows (support) failed:', supporting.error.message)
+
+  const byId = new Map<string, ShowRow>()
+  for (const row of [...(headlining.data ?? []), ...(supporting.data ?? [])]) byId.set(row.id, row)
+  return Array.from(byId.values())
+    .sort((a, b) => (a.show_date ?? '').localeCompare(b.show_date ?? ''))
+    .map(row => toShow(row))
+}
+
+// Every show the catalogue has at one venue, soonest first. `city` and
+// `state` narrow it to one room when the name is shared; without them every
+// venue of that name is included.
+export async function showsAtVenue(venue: string, city?: string | null, state?: string | null): Promise<Show[]> {
+  const exact = exactPattern(venue)
+  if (!exact) return []
+
+  let query = pageWindow(supabase.from('shows').select(SHOW_COLUMNS).ilike('venue', exact))
+  if (city) query = query.ilike('city', exactPattern(city))
+  if (state) query = query.eq('state', state)
+
+  // A busy room over two years (one behind, one ahead) is a few hundred
+  // shows, well inside one request.
+  const { data, error } = await query
+    .order('show_date', { ascending: true }).order('id', { ascending: true }).limit(NAME_SAMPLE_ROWS)
+  if (error) throw new Error(`venue shows failed: ${error.message}`)
+  return (data ?? []).map(row => toShow(row))
+}
+
 const CITY_MATCH_LIMIT = 6
 
 // One read is plenty to tell which cities a prefix can mean, and Supabase
