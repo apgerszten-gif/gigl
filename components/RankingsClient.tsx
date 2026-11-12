@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { AppHeader } from '@/components/AppHeader'
+import { Logo } from '@/components/Logo'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs, type RankingsView } from '@/components/FeedTabs'
 import { ArtistPhoto, Card, Chip, EmptyState, Label, Place, Stars, inputBox } from '@/components/ui'
@@ -143,14 +144,12 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
 
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
+      {/* The Feed's own header: the rankings are views on the Feed tab, and
+          the bar below already says which one is showing. */}
       <AppHeader>
-        <div className="min-w-0">
-          <Label>Everyone&apos;s ratings</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">
-            {view === 'rankings' ? 'Artist rankings' : 'Venue rankings'}
-          </h1>
-        </div>
+        <Logo href="/feed" />
       </AppHeader>
+      <h1 className="sr-only">{view === 'rankings' ? 'Artist rankings' : 'Venue rankings'}</h1>
 
       {/* Same control as Feed, with a rankings option selected. From here
           the two filter options navigate back to Feed, and the two rankings

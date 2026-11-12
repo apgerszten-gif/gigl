@@ -182,10 +182,7 @@ function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: 
   return (
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
-        <div className="min-w-0">
-          <Label>Everyone&apos;s ratings</Label>
-          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">Artist rankings</h1>
-        </div>
+        <Logo />
       </DemoHeader>
 
       <div className="px-5 pt-3 space-y-2.5">
