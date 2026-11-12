@@ -39,7 +39,7 @@ export default async function PublicProfile({ params }: { params: { username: st
 
   const shows = (showsRaw ?? []).slice().sort((a, b) => showScore(b) - showScore(a))
   const artistImage = await getArtistImages(supabase, [...shows.map(s => s.artist_name), ...taggedIn.map(t => t.artistName)])
-  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.crowd_rating != null)
+  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null)
   const avgScore = ratedShows.length > 0
     ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
     : 0
@@ -90,7 +90,7 @@ export default async function PublicProfile({ params }: { params: { username: st
             <div className="flex flex-col gap-3">
               {shows.map((show, i) => {
                 const score     = showScore(show)
-                const hasScore  = show.performance_rating != null && show.venue_rating != null && show.crowd_rating != null
+                const hasScore  = show.performance_rating != null && show.venue_rating != null
                 const mediaUrls = resolveMediaUrls(show).map(resolvePhotoUrl)
                 const place     = placeOf(show)
                 return (

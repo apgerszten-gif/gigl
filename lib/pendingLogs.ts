@@ -16,7 +16,6 @@ export interface PendingLogPayload {
   show_date:          string | null
   performance_rating: number
   venue_rating:       number
-  crowd_rating:       number
   review:             string | null
   tags:               string[] | null
   photo_url:          string | null
@@ -164,14 +163,14 @@ export function queueGuestDraft(userId: string): boolean {
   } catch {
     return false
   }
-  if (!draft?.artist_id || !draft.performance_rating || !draft.venue_rating || !draft.crowd_rating) return false
+  if (!draft?.artist_id || !draft.performance_rating || !draft.venue_rating) return false
 
   enqueuePendingLog({
     ...draft,
     user_id:    userId,
     photo_url:  null,
     media_urls: null,
-    emoji:      deriveLegacyEmoji(computeShowScore(draft.performance_rating, draft.venue_rating, draft.crowd_rating)),
+    emoji:      deriveLegacyEmoji(computeShowScore(draft.performance_rating, draft.venue_rating)),
   })
   clearGuestDraft()
   return true

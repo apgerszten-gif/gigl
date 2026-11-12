@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { isRankMetric, loadRankings } from '@/lib/rankings'
+import { defaultRankMetric, isRankMetric, loadRankings } from '@/lib/rankings'
 import { RankingsClient } from '@/components/RankingsClient'
 import { markInvocation, timeMark } from '@/lib/queryTiming'
 
@@ -26,11 +26,12 @@ export default async function RankingsPage({ searchParams }: Props) {
   timeMark('rankings:page total', pageStart)
 
   const by = Array.isArray(searchParams.by) ? searchParams.by[0] : searchParams.by
+  const venues = searchParams.view === 'venues'
   return (
     <RankingsClient
       initial={rankings}
-      initialView={searchParams.view === 'venues' ? 'venues' : 'rankings'}
-      initialMetric={isRankMetric(by) ? by : 'both'}
+      initialView={venues ? 'venues' : 'rankings'}
+      initialMetric={isRankMetric(by) ? by : defaultRankMetric(venues ? 'venues' : 'artists')}
     />
   )
 }

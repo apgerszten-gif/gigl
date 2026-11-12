@@ -54,7 +54,6 @@ interface ArtistLog {
   show_date:          string | null
   performance_rating: number | null
   venue_rating:       number | null
-  crowd_rating:       number | null
 }
 
 // An artist's page. Gigl's own logs count as shows too: the catalogue only
@@ -66,7 +65,7 @@ export async function artistHistory(name: string): Promise<ShowHistory & { name:
     showsByArtist(name),
     supabase
       .from('logged_shows')
-      .select('artist_id, artist_name, venue, stage, day, show_date, performance_rating, venue_rating, crowd_rating')
+      .select('artist_id, artist_name, venue, stage, day, show_date, performance_rating, venue_rating')
       .ilike('artist_name', exact)
       .limit(1000)
       .then(({ data, error }) => {

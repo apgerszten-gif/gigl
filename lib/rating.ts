@@ -1,18 +1,28 @@
-export function computeShowScore(performance: number, venue: number, crowd: number): number {
-  return (performance + venue + crowd) / 3
+// A show's score: its Performance and Venue stars, averaged.
+//
+// Crowd used to be a third rating. It came off the log screen, and it no
+// longer counts anywhere, old logs included, so every score means the same
+// thing. Older logs still carry a crowd_rating (and the SMS flow still
+// records one); nothing reads it.
+export function computeShowScore(performance: number, venue: number): number {
+  return (performance + venue) / 2
 }
 
 interface RatedRow {
   performance_rating: number | null
   venue_rating:       number | null
-  crowd_rating:       number | null
+}
+
+// Whether a log has the two ratings a score needs.
+export function isRated(row: RatedRow): boolean {
+  return row.performance_rating != null && row.venue_rating != null
 }
 
 // Same as computeShowScore, but tolerant of rows that predate the rating
 // columns (or are otherwise missing a value) — returns 0 for those.
 export function showScore(row: RatedRow): number {
-  if (row.performance_rating == null || row.venue_rating == null || row.crowd_rating == null) return 0
-  return computeShowScore(row.performance_rating, row.venue_rating, row.crowd_rating)
+  if (!isRated(row)) return 0
+  return computeShowScore(row.performance_rating!, row.venue_rating!)
 }
 
 export function roundToEighth(score: number): number {

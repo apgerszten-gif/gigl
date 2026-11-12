@@ -146,7 +146,6 @@ function LogShowInner() {
 
   const [performance, setPerformance] = useState(0)
   const [venue, setVenue]             = useState(0)
-  const [crowd, setCrowd]             = useState(0)
 
   const [thoughts, setThoughts] = useState('')
 
@@ -218,7 +217,6 @@ function LogShowInner() {
     if (!draft) return
     setPerformance(draft.performance_rating)
     setVenue(draft.venue_rating)
-    setCrowd(draft.crowd_rating)
     setThoughts(draft.review ?? '')
     if (draft.tags && draft.tags.length > 0) setExistingTags(draft.tags)
   }
@@ -241,7 +239,7 @@ function LogShowInner() {
       const loadStart = Date.now()
       const { data } = await timeQuery('log-show:logged_shows', supabase
         .from('logged_shows')
-        .select('id, stage, day, venue, show_date, performance_rating, venue_rating, crowd_rating, review, tags, photo_url, media_urls')
+        .select('id, stage, day, venue, show_date, performance_rating, venue_rating, review, tags, photo_url, media_urls')
         .eq('user_id', userId)
         .eq('artist_id', artistId)
         .maybeSingle())
@@ -254,7 +252,6 @@ function LogShowInner() {
         if (data.show_date) setShowDate(data.show_date)
         if (data.performance_rating) setPerformance(data.performance_rating)
         if (data.venue_rating) setVenue(data.venue_rating)
-        if (data.crowd_rating) setCrowd(data.crowd_rating)
         if (data.review) setThoughts(data.review)
         if (data.tags && data.tags.length > 0) setExistingTags(data.tags)
         const existingUrls = resolveMediaUrls(data)
@@ -331,7 +328,7 @@ function LogShowInner() {
     setMedia(prev => prev.filter((_, i) => i !== index))
   }
 
-  const canSave = performance > 0 && venue > 0 && crowd > 0
+  const canSave = performance > 0 && venue > 0
   const mediaVideoCount = media.filter(m => m.isVideo).length
   const mediaPhotoCount = media.filter(m => !m.isVideo).length
   const mediaFull = mediaVideoCount >= MAX_VIDEOS && mediaPhotoCount >= MAX_PHOTOS
@@ -347,7 +344,6 @@ function LogShowInner() {
       show_date:          showDate || null,
       performance_rating: performance,
       venue_rating:        venue,
-      crowd_rating:        crowd,
       review:              thoughts.trim() || null,
       tags:                existingTags.length > 0 ? existingTags : null,
     }
@@ -373,7 +369,7 @@ function LogShowInner() {
     console.log('[perf] log-show:save start')
 
     const draft = currentDraft()
-    const score = computeShowScore(performance, venue, crowd)
+    const score = computeShowScore(performance, venue)
     // Undefined leaves the log's tags as they are (see tagsReady).
     let tagIds: string[] | undefined = tagsReady ? tagged.filter(p => p.id !== userId).map(p => p.id) : undefined
 
@@ -525,12 +521,11 @@ function LogShowInner() {
           <div className="flex items-center justify-between gap-3">
             <Label tone="ink">Your rating</Label>
             {canSave
-              ? <Stars score={computeShowScore(performance, venue, crowd)} size={16} />
-              : <span className="text-[11px] italic text-ink-faint">All three required</span>}
+              ? <Stars score={computeShowScore(performance, venue)} size={16} />
+              : <span className="text-[11px] italic text-ink-faint">Both required</span>}
           </div>
           <StarRow label="Performance" value={performance} onChange={setPerformance} />
           <StarRow label="Venue"       value={venue}       onChange={setVenue} />
-          <StarRow label="Crowd"       value={crowd}       onChange={setCrowd} />
         </Card>
 
         <section className="space-y-1.5">

@@ -16,18 +16,23 @@ import { timeQuery } from '@/lib/queryTiming'
 import { useArtistImages } from '@/lib/useArtistImages'
 import { artistHref, venueHref } from '@/lib/showLinks'
 import {
-  RANK_METRICS, loadRankings, sortRankings,
+  defaultRankMetric, loadRankings, rankMetricsFor, sortRankings,
   type ArtistRanking, type RankMetric, type RankScores, type VenueRanking,
 } from '@/lib/rankings'
 
 interface Rankings { artists: ArtistRanking[]; venues: VenueRanking[] }
 
-// The view and the ranking are kept in the URL (?view=venues, ?by=venue), so
-// a shared link or a reload opens the same list.
+function listOf(view: RankingsView): 'artists' | 'venues' {
+  return view === 'venues' ? 'venues' : 'artists'
+}
+
+// The view and the ranking are kept in the URL (?view=venues, ?by=both), so
+// a shared link or a reload opens the same list. A list's own default (see
+// lib/rankings.ts) is left out.
 function rankingsUrl(view: RankingsView, metric: RankMetric): string {
   const params = new URLSearchParams()
   if (view === 'venues') params.set('view', 'venues')
-  if (metric !== 'both') params.set('by', metric)
+  if (metric !== defaultRankMetric(listOf(view))) params.set('by', metric)
   const qs = params.toString()
   return qs ? `/rankings?${qs}` : '/rankings'
 }
@@ -53,9 +58,12 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
     window.history.replaceState(null, '', rankingsUrl(view, metric))
   }, [view, metric])
 
+  // Each list opens ranked on its own stars: artists on Performance, venues
+  // on Venue.
   function changeView(next: RankingsView) {
     if (next === view) return
     setView(next)
+    setMetric(defaultRankMetric(listOf(next)))
     setQuery('')
   }
 
@@ -169,11 +177,11 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
           )}
         </label>
 
-        {/* What the stars rank on: Performance and Venue averaged, or
-            either alone. */}
+        {/* What the stars rank on: Performance or Venue alone, or the two
+            averaged. Artists lead with Performance, venues with Venue. */}
         <div className="flex flex-wrap items-center gap-1.5">
           <Label className="mr-0.5">Rank by</Label>
-          {RANK_METRICS.map(option => (
+          {rankMetricsFor(listOf(view)).map(option => (
             <button key={option.value} type="button" aria-pressed={metric === option.value} onClick={() => setMetric(option.value)}>
               <Chip active={metric === option.value}>{option.label}</Chip>
             </button>

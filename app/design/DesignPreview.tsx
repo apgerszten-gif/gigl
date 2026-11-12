@@ -171,7 +171,7 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
 // ── Screen 2: Rankings ───────────────────────────────────────────────────────
 
 // One row per artist across every show of theirs, ranked on Performance and
-// Venue stars averaged (or either alone - the "Rank by" chips).
+// Performance stars (or Venue, or the two averaged - the "Rank by" chips).
 const RANKED = [
   { artist: 'Tame Impala',  shows: 4, count: 38, performance: 5,   venue: 5 },
   { artist: 'Fred again..', shows: 6, count: 51, performance: 5,   venue: 4.5 },
@@ -211,9 +211,9 @@ function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: 
         </label>
         <div className="flex flex-wrap items-center gap-1.5">
           <Label className="mr-0.5">Rank by</Label>
-          <Chip active>Both</Chip>
-          <Chip>Performance</Chip>
+          <Chip active>Performance</Chip>
           <Chip>Venue</Chip>
+          <Chip>Both</Chip>
         </div>
       </div>
 
@@ -233,7 +233,7 @@ function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-display text-base font-bold leading-tight truncate">{row.artist}</h3>
-                <Stars score={(row.performance + row.venue) / 2} size={12} />
+                <Stars score={row.performance} size={12} />
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
                 <span className="inline-flex items-center gap-1">
@@ -266,7 +266,7 @@ const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 
 const VIBES = ['Surprise guest', 'Acoustic moment', 'Crowd surf', 'Sing along', 'Cool lighting']
 
 function LogShowScreen() {
-  const [ratings, setRatings] = useState({ Performance: 5, Venue: 4, Crowd: 5 })
+  const [ratings, setRatings] = useState({ Performance: 5, Venue: 4 })
   const [notes, setNotes] = useState('Plans played front to back. Sound at the Greek was pristine and the fog rolled in on cue.')
   const [vibes, setVibes] = useState<string[]>(['Surprise guest', 'Acoustic moment'])
   const values = Object.values(ratings)
