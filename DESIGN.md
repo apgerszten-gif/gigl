@@ -118,7 +118,7 @@ Where the photos come from:
 
 ### Feed (`/feed`)
 - `AppHeader` with the logo and your profile photo.
-- A search box at the top (`components/FeedSearch.tsx`), shown signed in or out: `inputBox` with `shadow-riso`, a `Search` icon, "Artists, venues, shows, people", and an `X` to clear once something's typed (Escape clears too). From two characters, its results replace everything below it, in sections under small `Label`s:
+- A search box under the two view bars (below), the same place as on Rankings (`components/FeedSearch.tsx`), shown signed in or out: `inputBox` with `shadow-riso`, a `Search` icon, "Artists, venues, shows, people", and an `X` to clear once something's typed (Escape clears too). From two characters, its results replace the stream below it; everything above stays where it is, so the box never moves while you type, and picking All activity or Following clears the search. The results come in sections under small `Label`s:
   - **Artists** and **Venues**: one card of link rows (photo, or a halftone tile with a `Building2` icon for a venue; the name; a venue's place line; "N shows" in 10px uppercase `ink-faint`; a `ChevronRight`), each opening that artist's or venue's page.
   - **Coming up** (Save) and **Past shows** (+ Log), up to six each, in the show-row pattern. Tonight's shows go under Past.
   - **People**, as the follower-list rows with a Follow button.
