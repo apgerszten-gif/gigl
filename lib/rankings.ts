@@ -48,13 +48,13 @@ interface Ranked {
   shows:   number
   count:   number
   scores:  RankScores
-}
-
-export interface ArtistRanking extends Ranked {
-  // Every show id (logged_shows.artist_id) behind this artist, for summing
-  // their battle records.
+  // Every show id (logged_shows.artist_id) behind the row: what its "N shows"
+  // and "N ratings" open (components/RankingDetailSheet.tsx), and for an
+  // artist, what their battle records are summed over.
   showIds: string[]
 }
+
+export type ArtistRanking = Ranked
 
 export interface VenueRanking extends Ranked {
   // Empty when none of the shows rated there are in the catalogue, which is
@@ -169,9 +169,10 @@ export function rankVenues(logs: LoggedShowForRanking[], places: Record<string, 
       name:   venue.name,
       city:   venue.city,
       state:  venue.state,
-      shows:  venue.tally.showIds.size,
-      count:  venue.tally.count,
-      scores: venue.tally.scores(),
+      shows:   venue.tally.showIds.size,
+      count:   venue.tally.count,
+      scores:  venue.tally.scores(),
+      showIds: Array.from(venue.tally.showIds),
     }))
   })
   return rows

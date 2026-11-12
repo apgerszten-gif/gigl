@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Search, X } from 'lucide-react'
+import { Building2, ChevronRight, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { AppHeader } from '@/components/AppHeader'
 import { Logo } from '@/components/Logo'
+import { RankingDetailSheet } from '@/components/RankingDetailSheet'
 import BottomNav from '@/components/BottomNav'
 import { FeedTabs, type RankingsView } from '@/components/FeedTabs'
 import { ArtistPhoto, Card, Chip, EmptyState, Label, Place, Stars, inputBox } from '@/components/ui'
@@ -51,6 +52,9 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
   const [view, setView]         = useState<RankingsView>(initialView)
   const [metric, setMetric]     = useState<RankMetric>(initialMetric)
   const [query, setQuery]       = useState('')
+  // The card whose "N shows" or "N ratings" is open, in a sheet over the list.
+  const [detail, setDetail]     = useState<{ name: string; showIds: string[]; mode: 'shows' | 'ratings' } | null>(null)
+  const closeDetail = useCallback(() => setDetail(null), [])
   const [battleModeUnlocked, setBattleModeUnlocked]   = useState(false)
   const [battleCardDismissed, setBattleCardDismissed] = useState(false)
   const [battleAggMap, setBattleAggMap] = useState<Record<string, { wins: number; losses: number }>>({})
@@ -210,7 +214,7 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
                 </div>
                 <Breakdown scores={row.scores} metric={metric} />
                 <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <Counts shows={row.shows} ratings={row.count} />
+                  <Counts shows={row.shows} ratings={row.count} onOpen={mode => setDetail({ name: row.name, showIds: row.showIds, mode })} />
                   {battleAggMap[row.key] && (
                     <BattleRecordBadge
                       wins={battleAggMap[row.key].wins}
@@ -239,7 +243,7 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
                 {row.city && <Place className="mt-0.5">{[row.city, row.state].filter(Boolean).join(', ')}</Place>}
                 <Breakdown scores={row.scores} metric={metric} />
                 <div className="mt-1.5">
-                  <Counts shows={row.shows} ratings={row.count} />
+                  <Counts shows={row.shows} ratings={row.count} onOpen={mode => setDetail({ name: row.name, showIds: row.showIds, mode })} />
                 </div>
               </div>
             </Card>
@@ -248,6 +252,17 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
       </main>
 
       <BottomNav />
+
+      {detail && (
+        <RankingDetailSheet
+          list={view === 'venues' ? 'venues' : 'artists'}
+          mode={detail.mode}
+          name={detail.name}
+          showIds={detail.showIds}
+          metric={metric}
+          onClose={closeDetail}
+        />
+      )}
     </div>
   )
 }
@@ -294,11 +309,31 @@ function Breakdown({ scores, metric }: { scores: RankScores; metric: RankMetric 
   )
 }
 
-function Counts({ shows, ratings }: { shows: number; ratings: number }) {
+// "N shows" and "N ratings", each opening what's behind it in a sheet. They
+// sit inside a card that opens the artist's or venue's page, so a tap here
+// stops before it reaches the card.
+function Counts({ shows, ratings, onOpen }: {
+  shows: number; ratings: number; onOpen: (mode: 'shows' | 'ratings') => void
+}) {
+  const chip = (mode: 'shows' | 'ratings', label: string) => (
+    <button
+      type="button"
+      onClick={e => { e.stopPropagation(); onOpen(mode) }}
+      onKeyDown={e => e.stopPropagation()}
+      aria-label={`See ${label.toLowerCase()}`}
+    >
+      <Chip>
+        <span className="inline-flex items-center gap-0.5">
+          {label}
+          <ChevronRight className="w-2.5 h-2.5 -mr-0.5" strokeWidth={2.5} />
+        </span>
+      </Chip>
+    </button>
+  )
   return (
     <span className="inline-flex flex-wrap gap-1.5">
-      <Chip>{shows} {shows === 1 ? 'show' : 'shows'}</Chip>
-      <Chip>{ratings} {ratings === 1 ? 'rating' : 'ratings'}</Chip>
+      {chip('shows', `${shows} ${shows === 1 ? 'show' : 'shows'}`)}
+      {chip('ratings', `${ratings} ${ratings === 1 ? 'rating' : 'ratings'}`)}
     </span>
   )
 }
