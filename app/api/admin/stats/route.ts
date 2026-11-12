@@ -4,6 +4,8 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { refuseUnlessAdmin } from '@/lib/adminAuth'
 import type { AdminLog, AdminSignup, AdminStats } from '@/lib/adminStats'
 import { readVenueSyncMode, readVenueSyncReport } from '@/lib/venues/settings'
+import { readReviewTextsMode, readReviewTextsReport } from '@/lib/reviewTexts'
+import { preludeConfigured } from '@/lib/prelude'
 
 // GET /api/admin/stats — everything the admin page (app/admin) shows: today's
 // QR funnel, sign-ups, texting and logs, plus the latest logs and sign-ups.
@@ -126,7 +128,7 @@ export async function GET(req: NextRequest) {
   const today = dayOf(new Date())
 
   try {
-    const [users, events, logsToday, logsTotal, logs, method, venueMode, venueReport] = await Promise.all([
+    const [users, events, logsToday, logsTotal, logs, method, venueMode, venueReport, textsMode, textsReport] = await Promise.all([
       allUsers(),
       eventsSince(since),
       countLogs(since),
@@ -135,6 +137,8 @@ export async function GET(req: NextRequest) {
       signupMethod(),
       readVenueSyncMode(),
       readVenueSyncReport(),
+      readReviewTextsMode(),
+      readReviewTextsReport(),
     ])
 
     // A phone account exists from the moment its code is requested; it only
@@ -202,6 +206,7 @@ export async function GET(req: NextRequest) {
           totals: venueReport.totals,
         },
       },
+      reviewTexts: { mode: textsMode, configured: preludeConfigured(), lastRun: textsReport },
     }
     return NextResponse.json(stats)
   } catch (err) {

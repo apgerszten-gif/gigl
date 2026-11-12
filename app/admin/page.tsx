@@ -47,6 +47,8 @@ export default function AdminPage() {
   const [removing, setRemoving]     = useState<string | null>(null)
   const [venueSaving, setVenueSaving] = useState(false)
   const [venueRunning, setVenueRunning] = useState(false)
+  const [textsSaving, setTextsSaving]   = useState(false)
+  const [textsChecking, setTextsChecking] = useState(false)
 
   const call = useCallback(async (path: string, init?: RequestInit) => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -143,6 +145,36 @@ export default function AdminPage() {
       // A phone that slept mid-run drops the connection, not the run.
     } finally {
       setVenueRunning(false)
+    }
+  }
+
+  async function switchReviewTexts(next: 'off' | 'live') {
+    if (!stats || textsSaving || next === stats.reviewTexts.mode) return
+    const question = next === 'live'
+      ? 'Start texting people the morning after a saved show? The next run is at 17:00 UTC.'
+      : 'Stop the review texts? Nothing else changes.'
+    if (!window.confirm(question)) return
+
+    setTextsSaving(true)
+    const res = await call('/api/admin/settings', { method: 'POST', body: JSON.stringify({ reviewTextsMode: next }) })
+    const data = await res.json().catch(() => ({}))
+    setTextsSaving(false)
+    if (!res.ok) { setError(data.error ?? "Couldn't save the switch."); return }
+    setError(null)
+    setStats(s => s && { ...s, reviewTexts: { ...s.reviewTexts, mode: data.reviewTextsMode } })
+  }
+
+  // Works out who would get a text today without sending any.
+  async function checkReviewTexts() {
+    if (!stats || textsChecking) return
+    setTextsChecking(true)
+    try {
+      const res = await call('/api/cron/review-texts?dry=1')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) setError(data.error ?? "Couldn't check the review texts.")
+      else load()
+    } finally {
+      setTextsChecking(false)
     }
   }
 
@@ -321,6 +353,44 @@ export default function AdminPage() {
               Every venue &rarr;
             </Link>
           </div>
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <Label>Review texts</Label>
+          <Segmented<'off' | 'live'>
+            options={[{ value: 'off', label: 'Off' }, { value: 'live', label: 'Live' }]}
+            value={stats.reviewTexts.mode}
+            onChange={switchReviewTexts}
+          />
+          <p className="text-[12px] leading-snug text-ink-muted">
+            {textsSaving ? 'Saving…' : stats.reviewTexts.mode === 'off'
+              ? 'Nobody is texted. Each day at 17:00 UTC the job still works out who would be: anyone whose saved show was yesterday and who hasn’t logged it.'
+              : 'Each day at 17:00 UTC, everyone whose saved show was yesterday, and who hasn’t logged it, gets one text through Prelude asking how it was.'}
+          </p>
+          {!stats.reviewTexts.configured && (
+            <ErrorNote>Prelude isn&apos;t set up for these yet. Add PRELUDE_API_KEY and PRELUDE_REVIEW_TEMPLATE_ID in Vercel; until then nothing sends, even on Live.</ErrorNote>
+          )}
+          {stats.reviewTexts.lastRun ? (
+            <>
+              <div className="flex">
+                <Stat value={stats.reviewTexts.lastRun.people} label="Due" />
+                <Stat value={stats.reviewTexts.lastRun.sent} label="Sent" />
+                <Stat value={stats.reviewTexts.lastRun.failed} label="Failed" />
+              </div>
+              <p className="text-[12px] leading-snug text-ink-muted">
+                Last run {ago(stats.reviewTexts.lastRun.ranAt, now)}{stats.reviewTexts.lastRun.mode === 'off' ? ', nothing sent' : ''}:{' '}
+                {plural(stats.reviewTexts.lastRun.people, 'person', 'people')} with {plural(stats.reviewTexts.lastRun.shows, 'show')} to review
+                {stats.reviewTexts.lastRun.turnedOff > 0 && `, ${stats.reviewTexts.lastRun.turnedOff} had replied STOP`}
+                {stats.reviewTexts.lastRun.noPhone > 0 && `, ${stats.reviewTexts.lastRun.noPhone} with no number`}.
+                {stats.reviewTexts.lastRun.errors.length > 0 && ` First error: ${stats.reviewTexts.lastRun.errors[0]}`}
+              </p>
+            </>
+          ) : (
+            <p className="text-[12px] leading-snug text-ink-muted">No run yet.</p>
+          )}
+          <button type="button" onClick={checkReviewTexts} disabled={textsChecking} className={`${btnSecondary} px-3 py-2 text-[11px]`}>
+            {textsChecking ? 'Checking…' : 'Check now (sends nothing)'}
+          </button>
         </Card>
 
         <section className="space-y-2">

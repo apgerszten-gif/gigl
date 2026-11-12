@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { refuseUnlessAdmin } from '@/lib/adminAuth'
 import { saveVenueSyncMode } from '@/lib/venues/settings'
+import { saveReviewTextsMode } from '@/lib/reviewTexts'
 
 // POST /api/admin/settings — the admin page's switches. app_settings has no
 // client write policy, so this route, under the service role, is the only
@@ -18,6 +19,22 @@ export async function POST(req: NextRequest) {
   if (refused) return refused
 
   const body = await req.json().catch(() => null)
+
+  // { reviewTextsMode: 'off' | 'live' }  whether the morning-after review
+  //                                       texts send (lib/reviewTexts.ts)
+  if (body?.reviewTextsMode !== undefined) {
+    const mode = body.reviewTextsMode
+    if (mode !== 'off' && mode !== 'live') {
+      return NextResponse.json({ error: "reviewTextsMode must be 'off' or 'live'." }, { status: 400 })
+    }
+    try {
+      await saveReviewTextsMode(mode)
+    } catch (err) {
+      console.error('[admin/settings] saving review texts mode failed:', err)
+      return NextResponse.json({ error: "Couldn't save the switch. Has the review texts SQL been run?" }, { status: 500 })
+    }
+    return NextResponse.json({ reviewTextsMode: mode })
+  }
 
   if (body?.venueSyncMode !== undefined) {
     const mode = body.venueSyncMode
