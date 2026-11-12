@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useCallback, useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { Plus, Share2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -19,6 +19,7 @@ import BottomNav from '@/components/BottomNav'
 import { FeedTabs } from '@/components/FeedTabs'
 import { Logo } from '@/components/Logo'
 import { SignUpSheet } from '@/components/SignUpSheet'
+import { ShareReviewSheet, type SharedReview } from '@/components/ShareReviewSheet'
 import { FEED_SEARCH_MIN, FeedSearchBar, FeedSearchResults } from '@/components/FeedSearch'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, btnPrimary, placeOf,
@@ -89,6 +90,9 @@ function FeedInner() {
   const [followingIds, setFollowingIds]   = useState<Set<string>>(new Set())
   const [interactions, setInteractions]   = useState<Record<string, Interactions>>({})
   const [activeComments, setActiveComments] = useState<string | null>(null)
+  // Your own review, being sent to friends (components/ShareReviewSheet.tsx).
+  const [sharing, setSharing]             = useState<SharedReview | null>(null)
+  const closeShare = useCallback(() => setSharing(null), [])
   // Signed-out visitors can read everything here. Reacting, commenting or
   // filtering to Following opens the sign-up sheet in this mode instead.
   const [signUpMode, setSignUpMode]       = useState<'signup' | 'signin' | null>(null)
@@ -430,6 +434,19 @@ function FeedInner() {
                   </Link>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {score !== null && <Stars score={score} size={13} />}
+                    {isMe && item.username && (
+                      <button
+                        type="button"
+                        onClick={() => setSharing({
+                          username: item.username!, showId: item.artist_id, artist: name, place,
+                          isoDate: item.show_date, imageUrl: artistImage(name), score, review: item.review,
+                        })}
+                        aria-label="Send this review to friends"
+                        className="p-1 -m-1 text-ink-faint hover:text-accent"
+                      >
+                        <Share2 className="w-3.5 h-3.5" strokeWidth={2} />
+                      </button>
+                    )}
                     <ContentMenu kind="log" targetId={item.id} ownerId={item.user_id} ownerName={item.username} onBlocked={hidePerson} />
                   </div>
                 </div>
@@ -481,6 +498,8 @@ function FeedInner() {
       </main>}
 
       <BottomNav showLogTip={showLogTip} onDismissLogTip={() => setShowLogTip(false)} />
+
+      {sharing && <ShareReviewSheet review={sharing} onClose={closeShare} />}
 
       {activeComments && (
         <CommentsModal

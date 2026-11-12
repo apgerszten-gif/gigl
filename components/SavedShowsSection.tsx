@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Bookmark, X } from 'lucide-react'
+import { Bookmark, Share2, X } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
-import { loadSavedShows, unsaveShow, type SavedShow } from '@/lib/savedShows'
-import { ArtistPhoto, DateTag, Label, Place } from '@/components/ui'
+import { InviteSheet } from '@/components/InviteSheet'
+import { loadInviteRsvps } from '@/lib/invites'
+import { loadSavedShows, unsaveShow, type SavableShow, type SavedShow } from '@/lib/savedShows'
+import { ArtistPhoto, Chip, DateTag, Label, Place } from '@/components/ui'
 
 // Your own upcoming plans, on your own profile only: where someone is going
 // to be is theirs to share, so saved_shows is private and the public profile
@@ -13,6 +15,10 @@ import { ArtistPhoto, DateTag, Label, Place } from '@/components/ui'
 export function SavedShowsSection() {
   const { user } = useAuth()
   const [shows, setShows]   = useState<SavedShow[] | null>(null)
+  // Who said "I'm in" through your invites, by show id (lib/invites.ts).
+  const [goingWith, setGoingWith] = useState<Record<string, string[]>>({})
+  const [inviting, setInviting]   = useState<SavableShow | null>(null)
+  const closeInvite = useCallback(() => setInviting(null), [])
 
   useEffect(() => {
     if (!user) return
@@ -23,6 +29,9 @@ export function SavedShowsSection() {
         console.error('saved shows failed:', err)
         if (!cancelled) setShows([])
       })
+    loadInviteRsvps(user.id)
+      .then(found => { if (!cancelled) setGoingWith(found) })
+      .catch(err => console.error('invite replies failed:', err))
     return () => { cancelled = true }
   }, [user?.id])
 
@@ -54,7 +63,23 @@ export function SavedShowsSection() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-display text-[15px] font-bold leading-tight truncate">{show.artist}</h3>
                 <Place className="mt-0.5">{[show.venue, show.city, show.state].filter(Boolean).join(', ')}</Place>
+                {goingWith[show.show_id] && goingWith[show.show_id].length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {goingWith[show.show_id].map(name => <Chip key={name} active>{name}&apos;s in</Chip>)}
+                  </div>
+                )}
               </div>
+              <button
+                type="button"
+                onClick={() => setInviting({
+                  id: show.show_id, artist: show.artist, venue: show.venue, city: show.city, state: show.state,
+                  isoDate: show.show_date, imageUrl: show.image_url,
+                })}
+                aria-label={`Invite friends to ${show.artist}`}
+                className="flex-shrink-0 p-1 text-ink-muted hover:text-accent"
+              >
+                <Share2 className="w-4 h-4" strokeWidth={2} />
+              </button>
               <button
                 type="button"
                 onClick={() => remove(show)}
@@ -80,6 +105,8 @@ export function SavedShowsSection() {
           <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">We&apos;ll remind you to review it</p>
         </div>
       </Link>
+
+      {inviting && <InviteSheet show={inviting} onClose={closeInvite} />}
     </section>
   )
 }

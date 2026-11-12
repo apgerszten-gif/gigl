@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, Suspense } from 'react'
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -11,8 +11,10 @@ import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
 import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
 import { useAuth } from '@/components/AuthProvider'
-import { ArtistPhoto, Card, Label, Place, Stars, btnPrimary, headerClass } from '@/components/ui'
+import { ArtistPhoto, Card, Label, Place, Stars, btnPrimary, btnSecondary, headerClass } from '@/components/ui'
 import { SignUpSheet } from '@/components/SignUpSheet'
+import { ShareReviewSheet } from '@/components/ShareReviewSheet'
+import { Sheet } from '@/components/Sheet'
 import { NotesWithMentions, WentWithField, usePeopleGraph } from '@/components/TagPeople'
 import { mentionedUsernames, unmention, type TaggedPerson } from '@/lib/tags'
 import {
@@ -108,6 +110,11 @@ function LogShowInner() {
   const dayParam       = searchParams.get('day') ?? ''
   const venueParam     = searchParams.get('venue') ?? ''
   const showDateParam  = searchParams.get('showDate') ?? ''
+  // Where to go once saved: a shared review this person came from ("Were
+  // you there? Rate it"), which then shows both ratings side by side. Only
+  // a path on this site is followed.
+  const returnToParam  = searchParams.get('returnTo')
+  const returnTo       = returnToParam && returnToParam.startsWith('/r/') ? returnToParam : null
   // Ticketmaster's photo for a show picked in search; otherwise the artist's
   // photo from artist_images, if there is one.
   const imageParam     = searchParams.get('image')
@@ -208,6 +215,10 @@ function LogShowInner() {
 
   const [saving, setSaving] = useState(false)
   const [celebration, setCelebration] = useState<{ username: string | null } | null>(null)
+  // After a save: "Logged." with "Send to friends", then the share sheet.
+  const [logged, setLogged]           = useState<{ username: string | null; score: number } | null>(null)
+  const [sharing, setSharing]         = useState(false)
+  const leave = useCallback(() => router.push('/feed'), [router])
   const [battleUnlock, setBattleUnlock] = useState(false)
   const [signUpOpen, setSignUpOpen]     = useState(false)
 
@@ -460,6 +471,15 @@ function LogShowInner() {
     // the feature opens before it should.
     const battleModeJustUnlocked = !existingId && !wasUnlocked && (priorCount + 1) >= 10
 
+    // Came from a friend's shared review: straight back to it, where both
+    // ratings now sit side by side. Before any celebration, since a first
+    // log is exactly the friend this link was meant to bring in.
+    if (returnTo) {
+      timeMark('log-show:save total (return to review)', saveStart)
+      router.push(returnTo)
+      return
+    }
+
     if (isFirstShow) {
       const { data: profileRow } = await timeQuery('log-show:profiles-username', supabase.from('profiles').select('username').eq('id', userId).single())
       setCelebration({ username: profileRow?.username ?? null })
@@ -476,7 +496,9 @@ function LogShowInner() {
     }
 
     timeMark('log-show:save total', saveStart)
-    router.push('/feed')
+    const { data: me } = await supabase.from('profiles').select('username').eq('id', userId).single()
+    setLogged({ username: me?.username ?? null, score })
+    setSaving(false)
   }
 
   if (loadingExisting) return null
@@ -611,7 +633,40 @@ function LogShowInner() {
         />
       )}
 
-      {celebration && <FirstShowCelebration username={celebration.username} />}
+      {celebration && (
+        <FirstShowCelebration
+          username={celebration.username}
+          onShareReview={celebration.username ? () => {
+            setLogged({ username: celebration.username, score: computeShowScore(performance, venue) })
+            setCelebration(null)
+            setSharing(true)
+          } : undefined}
+        />
+      )}
+
+      {logged && !sharing && (
+        <Sheet title="Logged" blurb={`${artistName} is on your profile and the feed.`} onClose={leave}>
+          <div className="space-y-2.5">
+            {logged.username && (
+              <button type="button" onClick={() => setSharing(true)} className={`${btnPrimary} w-full py-3.5 text-xs`}>
+                Send to friends
+              </button>
+            )}
+            <button type="button" onClick={leave} className={`${btnSecondary} w-full py-3 text-[11px]`}>Back to feed</button>
+          </div>
+        </Sheet>
+      )}
+
+      {logged?.username && sharing && (
+        <ShareReviewSheet
+          review={{
+            username: logged.username, showId: artistId, artist: artistName,
+            place: stage || showVenue || null, isoDate: showDate || null,
+            imageUrl: imageParam || artistImage(artistName), score: logged.score, review: thoughts.trim() || null,
+          }}
+          onClose={leave}
+        />
+      )}
       {battleUnlock && (
         <BattleModeUnlockedModal onDismiss={() => { setBattleUnlock(false); router.push('/feed') }} />
       )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Camera, Check, ImagePlus, Loader2, Pencil, Share2 } from 'lucide-react'
@@ -27,6 +27,7 @@ import { updateMyProfile } from '@/lib/useMyProfile'
 import { useArtistImages } from '@/lib/useArtistImages'
 import { SUPPORT_MAILTO } from '@/lib/contact'
 import { TaggedInList } from '@/components/TagDisplay'
+import { ShareReviewSheet, type SharedReview } from '@/components/ShareReviewSheet'
 import { loadTaggedIn, type TaggedInLog } from '@/lib/tags'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
@@ -87,6 +88,8 @@ export default function ProfilePage() {
   const [loading, setLoading]               = useState(true)
   const [copied, setCopied]                 = useState(false)
   const [editingId, setEditingId]           = useState<string | null>(null)
+  const [sharing, setSharing]               = useState<SharedReview | null>(null)
+  const closeShare = useCallback(() => setSharing(null), [])
   const [editReview, setEditReview]         = useState('')
   const [editTags, setEditTags]             = useState<string[]>([])
   const [editSaving, setEditSaving]         = useState(false)
@@ -411,6 +414,19 @@ export default function ProfilePage() {
                           </div>
                         )}
                       </div>
+                      {profile?.username && hasScore && (
+                        <button
+                          type="button"
+                          onClick={() => setSharing({
+                            username: profile.username, showId: show.artist_id, artist: show.artist_name, place,
+                            isoDate: show.show_date, imageUrl: artistImage(show.artist_name), score, review: show.review,
+                          })}
+                          aria-label="Send this review to friends"
+                          className="p-1.5 flex-shrink-0 text-ink-faint hover:text-accent"
+                        >
+                          <Share2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => isEditing ? setEditingId(null) : startEdit(show)}
@@ -551,6 +567,8 @@ export default function ProfilePage() {
           <Link href="/delete-account" className="underline underline-offset-[3px]">Delete account</Link>
         </footer>
       </div>
+
+      {sharing && <ShareReviewSheet review={sharing} onClose={closeShare} />}
 
       <BottomNav />
     </div>
