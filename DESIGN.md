@@ -139,7 +139,7 @@ Where the photos come from:
 
 ### Rankings (`/rankings`)
 - Reached from the Feed's view switch, not the dock. Its own route; the two filter options navigate back to Feed, while **Artist rankings / Venue rankings** switch in place.
-- `AppHeader` with an "Everyone's ratings" label and the title ("Artist rankings" or "Venue rankings"), then the same two controls as Feed with a rankings option selected.
+- The same `AppHeader` as Feed (the logo, linking home, and your profile photo on the right), so the header never changes anywhere on the Feed tab. There's no page title: the second bar already says which ranking is showing. Then the same two controls as Feed with a rankings option selected.
 - A search box (`inputBox` with `shadow-riso`, a `Search` icon and an `X` to clear): "Search artists", or "Search venues or cities". It narrows the list as you type, and every card keeps its real rank number ("#12"), not its place among the matches.
 - A **Rank by** row: a `Label`, then three `Chip` toggles, led by the stars that matter most to the list: **Performance / Venue / Both** on Artist rankings, **Venue / Performance / Both** on Venue rankings. Each list opens ranked on its first chip, and switching lists goes back to that list's first. Both averages the Performance and Venue stars. The view and any choice other than the list's first are kept in the URL (`?view=venues&by=both`).
 - **Artist rankings** are one card per artist across every show of theirs anyone has rated (names matched loosely, so "Charli XCX" and "Charli xcx" are one artist), not one card per show. **Venue rankings** are one card per venue and city: the city comes from the catalogue, so a venue only known from setlist.fm logs has no place line, and festival stages aren't venues.
