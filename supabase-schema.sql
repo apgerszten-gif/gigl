@@ -1004,3 +1004,24 @@ language sql stable security definer set search_path = public as $$
     and i.show_date >= current_date - 1
 $$;
 grant execute on function public.get_show_invite(text) to anon, authenticated;
+
+-- Saying "I'm in" to an invite. The insert policy on invite_rsvps checks the
+-- invite is live, but the person saying yes can't read someone else's
+-- show_invites row, so that check always failed. This function does the same
+-- check with the owner's rights and records the yes for whoever is signed in.
+create or replace function public.join_show_invite(invite_token text)
+returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return false; end if;
+  if not exists (
+    select 1 from public.show_invites
+    where token = invite_token and revoked_at is null and show_date >= current_date - 1
+  ) then return false; end if;
+  insert into public.invite_rsvps (token, user_id) values (invite_token, auth.uid())
+  on conflict do nothing;
+  return true;
+end
+$$;
+revoke all on function public.join_show_invite(text) from public;
+grant execute on function public.join_show_invite(text) to authenticated;
