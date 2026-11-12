@@ -334,12 +334,13 @@ function FeedInner() {
         <Logo href="/feed" />
       </AppHeader>
 
+      {/* Everything up here stays put while a search is on, and only the
+          stream below gives way to results: hiding anything above the box
+          would slide it up under the finger mid-word. */}
       <div className="px-5 pt-3 space-y-3">
-        <FeedSearchBar value={searchQuery} onChange={setSearchQuery} />
-
         {/* The front door for someone who scanned a code: what this is, and
             that writing a log doesn't need an account until it's posted. */}
-        {!searching && !authLoading && !user && (
+        {!authLoading && !user && (
           <Card className="px-4 py-3.5">
             <h2 className="font-display text-xl font-bold tracking-tight leading-tight">
               Rate the shows you&apos;ve been to
@@ -363,19 +364,22 @@ function FeedInner() {
           </Card>
         )}
 
-        {!searching && (
-          <>
-            <ReviewReminders />
+        <ReviewReminders />
 
-            <FeedTabs
-              value={activeFilter}
-              onFilterChange={next => {
-                if (next === 'following' && !user) { setSignUpMode('signup'); return }
-                setFilterMode(next)
-              }}
-            />
-          </>
-        )}
+        {/* The two view bars, then the search under them, the same order
+            as Rankings. Picking a filter mid-search brings the stream back,
+            since that's what the filter is for. */}
+        <div className="space-y-2.5">
+          <FeedTabs
+            value={activeFilter}
+            onFilterChange={next => {
+              if (next === 'following' && !user) { setSignUpMode('signup'); return }
+              setFilterMode(next)
+              setSearchQuery('')
+            }}
+          />
+          <FeedSearchBar value={searchQuery} onChange={setSearchQuery} />
+        </div>
       </div>
 
       {searching ? <FeedSearchResults query={searchQuery} /> : <main className="px-5 pt-4 space-y-4">
