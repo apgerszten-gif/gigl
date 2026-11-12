@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { PartyPopper } from 'lucide-react'
 import { Card, btnPrimary, btnSecondary } from '@/components/ui'
 
-export function FirstShowCelebration({ username }: { username: string | null }) {
+// `onShareReview`, when given, makes the main button send the review just
+// logged (components/ShareReviewSheet.tsx) rather than an invite to Gigl.
+export function FirstShowCelebration({ username, onShareReview }: { username: string | null; onShareReview?: () => void }) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
 
@@ -40,8 +42,8 @@ export function FirstShowCelebration({ username }: { username: string | null }) 
           Bring your friends in on it and see who&apos;s rating what, together.
         </p>
 
-        <button type="button" onClick={handleShare} className={`${btnPrimary} w-full py-3.5 text-xs mb-2.5`}>
-          {copied ? 'Link copied!' : 'Share with friends'}
+        <button type="button" onClick={onShareReview ?? handleShare} className={`${btnPrimary} w-full py-3.5 text-xs mb-2.5`}>
+          {onShareReview ? 'Send it to friends' : copied ? 'Link copied!' : 'Share with friends'}
         </button>
         <button type="button" onClick={() => router.push('/select-festival')} className={`${btnSecondary} w-full py-3.5 text-xs mb-2.5`}>
           Log another show

@@ -7,6 +7,8 @@ import { VisitTracker } from '@/components/VisitTracker'
 import { spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
+  // Link previews (shared invites and reviews) need absolute image URLs.
+  metadataBase: new URL('https://www.gigl.space'),
   title: 'Gigl — be the critic.',
   description: "Log, rate and rank the live shows you've been to",
   manifest: '/manifest.json',

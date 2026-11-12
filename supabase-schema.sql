@@ -927,3 +927,80 @@ create policy "show_tags_delete" on public.show_tags for delete using (
 );
 -- "Tagged in" reads by the person tagged.
 create index if not exists show_tags_tagged_user_idx on public.show_tags (tagged_user_id, created_at desc);
+
+-- ── Show invites ("Alex is going, you in?") ─────────────────────────────────
+-- Sharing a show you've saved makes a link, /i/<token>, that tells friends
+-- you're going and lets them say they're in (lib/invites.ts). The invite
+-- copies the one show it's for and never reads saved_shows, which stay
+-- private: the link shows that show and your first name, nothing else.
+-- It stops working the day after the show, or when you turn it off.
+create table if not exists public.show_invites (
+  token      text primary key,
+  owner_id   uuid references public.profiles(id) on delete cascade not null,
+  show_id    text not null,
+  artist     text not null,
+  venue      text not null,
+  city       text not null default '',
+  state      text not null default '',
+  show_date  date not null,
+  image_url  text,
+  -- "A friend is going" instead of your name.
+  anonymous  boolean not null default false,
+  created_at timestamp with time zone not null default now(),
+  revoked_at timestamp with time zone
+);
+create index if not exists show_invites_owner_show_idx on public.show_invites (owner_id, show_id);
+alter table public.show_invites enable row level security;
+-- Only the owner reads or changes their invites directly; everyone else
+-- reaches one only by its token, through get_show_invite() below.
+drop policy if exists "show_invites_owner" on public.show_invites;
+create policy "show_invites_owner" on public.show_invites for all
+  using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+-- Who said "I'm going too". Readable by the person who said it and by the
+-- invite's owner, who sees "Richard's in" on their saved show.
+create table if not exists public.invite_rsvps (
+  token      text references public.show_invites(token) on delete cascade not null,
+  user_id    uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamp with time zone not null default now(),
+  primary key (token, user_id)
+);
+alter table public.invite_rsvps enable row level security;
+drop policy if exists "invite_rsvps_read" on public.invite_rsvps;
+create policy "invite_rsvps_read" on public.invite_rsvps for select using (
+  auth.uid() = user_id
+  or exists (select 1 from public.show_invites i where i.token = invite_rsvps.token and i.owner_id = auth.uid())
+);
+drop policy if exists "invite_rsvps_insert" on public.invite_rsvps;
+create policy "invite_rsvps_insert" on public.invite_rsvps for insert with check (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.show_invites i
+    where i.token = invite_rsvps.token and i.revoked_at is null and i.show_date >= current_date - 1
+  )
+);
+
+-- One invite by its token, while it's live: not turned off, and not past the
+-- day after the show. The owner's first name comes with it unless they chose
+-- to stay anonymous. Security definer so a link works for anyone holding it
+-- without making the table readable.
+create or replace function public.get_show_invite(invite_token text)
+returns table (
+  token text, owner_id uuid, owner_name text, owner_username text, owner_avatar text,
+  show_id text, artist text, venue text, city text, state text, show_date date, image_url text
+)
+language sql stable security definer set search_path = public as $$
+  select i.token,
+         case when i.anonymous then null else i.owner_id end,
+         case when i.anonymous then null
+              else split_part(coalesce(nullif(trim(p.display_name), ''), p.username), ' ', 1) end,
+         case when i.anonymous then null else p.username end,
+         case when i.anonymous then null else p.avatar_url end,
+         i.show_id, i.artist, i.venue, i.city, i.state, i.show_date, i.image_url
+  from public.show_invites i
+  join public.profiles p on p.id = i.owner_id
+  where i.token = invite_token
+    and i.revoked_at is null
+    and i.show_date >= current_date - 1
+$$;
+grant execute on function public.get_show_invite(text) to anon, authenticated;

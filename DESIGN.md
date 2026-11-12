@@ -200,6 +200,13 @@ Where the photos come from:
 - **More past shows**, from setlist.fm, with the "via setlist.fm" link on its label row: loaded straight away when the page has fewer than five past shows, otherwise behind a "Look for older shows" button, then "Show earlier shows" for each older batch. Nights the page already lists are left out, so a show's openers don't turn up as shows of their own.
 - An artist's page also lists shows people have logged that the catalogue doesn't have (setlist.fm logs, festival sets). A festival set has no + Log, since it's logged from its lineup.
 
+### Sharing (`/i/<token>`, `/r/<handle>/<show>`)
+- **Invite to an upcoming show** (`components/InviteSheet.tsx`): from the Share icon on each saved show on You, or the "Saved {artist} · Invite friends" bar that floats above the dock for six seconds after any save (a `bg-ink` pill, `shadow-riso-lg`). The sheet shows a preview card with an "I'm going" chip, a "Show my name" switch, and a primary "Send invite" that opens the phone's share sheet (or copies the link). "Turn off this link" ends it. Saved rows show a sienna "Richard's in" chip for each friend who said yes.
+- **Invite page** (`/i/<token>`): logo bar, the artist photo large with a date sticker, "Alex is going" with their photo, the artist in 30px display, the place line (to the venue page) and date, then a primary "I'm going too" and a quiet "Not for me". Signed out, the button opens the sign-up sheet ("Tell Alex you're in") and finishes after; then "You're in" with a Follow card.
+- **Send your take** (`components/ShareReviewSheet.tsx`): from the Share icon on your own feed cards and profile logs, the "Logged." sheet after saving a log, and the first-show celebration. A preview card, a "Hide my stars until they rate" switch, and Share.
+- **Review page** (`/r/<handle>/<show>`): one card with the review's photos, @handle and stars (or "?????" in sienna when hidden), the artist (to the show's reviews), place, date and pull quote. Then a primary "Were you there? Rate it" and a quiet "Just reading? See everyone's reviews". Once the viewer has rated, a "You and Alex" pair of flat cards compares Performance and Venue stars with one line on where they differ. The author sees "Send to friends" instead.
+- **Link previews** are 1200×630 riso cards: the artist photo with a tilted date sticker, an accent chip ("Alex is going", "Alex's take"), the artist, place, stars and a pull quote.
+
 ### Other screens
 - **Public profile** (`/u/[username]`): the You layout, read-only, with a Follow button and a "Join Gigl" call to action.
 - **Show** (`/artist/[id]`), one show's reviews. The artist's name links to their page, and the place line to the venue's page when the catalogue knows the venue's city:

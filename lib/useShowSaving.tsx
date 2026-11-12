@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Check } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
+import { InviteSheet } from '@/components/InviteSheet'
 import { SignUpSheet } from '@/components/SignUpSheet'
 import { fetchSavedShowIds, saveShow, unsaveShow, type SavableShow } from '@/lib/savedShows'
 
@@ -19,6 +21,17 @@ export function useShowSaving(textOptIn = false) {
   const [savedIds, setSavedIds]       = useState<Set<string>>(new Set())
   const [saveFailed, setSaveFailed]   = useState(false)
   const [pendingSave, setPendingSave] = useState<SavableShow | null>(null)
+  // Right after a save: a bar offering "Invite friends" for a few seconds,
+  // and the invite sheet once tapped (components/InviteSheet.tsx).
+  const [justSaved, setJustSaved]     = useState<SavableShow | null>(null)
+  const [inviting, setInviting]       = useState<SavableShow | null>(null)
+  const closeInvite = useCallback(() => setInviting(null), [])
+
+  useEffect(() => {
+    if (!justSaved) return
+    const t = setTimeout(() => setJustSaved(null), 6000)
+    return () => clearTimeout(t)
+  }, [justSaved])
 
   useEffect(() => {
     if (!user) { setSavedIds(new Set()); return }
@@ -30,6 +43,7 @@ export function useShowSaving(textOptIn = false) {
     setSavedIds(ids => new Set(ids).add(show.id))
     try {
       await saveShow(userId, show, textOptIn && !!user?.phone)
+      setJustSaved(show)
     } catch (err) {
       console.error('saving a show failed:', err)
       setSaveFailed(true)
@@ -52,7 +66,9 @@ export function useShowSaving(textOptIn = false) {
     }
   }
 
-  const signUpSheet = pendingSave ? (
+  const signUpSheet = (
+    <>
+      {pendingSave && (
     <SignUpSheet
       title="Save this show"
       blurb="Make an account to save shows. We'll remind you to review them once they've happened."
@@ -63,7 +79,27 @@ export function useShowSaving(textOptIn = false) {
         storeSave(userId, show)
       }}
     />
-  ) : null
+      )}
+
+      {justSaved && !inviting && (
+        <div className="fixed inset-x-0 bottom-24 z-[90] px-5 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-md flex items-center gap-3 rounded-full bg-ink text-cream shadow-riso-lg pl-4 pr-1.5 py-1.5">
+            <Check className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+            <span className="flex-1 min-w-0 truncate text-[12px] font-semibold">Saved {justSaved.artist}</span>
+            <button
+              type="button"
+              onClick={() => { setInviting(justSaved); setJustSaved(null) }}
+              className="flex-shrink-0 rounded-full bg-accent border-1.5 border-cream px-3 py-1.5 text-[10px] font-bold uppercase tracking-label"
+            >
+              Invite friends
+            </button>
+          </div>
+        </div>
+      )}
+
+      {inviting && <InviteSheet show={inviting} onClose={closeInvite} />}
+    </>
+  )
 
   return { savedIds, saveFailed, toggleSave, signUpSheet }
 }
