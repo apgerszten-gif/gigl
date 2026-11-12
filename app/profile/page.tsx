@@ -241,7 +241,7 @@ export default function ProfilePage() {
     }
   }
 
-  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null && s.crowd_rating != null)
+  const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null)
   const avgScore = ratedShows.length > 0
     ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
     : 0
@@ -376,7 +376,7 @@ export default function ProfilePage() {
             <div className="flex flex-col gap-3">
               {shows.map((show, i) => {
                 const score     = showScore(show)
-                const hasScore  = show.performance_rating != null && show.venue_rating != null && show.crowd_rating != null
+                const hasScore  = show.performance_rating != null && show.venue_rating != null
                 const isEditing = editingId === show.id
                 const mediaUrls = resolveMediaUrls(show).map(u => resolvePhotoUrl(u)!)
                 const place     = placeOf(show)

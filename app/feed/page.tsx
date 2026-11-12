@@ -52,7 +52,6 @@ interface GlobalLog {
   artist_name:        string
   performance_rating: number | null
   venue_rating:        number | null
-  crowd_rating:         number | null
   created_at:  string
   user_id:     string
   stage:       string | null
@@ -133,7 +132,7 @@ function FeedInner() {
 
     const logsQuery = supabase
       .from('logged_shows')
-      .select('id, artist_id, artist_name, performance_rating, venue_rating, crowd_rating, created_at, user_id, stage, day, venue, show_date, photo_url, media_urls, review, tags, show_tags(tagged_user_id)')
+      .select('id, artist_id, artist_name, performance_rating, venue_rating, created_at, user_id, stage, day, venue, show_date, photo_url, media_urls, review, tags, show_tags(tagged_user_id)')
       .order('created_at', { ascending: false })
       .limit(200)
 
@@ -398,9 +397,9 @@ function FeedInner() {
           const name      = item.artist_name ?? 'Unknown'
           const isMe      = item.user_id === user?.id
           const username  = item.username ?? 'anonymous'
-          const hasScore  = item.performance_rating != null && item.venue_rating != null && item.crowd_rating != null
+          const hasScore  = item.performance_rating != null && item.venue_rating != null
           const score     = hasScore
-            ? computeShowScore(item.performance_rating!, item.venue_rating!, item.crowd_rating!)
+            ? computeShowScore(item.performance_rating!, item.venue_rating!)
             : null
           const hasTags   = !!item.tags && item.tags.length > 0
           const mediaUrls = resolveMediaUrls(item).map(resolvePhotoUrl)

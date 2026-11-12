@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const artist = match.artist
 
   // 5. Upsert the rating
-  const score = computeShowScore(performance, venue, crowd)
+  const score = computeShowScore(performance, venue)
   const { error } = await supabaseAdmin().from('logged_shows').upsert({
     user_id:            profile.id,
     artist_id:          artist.id,

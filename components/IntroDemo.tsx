@@ -224,7 +224,6 @@ function SearchScene() {
 const RATING_ROWS = [
   { label: 'Performance', count: 5, tap: 7.35 },
   { label: 'Venue',       count: 4, tap: 8 },
-  { label: 'Crowd',       count: 5, tap: 8.6 },
 ]
 
 function RateScene() {

@@ -77,7 +77,6 @@ interface LogRow {
   day: string | null
   performance_rating: number | null
   venue_rating: number | null
-  crowd_rating: number | null
   review: string | null
   media_urls: string[] | null
   created_at: string
@@ -87,13 +86,13 @@ interface LogRow {
 async function latestLogs(): Promise<AdminLog[]> {
   const { data, error } = await supabaseAdmin()
     .from('logged_shows')
-    .select('id, artist_name, venue, stage, day, performance_rating, venue_rating, crowd_rating, review, media_urls, created_at, profiles(username)')
+    .select('id, artist_name, venue, stage, day, performance_rating, venue_rating, review, media_urls, created_at, profiles(username)')
     .order('created_at', { ascending: false })
     .limit(LATEST)
   if (error) throw error
   return ((data ?? []) as unknown as LogRow[]).map(row => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-    const rated = row.performance_rating != null && row.venue_rating != null && row.crowd_rating != null
+    const rated = row.performance_rating != null && row.venue_rating != null
     return {
       id: row.id,
       username: profile?.username ?? null,
@@ -101,7 +100,7 @@ async function latestLogs(): Promise<AdminLog[]> {
       stage: row.stage,
       day: row.day,
       venue: row.venue,
-      score: rated ? (row.performance_rating! + row.venue_rating! + row.crowd_rating!) / 3 : 0,
+      score: rated ? (row.performance_rating! + row.venue_rating!) / 2 : 0,
       review: row.review?.trim() || null,
       photos: row.media_urls?.length ?? 0,
       createdAt: row.created_at,

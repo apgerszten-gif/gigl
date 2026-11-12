@@ -6,17 +6,30 @@ import { nameKey } from './nameKey'
 // every show of theirs anyone has rated, and a venue's from every show there.
 //
 // Ranked on Performance and Venue stars, the two the user picks between on
-// the page: their average ("both"), or either one alone. Crowd isn't part of
-// either - it says more about one night's audience than about the artist or
-// the room.
+// the page: either one alone, or their average ("both").
 
 export type RankMetric = 'both' | 'performance' | 'venue'
 
-export const RANK_METRICS: { value: RankMetric; label: string }[] = [
-  { value: 'both',        label: 'Both' },
-  { value: 'performance', label: 'Performance' },
-  { value: 'venue',       label: 'Venue' },
-]
+const METRIC_LABELS: Record<RankMetric, string> = {
+  performance: 'Performance',
+  venue:       'Venue',
+  both:        'Both',
+}
+
+// Each list leads with the stars that matter most to it, and opens ranked on
+// those: artists by Performance, venues by Venue.
+const METRIC_ORDER: Record<'artists' | 'venues', RankMetric[]> = {
+  artists: ['performance', 'venue', 'both'],
+  venues:  ['venue', 'performance', 'both'],
+}
+
+export function rankMetricsFor(list: 'artists' | 'venues'): { value: RankMetric; label: string }[] {
+  return METRIC_ORDER[list].map(value => ({ value, label: METRIC_LABELS[value] }))
+}
+
+export function defaultRankMetric(list: 'artists' | 'venues'): RankMetric {
+  return METRIC_ORDER[list][0]
+}
 
 export function isRankMetric(value: unknown): value is RankMetric {
   return value === 'both' || value === 'performance' || value === 'venue'

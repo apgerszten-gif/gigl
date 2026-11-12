@@ -141,7 +141,7 @@ Where the photos come from:
 - Reached from the Feed's view switch, not the dock. Its own route; the two filter options navigate back to Feed, while **Artist rankings / Venue rankings** switch in place.
 - `AppHeader` with an "Everyone's ratings" label and the title ("Artist rankings" or "Venue rankings"), then the same two controls as Feed with a rankings option selected.
 - A search box (`inputBox` with `shadow-riso`, a `Search` icon and an `X` to clear): "Search artists", or "Search venues or cities". It narrows the list as you type, and every card keeps its real rank number ("#12"), not its place among the matches.
-- A **Rank by** row: a `Label`, then **Both / Performance / Venue** as `Chip` toggles. Both averages the Performance and Venue stars; the other two rank on one alone. Crowd isn't part of either. The view and the choice are kept in the URL (`?view=venues&by=venue`).
+- A **Rank by** row: a `Label`, then three `Chip` toggles, led by the stars that matter most to the list: **Performance / Venue / Both** on Artist rankings, **Venue / Performance / Both** on Venue rankings. Each list opens ranked on its first chip, and switching lists goes back to that list's first. Both averages the Performance and Venue stars. The view and any choice other than the list's first are kept in the URL (`?view=venues&by=both`).
 - **Artist rankings** are one card per artist across every show of theirs anyone has rated (names matched loosely, so "Charli XCX" and "Charli xcx" are one artist), not one card per show. **Venue rankings** are one card per venue and city: the city comes from the catalogue, so a venue only known from setlist.fm logs has no place line, and festival stages aren't venues.
 - Ranked cards: a sienna rank number, the artist photo (or a halftone `Building2` tile for a venue), the name with the stars it's ranked on, a venue's place line, then both averages small ("PERFORMANCE ★★★★★ VENUE ★★★★☆", the one not in use faint), and chips for shows and ratings. An artist's card carries their battle record summed over all their shows. Tapping a card opens the artist's or venue's page. Ties go to the one with more ratings.
 - One list, no day tabs. Splitting by day made sense when every logged show came from a festival lineup and "Saturday" named a real section of the event; with search covering the whole Ticketmaster catalogue it would slice a year of unrelated gigs by weekday.
@@ -158,7 +158,7 @@ Where the photos come from:
 ### Log a show (`/log-show`)
 - Title bar ("Log a show" or "Update log") with a close button. There's no dock or profile photo in this flow.
 - Selected-show card: the artist photo, the date as a sienna label, the artist and the place line.
-- Rating card: the overall stars once all three are set, then tappable Performance / Venue / Crowd star rows.
+- Rating card: the overall stars once both are set (or "Both required" in faint italic until then), then tappable Performance and Venue star rows. There's no Crowd rating any more.
 - Field notes (the review) and "Photos & video" (up to 1 video and 2 photos). Highlight tags were taken off to keep logging quick; a log re-rated here keeps any it already had, and they still show on feed cards and can be edited from You.
 - Tagging who you went with (`components/TagPeople.tsx`), in two places that add nothing to the screen until they're used:
   - Typing `@` in Field notes opens a list under the box: "People you follow" while nothing's typed after the @, then "Following" and "Everyone on Gigl" as you type. Each row is the person's photo, name and handle, with a small "+ Follow" (`btnSecondary`) on anyone you don't follow, which tags and follows in one tap; tapping the row just tags. Picking writes `@username` into the review, tinted `bg-accent/15 text-accent`.
@@ -205,7 +205,7 @@ Where the photos come from:
   - a large artist photo with the place line and average stars
   - a strip of fan photos
   - a stats card: number of ratings, plus average and top rating as stars
-  - a Performance / Venue / Crowd breakdown
+  - a Performance / Venue breakdown
   - review cards
 - **Stage** (`/stage/[name]`), **Battle** (`/battle`), the follower lists, sign-in, username and legal pages all use the same pieces.
 - **Landing** (`/`): a server redirect to the feed (`next.config.js`), signed in or not, so a QR scan lands in one hop. The feed sends an account without a username on to Choose username. It used to play the intro tour in `components/IntroDemo.tsx`, a 14-second tour in a mock phone (ink bezel, `shadow-riso-lg`) with four scenes (the feed with the Log tip and a tap, show search with a pick, star rating, and rankings) that ended at sign-up. The tour is no longer shown but is kept in case it's wanted back.
