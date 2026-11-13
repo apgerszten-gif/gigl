@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchArtists, searchStoredShows, searchVenues, upcomingShows } from '@/lib/shows/repository'
 import { artistPhotos } from '@/lib/shows/artistImageSync'
+import { reviewedShows } from '@/lib/shows/history'
+import { ratingsForShows } from '@/lib/showRatings'
+import { supabase } from '@/lib/supabase'
 
 // GET /api/search?q=fillmore - the Feed's search bar. One request answers
 // every section it shows: artists and venues (each opening its own page of
-// shows, /artists and /venues), shows that have happened (to log) and shows
+// shows, /artists and /venues), shows people have rated (to read the reviews
+// and setlist, listed first), shows that have happened (to log) and shows
 // that haven't (to save), each a handful long. People are searched in the
 // browser, the same way the You screen does it (components/UserSearch.tsx).
 //
@@ -18,6 +22,7 @@ const MIN_QUERY = 2
 const ARTIST_LIMIT = 4
 const VENUE_LIMIT = 4
 const SHOW_LIMIT = 6
+const REVIEWED_LIMIT = 4
 
 // Ticketmaster photo lookups per request for artists with none on file. Kept
 // low: this answers as someone types.
@@ -25,12 +30,13 @@ const PHOTO_LOOKUPS = 2
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim()
-  if (q.length < MIN_QUERY) return NextResponse.json({ artists: [], venues: [], past: [], upcoming: [] })
+  if (q.length < MIN_QUERY) return NextResponse.json({ artists: [], venues: [], reviewed: [], past: [], upcoming: [], ratings: {} })
 
   try {
-    const [artists, venues, past, soon] = await Promise.all([
+    const [artists, venues, reviewed, stored, soon] = await Promise.all([
       searchArtists(q, ARTIST_LIMIT),
       searchVenues(q, VENUE_LIMIT),
+      reviewedShows(q, REVIEWED_LIMIT),
       searchStoredShows(q, { limit: SHOW_LIMIT }),
       // Twice as many, because today's shows come back from both reads.
       upcomingShows(q, { limit: SHOW_LIMIT * 2 }).then(page => page.shows),
@@ -39,18 +45,25 @@ export async function GET(req: NextRequest) {
     // Tonight's show is on both lists, and goes under Past, where it can be
     // logged on the way home - the same side the artist and venue pages put
     // it on (lib/shows/history.ts).
-    const pastIds = new Set(past.map(s => s.id))
+    // A show already listed under Reviews isn't listed again under Past. One
+    // left in Past that has ratings still opens its reviews (PastShowRows).
+    const reviewedIds = new Set(reviewed.shows.map(s => s.id))
+    const past = stored.filter(s => !reviewedIds.has(s.id))
+    const pastRatings = await ratingsForShows(supabase, past.map(s => s.id))
+    const pastIds = new Set([...stored.map(s => s.id), ...Array.from(reviewedIds)])
     const upcoming = soon.filter(s => !pastIds.has(s.id)).slice(0, SHOW_LIMIT)
 
     const unphotographed = [
       ...artists.filter(a => !a.imageUrl).map(a => a.name),
-      ...[...past, ...upcoming].filter(s => !s.imageUrl).map(s => s.artist),
+      ...[...reviewed.shows, ...past, ...upcoming].filter(s => !s.imageUrl).map(s => s.artist),
     ]
     const photo = unphotographed.length > 0 ? await artistPhotos(unphotographed, PHOTO_LOOKUPS) : () => null
 
     return NextResponse.json({
       artists:  artists.map(a => (a.imageUrl ? a : { ...a, imageUrl: photo(a.name) })),
       venues,
+      reviewed: reviewed.shows.map(s => (s.imageUrl ? s : { ...s, imageUrl: photo(s.artist) })),
+      ratings:  { ...pastRatings, ...reviewed.ratings },
       past:     past.map(s => (s.imageUrl ? s : { ...s, imageUrl: photo(s.artist) })),
       upcoming: upcoming.map(s => (s.imageUrl ? s : { ...s, imageUrl: photo(s.artist) })),
     })
