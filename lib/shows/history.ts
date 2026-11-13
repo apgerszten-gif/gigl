@@ -56,6 +56,27 @@ interface ArtistLog {
   venue_rating:       number | null
 }
 
+// A logged show as a list row, from one of its logs. A log keeps the venue's
+// name but not its city. A festival set's place is its stage and day, and it
+// isn't offered for logging from a list: it's logged from its lineup, which
+// knows the stage.
+function listedFromLog(log: ArtistLog): ListedShow {
+  const festival = log.stage ? festivalNameOf(log.artist_id) : null
+  const day = log.day ? log.day.charAt(0).toUpperCase() + log.day.slice(1) : null
+  return {
+    id:       log.artist_id,
+    artist:   log.artist_name,
+    venue:    log.stage
+      ? [log.stage, day].filter(Boolean).join(' · ') + (festival ? ` (${festival})` : '')
+      : log.venue ?? '',
+    city:     '',
+    state:    '',
+    isoDate:  log.show_date,
+    imageUrl: null,
+    canLog:   !log.stage,
+  }
+}
+
 // An artist's page. Gigl's own logs count as shows too: the catalogue only
 // keeps a year, and setlist.fm shows and festival sets are never stored in
 // it, so a show someone logged may be the only record of it Gigl has.
@@ -79,25 +100,10 @@ export async function artistHistory(name: string): Promise<ShowHistory & { name:
   const photo = photoOf(name) ?? catalogue.find(s => s.imageUrl)?.imageUrl ?? null
 
   // One row per logged show the catalogue doesn't have, from its first log.
-  // A festival set's place is its stage and day, and it isn't offered for
-  // logging here: it's logged from its lineup, which knows the stage.
   const loggedOnly = new Map<string, ListedShow>()
   for (const log of logs) {
     if (catalogueIds.has(log.artist_id) || loggedOnly.has(log.artist_id)) continue
-    const festival = log.stage ? festivalNameOf(log.artist_id) : null
-    const day = log.day ? log.day.charAt(0).toUpperCase() + log.day.slice(1) : null
-    loggedOnly.set(log.artist_id, {
-      id:       log.artist_id,
-      artist:   log.artist_name,
-      venue:    log.stage
-        ? [log.stage, day].filter(Boolean).join(' · ') + (festival ? ` (${festival})` : '')
-        : log.venue ?? '',
-      city:     '',
-      state:    '',
-      isoDate:  log.show_date,
-      imageUrl: null,
-      canLog:   !log.stage,
-    })
+    loggedOnly.set(log.artist_id, listedFromLog(log))
   }
 
   // Catalogue rows where this artist was support are rated under the
@@ -139,4 +145,56 @@ export async function venueHistory(name: string, city: string | null, state: str
     ratings,
     overall: overallRating(ratings),
   }
+}
+
+// Logs read per Feed search before they're grouped into shows. Plenty for a
+// name search; the newest come first, so a very common word loses only the
+// oldest shows.
+const REVIEWED_SCAN = 500
+
+// The Feed search's first section: shows people have rated whose artist or
+// venue matches what was typed, most-rated first, so the reviews (and the
+// setlist) are a tap away before anything to log or save. Any show logged at
+// all counts - catalogue, setlist.fm, user-added or a festival set - and the
+// catalogue fills in the city and photo where it has the show.
+export async function reviewedShows(query: string, limit: number): Promise<{ shows: ListedShow[]; ratings: Record<string, ShowRating> }> {
+  // .or() reads commas and brackets as syntax; LIKE reads % and _.
+  const term = query.replace(/[,()\\%_]/g, ' ').trim()
+  if (!term) return { shows: [], ratings: {} }
+
+  const { data, error } = await supabase
+    .from('logged_shows')
+    .select('artist_id, artist_name, venue, stage, day, show_date, performance_rating, venue_rating')
+    .or(`artist_name.ilike.%${term}%,venue.ilike.%${term}%`)
+    .order('show_date', { ascending: false, nullsFirst: false })
+    .limit(REVIEWED_SCAN)
+  if (error) {
+    console.error('reviewed shows lookup failed:', error.message)
+    return { shows: [], ratings: {} }
+  }
+
+  const logs = (data ?? []) as ArtistLog[]
+  const ratings = tallyRatings(logs)
+  const first = new Map<string, ArtistLog>()
+  logs.forEach(log => { if (ratings[log.artist_id] && !first.has(log.artist_id)) first.set(log.artist_id, log) })
+
+  const picked = Array.from(first.values())
+    .sort((a, b) => ratings[b.artist_id].count - ratings[a.artist_id].count
+      || (b.show_date ?? '').localeCompare(a.show_date ?? ''))
+    .slice(0, limit)
+  if (picked.length === 0) return { shows: [], ratings: {} }
+
+  const { data: listings } = await supabase
+    .from('shows').select('id, venue, city, state, image_url')
+    .in('id', picked.map(log => log.artist_id))
+  const listing = new Map((listings ?? []).map(row => [row.id as string, row]))
+
+  const shows = picked.map(log => {
+    const row = listing.get(log.artist_id)
+    const show = listedFromLog(log)
+    return row
+      ? { ...show, venue: row.venue ?? show.venue, city: row.city ?? '', state: row.state ?? '', imageUrl: row.image_url ?? null }
+      : show
+  })
+  return { shows, ratings: Object.fromEntries(shows.map(s => [s.id, ratings[s.id]])) }
 }

@@ -11,11 +11,14 @@ import { createClient } from '@/lib/supabase/client'
 import { artistHref, venueHref } from '@/lib/showLinks'
 import { useShowSaving } from '@/lib/useShowSaving'
 import { useStartLogging } from '@/lib/useStartLogging'
+import type { ShowRating } from '@/lib/showRatings'
 
-// The Feed's search: one box for artists, venues, shows and people. An artist
-// or venue opens its own page of every show (/artists, /venues); a show that's
-// happened can be logged from here and one that hasn't can be saved, so the
-// dock's Log button isn't the only way to either.
+// The Feed's search: one box for artists, venues, shows and people. Shows
+// people have rated come first, and open their page of reviews and setlist
+// (/artist/<id>). An artist or venue opens its own page of every show
+// (/artists, /venues); a show that's happened can be logged from here and one
+// that hasn't can be saved, so the dock's Log button isn't the only way to
+// either.
 
 export const FEED_SEARCH_MIN = 2
 const SEARCH_DEBOUNCE_MS = 300
@@ -26,6 +29,8 @@ interface VenueMatch  { name: string; city: string; state: string; shows: number
 interface Results {
   artists:  ArtistMatch[]
   venues:   VenueMatch[]
+  reviewed: ListedShow[]
+  ratings:  Record<string, ShowRating>
   past:     ListedShow[]
   upcoming: ListedShow[]
   people:   Person[]
@@ -100,6 +105,8 @@ export function FeedSearchResults({ query }: { query: string }) {
         setResults({
           artists:  data.artists ?? [],
           venues:   data.venues ?? [],
+          reviewed: data.reviewed ?? [],
+          ratings:  data.ratings ?? {},
           past:     data.past ?? [],
           upcoming: data.upcoming ?? [],
           people:   (peopleRes.data ?? []) as Person[],
@@ -118,7 +125,7 @@ export function FeedSearchResults({ query }: { query: string }) {
   }, [trimmed, user?.id])
 
   const settled = answered === trimmed
-  const empty = results != null && results.artists.length === 0 && results.venues.length === 0
+  const empty = results != null && results.reviewed.length === 0 && results.artists.length === 0 && results.venues.length === 0
     && results.past.length === 0 && results.upcoming.length === 0 && results.people.length === 0
 
   return (
@@ -133,6 +140,13 @@ export function FeedSearchResults({ query }: { query: string }) {
         <EmptyState>Nothing on Gigl matches &ldquo;{trimmed}&rdquo; yet.</EmptyState>
       ) : (
         <div className={`space-y-5 transition-opacity ${settled ? '' : 'opacity-60'}`}>
+          {results.reviewed.length > 0 && (
+            <section>
+              <Label className="mb-2">Reviews</Label>
+              <PastShowRows shows={results.reviewed} onLog={startLogging} ratings={results.ratings} />
+            </section>
+          )}
+
           {results.artists.length > 0 && (
             <section>
               <Label className="mb-2">Artists</Label>
@@ -178,7 +192,7 @@ export function FeedSearchResults({ query }: { query: string }) {
           {results.past.length > 0 && (
             <section>
               <Label className="mb-2">Past shows</Label>
-              <PastShowRows shows={results.past} onLog={startLogging} />
+              <PastShowRows shows={results.past} onLog={startLogging} ratings={results.ratings} />
             </section>
           )}
 
