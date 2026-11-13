@@ -17,6 +17,7 @@ import {
   findCalendarLinks, findIcsLink, isMusic, looksLikeSquarespace, sameArtist, type VenueEvent,
 } from './parse'
 import { VENUES, type Venue } from './list'
+import { SYNC_CITIES } from '../shows/cities'
 import type { VenueMethod, VenueResult, VenueSyncMode, VenueSyncReport, VenueStatus } from './report'
 
 // Sites fetched at once. Each site is still one request at a time
@@ -179,8 +180,36 @@ function venueLabel(event: VenueEvent, venue: Venue): string {
   return name
 }
 
+// Where a promoter's listing in another city sits: that city's centroid and
+// metro when the catalogue has one, otherwise no position at all. A promoter
+// booking Austin and Dallas must not put its Dallas shows on Austin's map.
+function promoterPlace(event: VenueEvent, venue: Venue): { lat: number | null; lng: number | null; metro: string } | null {
+  if (!venue.promoter || !event.city || nameKey(event.city) === nameKey(venue.city)) return null
+  const state = event.state ?? venue.state
+  const known = SYNC_CITIES.find(c => c.stateCode === state && nameKey(c.city) === nameKey(event.city!))
+  return known
+    ? { lat: event.lat ?? known.lat, lng: event.lng ?? known.lng, metro: `${known.city}, ${known.stateCode}` }
+    : { lat: event.lat, lng: event.lng, metro: venue.metro }
+}
+
 function toRow(event: VenueEvent, venue: Venue, artist: string, support: string[]): VenueShowRow {
   const elsewhere = !!event.state && event.state !== venue.state
+  const away = promoterPlace(event, venue)
+  if (away) {
+    return {
+      id:        `venue-${venue.id}-${event.isoDate}-${slug(artist)}`,
+      artist,
+      support:   support.length > 0 ? support : null,
+      venue:     venueLabel(event, venue),
+      city:      event.city!,
+      state:     event.state ?? venue.state,
+      show_date: event.isoDate,
+      lat:       away.lat,
+      lng:       away.lng,
+      metro:     away.metro,
+      image_url: event.imageUrl,
+    }
+  }
   return {
     id:        `venue-${venue.id}-${event.isoDate}-${slug(artist)}`,
     artist,

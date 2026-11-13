@@ -76,6 +76,7 @@ const VENUE_CITIES: VenueCity[] = [
   {
     city: 'Los Angeles', state: 'CA', tz: 'America/Los_Angeles',
     venues: [
+      { name: 'Brownies & Lemonade', url: 'https://www.browniesandlemonade.com', promoter: true },
       { name: 'The Echo', url: 'https://www.theecho.com' },
       { name: 'Zebulon', url: 'https://zebulon.la' },
       { name: 'The Smell', url: 'https://www.thesmell.org' },
@@ -214,6 +215,7 @@ const VENUE_CITIES: VenueCity[] = [
   {
     city: 'Jacksonville', state: 'FL', tz: 'America/New_York',
     venues: [
+      { name: 'Friday Musicale', url: 'https://www.fridaymusicale.com', promoter: true },
       { name: 'Jack Rabbits', url: 'https://www.jackrabbitsonline.com' },
       { name: 'Underbelly', url: 'https://www.underbellylive.com' },
       { name: 'Murray Hill Theatre', url: 'https://www.murrayhilltheatre.com' },
@@ -259,6 +261,7 @@ const VENUE_CITIES: VenueCity[] = [
   {
     city: 'Charlotte', state: 'NC', tz: 'America/New_York',
     venues: [
+      { name: 'Goodyear Arts', url: 'https://www.goodyeararts.com', promoter: true },
       { name: 'The Evening Muse', url: 'https://www.eveningmuse.com' },
       { name: 'Snug Harbor', url: 'https://www.snugrock.com' },
       { name: 'Petra\'s', url: 'https://www.petrasbar.com' },
@@ -274,6 +277,7 @@ const VENUE_CITIES: VenueCity[] = [
   {
     city: 'Columbus', state: 'OH', tz: 'America/New_York',
     venues: [
+      { name: 'Jazz Arts Group', url: 'https://www.jazzartsgroup.org', promoter: true },
       { name: 'Ace of Cups', url: 'https://aceofcupsbar.com' },
       { name: 'Rumba Cafe', url: 'https://columbusrumbacafe.com' },
       { name: 'Big Room Bar', url: 'https://www.bigroombar.com' },
@@ -289,6 +293,8 @@ const VENUE_CITIES: VenueCity[] = [
   {
     city: 'Indianapolis', state: 'IN', tz: 'America/Indiana/Indianapolis',
     venues: [
+      { name: 'MOKB Presents', url: 'https://www.mokbpresents.com', promoter: true },
+      { name: 'Indianapolis Chamber Orchestra', url: 'https://www.icomusic.org', promoter: true },
       { name: 'HI-FI', url: 'https://hifiindy.com' },
       { name: 'Melody Inn', url: 'https://melodyindy.com' },
       { name: 'The Jazz Kitchen', url: 'https://www.thejazzkitchen.com' },
@@ -304,6 +310,7 @@ const VENUE_CITIES: VenueCity[] = [
   {
     city: 'San Francisco', state: 'CA', tz: 'America/Los_Angeles',
     venues: [
+      { name: 'Noise Pop', url: 'https://www.noisepop.com', promoter: true },
       { name: 'Bottom of the Hill', url: 'https://www.bottomofthehill.com' },
       { name: 'The Independent', url: 'https://www.theindependentsf.com' },
       { name: 'Rickshaw Stop', url: 'https://rickshawstop.com' },
