@@ -251,6 +251,11 @@ export function detectEventsCalendarApi(html: string, pageUrl: string): string |
   if (/tribe-events|tribe_events|the-events-calendar/i.test(html) && /wp-content|wp-json/i.test(html)) {
     return `${new URL(pageUrl).origin}/wp-json/tribe/events/v1/`
   }
+  // Any WordPress site may run the plugin behind a custom theme that leaves
+  // none of its markup on the page (Framework's does), so the default path
+  // is worth one try; a site without it answers 404 and the other formats
+  // carry on.
+  if (/wp-content|wp-json/i.test(html)) return `${new URL(pageUrl).origin}/wp-json/tribe/events/v1/`
   return null
 }
 

@@ -167,6 +167,9 @@ const ROOM_ONLY = /^(?:main ?room|main stage|the main stage|upstairs|downstairs|
 
 function venueLabel(event: VenueEvent, venue: Venue): string {
   const name = event.locationName?.trim()
+  // A promoter's listing is at whichever room it names; the promoter isn't
+  // a place.
+  if (venue.promoter) return name && name.length <= 80 ? name : venue.name
   if (!name || ROOM_ONLY.test(name) || name.length > 80) return venue.name
   // The site's own spelling of itself loses to ours, so one room isn't
   // filed under two names.
@@ -292,15 +295,25 @@ export async function syncVenues(mode: VenueSyncMode, venues: Venue[] = VENUES):
     const venue = byVenue.get(id)!
     const rows = rowsByVenue.get(id)!
     if (rows.length === 0) return
-    const dates = rows.map(r => r.show_date).sort()
-    let existing: { artist: string; show_date: string }[] = []
-    try {
-      existing = await catalogueShowsAtVenue(venue.state, distinctiveWord(venue.name), dates[0], dates[dates.length - 1])
-    } catch (err) {
-      console.error(`[sync-venues] catalogue lookup for ${venue.name} failed:`, err instanceof Error ? err.message : err)
+    // A promoter's rows span several rooms, so each room is looked up on
+    // its own.
+    const rooms = venue.promoter
+      ? Array.from(new Set(rows.map(r => `${r.state}|${r.venue}`))).map(k => { const [state, name] = k.split('|'); return { state, name } })
+      : [{ state: venue.state, name: venue.name }]
+    const existing: { artist: string; show_date: string; room: string }[] = []
+    for (const room of rooms) {
+      const roomRows = venue.promoter ? rows.filter(r => r.venue === room.name && r.state === room.state) : rows
+      const dates = roomRows.map(r => r.show_date).sort()
+      try {
+        const found = await catalogueShowsAtVenue(room.state, distinctiveWord(room.name), dates[0], dates[dates.length - 1])
+        existing.push(...found.map(e => ({ ...e, room: room.name })))
+      } catch (err) {
+        console.error(`[sync-venues] catalogue lookup for ${room.name} failed:`, err instanceof Error ? err.message : err)
+      }
     }
     if (existing.length === 0) return
-    const kept = rows.filter(row => !existing.some(e => e.show_date === row.show_date && sameArtist(e.artist, row.artist)))
+    const kept = rows.filter(row => !existing.some(e =>
+      (!venue.promoter || e.room === row.venue) && e.show_date === row.show_date && sameArtist(e.artist, row.artist)))
     results.get(id)!.onCatalogue += rows.length - kept.length
     rowsByVenue.set(id, kept)
   }, () => false)

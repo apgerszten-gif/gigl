@@ -8,6 +8,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/sync-unclassified",
+      "schedule": "30 9 * * *"
+    },
+    {
       "path": "/api/cron/sync-venues",
       "schedule": "0 10 * * *"
     }

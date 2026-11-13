@@ -24,6 +24,12 @@ export interface VenueSeed {
   name: string
   url:  string
   city?: string
+  // A promoter's calendar rather than one room's: each listing keeps its
+  // own venue and city. Electronic music especially is booked by promoters
+  // across rooms that sell only on DICE (Framework runs Reframe Studios,
+  // which Ticketmaster lists with no events), so the room has no feed of
+  // its own and the promoter is the only source.
+  promoter?: boolean
 }
 
 interface VenueCity {
@@ -48,6 +54,7 @@ export interface Venue {
   // coordinates, the same fallback the Ticketmaster sync uses.
   lat:   number | null
   lng:   number | null
+  promoter: boolean
 }
 
 const VENUE_CITIES: VenueCity[] = [
@@ -79,6 +86,9 @@ const VENUE_CITIES: VenueCity[] = [
       { name: 'Gold-Diggers', url: 'https://www.golddiggers.la' },
       { name: 'Hotel Cafe', url: 'https://www.hotelcafe.com' },
       { name: 'The Mint', url: 'https://www.themintla.com' },
+      // Promoters. Framework books Reframe Studios (several thousand, DICE
+      // only) and other rooms; its site runs The Events Calendar.
+      { name: 'Framework', url: 'https://thisisframework.com', promoter: true },
     ],
   },
   {
@@ -384,6 +394,7 @@ export const VENUES: Venue[] = VENUE_CITIES.flatMap(group =>
       metro: `${group.city}, ${group.state}`,
       lat:   point?.lat ?? null,
       lng:   point?.lng ?? null,
+      promoter: !!seed.promoter,
     }
   }),
 )
