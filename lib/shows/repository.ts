@@ -580,6 +580,28 @@ export async function catalogueShowsAtVenue(
   return (data ?? []) as { artist: string; show_date: string }[]
 }
 
+// Which of these venues already have music-category Ticketmaster shows in
+// the catalogue, as "<venue key>|<city key>|<state>". The unclassified sync
+// (app/api/cron/sync-unclassified) keeps an uncategorised event only at a
+// room like that, which is what separates a concert from a drive-in movie.
+export async function knownMusicVenues(venues: { venue: string; city: string; state: string }[]): Promise<Set<string>> {
+  const key = (v: { venue: string; city: string; state: string }) => `${nameKey(v.venue)}|${nameKey(v.city)}|${v.state}`
+  const names = Array.from(new Set(venues.map(v => v.venue)))
+  const known = new Set<string>()
+  // PostgREST puts `in` filters in the URL, so names go up in chunks.
+  for (let i = 0; i < names.length; i += 80) {
+    const { data, error } = await supabase
+      .from('shows')
+      .select('venue, city, state')
+      .eq('source', 'ticketmaster')
+      .in('venue', names.slice(i, i + 80))
+      .limit(1000)
+    if (error) throw new Error(`music venue lookup failed: ${error.message}`)
+    for (const row of data ?? []) known.add(key(row))
+  }
+  return known
+}
+
 // Drops shows more than a year old - only those, and this is the
 // load-bearing part of the whole feature.
 //

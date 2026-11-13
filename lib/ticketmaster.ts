@@ -286,6 +286,11 @@ export interface FetchOptions {
   // at any radius. Running only one of them silently loses thousands of shows
   // either way; ids dedupe the large overlap.
   radiusMiles?: number
+  // Ask for events Ticketmaster left without a category ("Undefined"
+  // segment) instead of music. Many real concerts sit there, often ones it
+  // takes in from partner ticketing (TicketWeb ids start Z7r9), alongside
+  // comedy, screenings and venue tours - see app/api/cron/sync-unclassified.
+  unclassified?: boolean
 }
 
 // One page of one city's upcoming music listings, optionally scoped to a date
@@ -294,11 +299,10 @@ export interface FetchOptions {
 // Ticketmaster's free tier allows 5 requests/sec and a loop in here would have
 // no view of the requests the other cities are making.
 export async function fetchCityShowsPage(city: SyncCity, page: number, options: FetchOptions = {}): Promise<CityPageResult> {
-  const { window, radiusMiles } = options
+  const { window, radiusMiles, unclassified } = options
 
   const params = new URLSearchParams({
     apikey:             TICKETMASTER_API_KEY,
-    classificationName: 'music',
     size:               String(TM_MAX_PAGE_SIZE),
     page:               String(page),
     // Soonest first, so that a city still hitting the ceiling inside a single
@@ -307,6 +311,9 @@ export async function fetchCityShowsPage(city: SyncCity, page: number, options: 
     // more nights to be captured on.
     sort:               'date,asc',
   })
+
+  if (unclassified) params.set('segmentName', 'Undefined')
+  else params.set('classificationName', 'music')
 
   if (radiusMiles) {
     // No countryCode: the filter is geographic, so a radius around Detroit or

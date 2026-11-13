@@ -17,6 +17,7 @@ import {
   findCalendarLinks, findIcsLink, isMusic, looksLikeSquarespace, sameArtist, type VenueEvent,
 } from './parse'
 import { VENUES, type Venue } from './list'
+import { SYNC_CITIES } from '../shows/cities'
 import type { VenueMethod, VenueResult, VenueSyncMode, VenueSyncReport, VenueStatus } from './report'
 
 // Sites fetched at once. Each site is still one request at a time
@@ -167,6 +168,9 @@ const ROOM_ONLY = /^(?:main ?room|main stage|the main stage|upstairs|downstairs|
 
 function venueLabel(event: VenueEvent, venue: Venue): string {
   const name = event.locationName?.trim()
+  // A promoter's listing is at whichever room it names; the promoter isn't
+  // a place.
+  if (venue.promoter) return name && name.length <= 80 ? name : venue.name
   if (!name || ROOM_ONLY.test(name) || name.length > 80) return venue.name
   // The site's own spelling of itself loses to ours, so one room isn't
   // filed under two names.
@@ -176,8 +180,36 @@ function venueLabel(event: VenueEvent, venue: Venue): string {
   return name
 }
 
+// Where a promoter's listing in another city sits: that city's centroid and
+// metro when the catalogue has one, otherwise no position at all. A promoter
+// booking Austin and Dallas must not put its Dallas shows on Austin's map.
+function promoterPlace(event: VenueEvent, venue: Venue): { lat: number | null; lng: number | null; metro: string } | null {
+  if (!venue.promoter || !event.city || nameKey(event.city) === nameKey(venue.city)) return null
+  const state = event.state ?? venue.state
+  const known = SYNC_CITIES.find(c => c.stateCode === state && nameKey(c.city) === nameKey(event.city!))
+  return known
+    ? { lat: event.lat ?? known.lat, lng: event.lng ?? known.lng, metro: `${known.city}, ${known.stateCode}` }
+    : { lat: event.lat, lng: event.lng, metro: venue.metro }
+}
+
 function toRow(event: VenueEvent, venue: Venue, artist: string, support: string[]): VenueShowRow {
   const elsewhere = !!event.state && event.state !== venue.state
+  const away = promoterPlace(event, venue)
+  if (away) {
+    return {
+      id:        `venue-${venue.id}-${event.isoDate}-${slug(artist)}`,
+      artist,
+      support:   support.length > 0 ? support : null,
+      venue:     venueLabel(event, venue),
+      city:      event.city!,
+      state:     event.state ?? venue.state,
+      show_date: event.isoDate,
+      lat:       away.lat,
+      lng:       away.lng,
+      metro:     away.metro,
+      image_url: event.imageUrl,
+    }
+  }
   return {
     id:        `venue-${venue.id}-${event.isoDate}-${slug(artist)}`,
     artist,
@@ -292,15 +324,25 @@ export async function syncVenues(mode: VenueSyncMode, venues: Venue[] = VENUES):
     const venue = byVenue.get(id)!
     const rows = rowsByVenue.get(id)!
     if (rows.length === 0) return
-    const dates = rows.map(r => r.show_date).sort()
-    let existing: { artist: string; show_date: string }[] = []
-    try {
-      existing = await catalogueShowsAtVenue(venue.state, distinctiveWord(venue.name), dates[0], dates[dates.length - 1])
-    } catch (err) {
-      console.error(`[sync-venues] catalogue lookup for ${venue.name} failed:`, err instanceof Error ? err.message : err)
+    // A promoter's rows span several rooms, so each room is looked up on
+    // its own.
+    const rooms = venue.promoter
+      ? Array.from(new Set(rows.map(r => `${r.state}|${r.venue}`))).map(k => { const [state, name] = k.split('|'); return { state, name } })
+      : [{ state: venue.state, name: venue.name }]
+    const existing: { artist: string; show_date: string; room: string }[] = []
+    for (const room of rooms) {
+      const roomRows = venue.promoter ? rows.filter(r => r.venue === room.name && r.state === room.state) : rows
+      const dates = roomRows.map(r => r.show_date).sort()
+      try {
+        const found = await catalogueShowsAtVenue(room.state, distinctiveWord(room.name), dates[0], dates[dates.length - 1])
+        existing.push(...found.map(e => ({ ...e, room: room.name })))
+      } catch (err) {
+        console.error(`[sync-venues] catalogue lookup for ${room.name} failed:`, err instanceof Error ? err.message : err)
+      }
     }
     if (existing.length === 0) return
-    const kept = rows.filter(row => !existing.some(e => e.show_date === row.show_date && sameArtist(e.artist, row.artist)))
+    const kept = rows.filter(row => !existing.some(e =>
+      (!venue.promoter || e.room === row.venue) && e.show_date === row.show_date && sameArtist(e.artist, row.artist)))
     results.get(id)!.onCatalogue += rows.length - kept.length
     rowsByVenue.set(id, kept)
   }, () => false)
