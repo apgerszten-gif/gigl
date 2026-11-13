@@ -471,7 +471,7 @@ const NOT_MUSIC_TYPES = new Set([
 // short and literal: a broader list ("talk", "wine", "film", "class") starts
 // throwing out bands (Talking Heads, Film School, Class Actress). A
 // MusicEvent, or a listing filed under a music category, skips this check.
-const NOT_MUSIC_WORDS = /\b(comedy|comedian|stand[- ]?up|improv|trivia|karaoke|bingo|open mic|drag (?:brunch|show|bingo)|brunch|yoga|workshop|flea market|private event|closed for|screening|watch party|viewing party|podcast|book (?:signing|launch|club)|poetry slam|burlesque|wrestling|magic show|pub quiz|quiz night|game night|networking|craft fair|spelling bee|storytime|skate night|holiday market|art market)\b/i
+const NOT_MUSIC_WORDS = /\b(comedy|comedian|stand[- ]?up|improv|trivia|karaoke|bingo|open mic|drag (?:brunch|show|bingo)|brunch|yoga|workshop|flea market|private event|closed for|screening|watch party|viewing party|podcast|book (?:signing|launch|club)|poetry slam|burlesque|wrestling|magic show|pub quiz|quiz night|game night|networking|craft fair|spelling bee|storytime|skate night|holiday market|art market|season (?:\d+ )?pass(?:es)?|(?:vip |weekend |festival |multi-day |season )?passes|gift cards?|memberships?|parking)\b/i
 
 const MUSIC_CATEGORIES = /\b(music|concert|live|band|dj|club night|dance|festival|tour|show)\b/
 
