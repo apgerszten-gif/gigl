@@ -96,12 +96,13 @@ export function LoadingLabel({ children = 'Loading…' }: { children?: React.Rea
   )
 }
 
-// Big stat above a small label, for the profile/artist stat rows.
-export function Stat({ value, label }: { value: React.ReactNode; label: string }) {
+// Big stat above a small label, for the profile/artist stat rows. `after`
+// sits beside the label: a chevron on a stat that opens something.
+export function Stat({ value, label, after }: { value: React.ReactNode; label: string; after?: React.ReactNode }) {
   return (
     <div className="flex-1 flex flex-col items-center text-center">
       <div className="font-display text-lg font-bold leading-none min-h-[18px] flex items-center">{value}</div>
-      <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">{label}</p>
+      <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted inline-flex items-center gap-0.5">{label}{after}</p>
     </div>
   )
 }

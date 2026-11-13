@@ -10,8 +10,9 @@ import { Logo } from '@/components/Logo'
 import { ContentMenu } from '@/components/ContentMenu'
 import { SetlistPanel } from '@/components/SetlistPanel'
 import { LogThisShow } from '@/components/LogThisShow'
+import { ShowRatingsCard } from '@/components/ShowRatingsCard'
 import {
-  ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat,
+  ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars,
 } from '@/components/ui'
 import { markInvocation, timeQuery, timeMark } from '@/lib/queryTiming'
 import { artistHref, venueHref } from '@/lib/showLinks'
@@ -123,30 +124,35 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           </div>
         )}
 
-        <Card className="flex py-3">
-          <Stat value={rated.length} label="Ratings" />
-          <div className="flex-1 flex border-l border-ink/10">
-            <Stat value={rated.length > 0 ? <Stars score={avgScore} size={11} /> : <span className="text-accent">—</span>} label="Avg rating" />
-          </div>
-          <div className="flex-1 flex border-l border-ink/10">
-            <Stat value={rated.length > 0 ? <Stars score={topScore} size={11} /> : <span className="text-accent">—</span>} label="Top rating" />
-          </div>
-        </Card>
+        <ShowRatingsCard
+          count={rated.length}
+          avgScore={avgScore}
+          topScore={topScore}
+          avgPerformance={avgPerformance}
+          avgVenue={avgVenue}
+        />
 
-        <section>
-          <Label className="mb-2">Breakdown</Label>
-          <Card flat className="px-4 py-3 space-y-2">
-            {[
-              { label: 'Performance', value: avgPerformance },
-              { label: 'Venue',       value: avgVenue },
-            ].map(row => (
-              <div key={row.label} className="flex items-center justify-between">
-                <span className="text-[13px] text-ink-muted">{row.label}</span>
-                <Stars score={row.value} size={15} />
-              </div>
-            ))}
-          </Card>
-        </section>
+        {/* The setlist and logging your own, side by side above the reviews.
+            A festival set logged from its lineup has a day, not a date, and
+            is logged from that lineup, which knows the stage. */}
+        {showDate && (
+          <div className="flex gap-2.5">
+            <div className="flex-1 min-w-0">
+              <SetlistPanel artist={artistName} isoDate={showDate} venue={listing?.venue ?? venueName} city={listing?.city} />
+            </div>
+            {!stage && (
+              <LogThisShow show={{
+                id:       params.artistId,
+                artist:   artistName,
+                venue:    listing?.venue ?? venueName,
+                city:     listing?.city ?? '',
+                state:    listing?.state ?? '',
+                isoDate:  showDate,
+                imageUrl: artistImage(artistName),
+              }} />
+            )}
+          </div>
+        )}
 
         <section>
           <Label className="mb-2.5">What people are saying</Label>
@@ -181,24 +187,6 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
             </div>
           )}
         </section>
-
-        {/* After the reviews: the setlist, then logging your own. A festival
-            set logged from its lineup has a day, not a date, and is logged
-            from that lineup, which knows the stage. */}
-        {showDate && (
-          <SetlistPanel artist={artistName} isoDate={showDate} venue={listing?.venue ?? venueName} city={listing?.city} />
-        )}
-        {!stage && showDate && (
-          <LogThisShow show={{
-            id:       params.artistId,
-            artist:   artistName,
-            venue:    listing?.venue ?? venueName,
-            city:     listing?.city ?? '',
-            state:    listing?.state ?? '',
-            isoDate:  showDate,
-            imageUrl: artistImage(artistName),
-          }} />
-        )}
       </div>
     </div>
   )
