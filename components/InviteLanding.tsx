@@ -39,17 +39,25 @@ export function InviteLanding({ token }: { token: string }) {
     if (!invite) return
     setBusy(true)
     setFailed(false)
+    // The save is what matters to them; the "I'm in" the inviter sees is
+    // extra, so its failing is logged rather than shown.
     try {
       await saveShow(userId, {
         id: invite.show_id, artist: invite.artist, venue: invite.venue, city: invite.city, state: invite.state,
         isoDate: invite.show_date, imageUrl: invite.image_url,
       }, true)
-      if (userId !== invite.owner_id) await rsvp(token, userId)
-      setGoing(true)
     } catch (err) {
-      console.error('joining an invite failed:', err)
+      console.error('saving the invited show failed:', err)
       setFailed(true)
+      setBusy(false)
+      return
+    }
+    try {
+      if (userId !== invite.owner_id) await rsvp(token)
+    } catch (err) {
+      console.error('recording the RSVP failed:', err)
     } finally {
+      setGoing(true)
       setBusy(false)
     }
   }

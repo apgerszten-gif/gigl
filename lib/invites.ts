@@ -87,9 +87,13 @@ export async function hasRsvped(token: string, userId: string): Promise<boolean>
   return (data ?? []).length > 0
 }
 
-export async function rsvp(token: string, userId: string): Promise<void> {
-  const { error } = await createClient().from('invite_rsvps').upsert({ token, user_id: userId }, { onConflict: 'token,user_id', ignoreDuplicates: true })
+// Records "I'm in" for whoever is signed in, through join_show_invite(): the
+// invite_rsvps insert policy can't see the inviter's invite row, so a plain
+// insert is always refused.
+export async function rsvp(token: string): Promise<void> {
+  const { data, error } = await createClient().rpc('join_show_invite', { invite_token: token })
   if (error) throw new Error(error.message)
+  if (data === false) throw new Error('This invite has ended.')
 }
 
 // For the owner's Saved shows: show id -> first names of everyone who said
