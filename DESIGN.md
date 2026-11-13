@@ -214,6 +214,7 @@ Where the photos come from:
   - a strip of fan photos
   - a stats card: number of ratings, plus average and top rating as stars
   - a Performance / Venue breakdown
+  - **Setlist** (`components/SetlistPanel.tsx`, also on the review page): a full-width `btnSecondary` "See what they played", then the songs in one `Card` of alternating rows numbered in sienna display type, each set or encore under an accent `Label`, covers, guests and setlist.fm's notes in an 11px `ink-muted` line, a song played from tape unnumbered in italic with a `Disc3` icon, and an arrow for a segue. The "via setlist.fm" link sits on the label row; with no setlist, an `EmptyState` says so
   - review cards
 - **Stage** (`/stage/[name]`), **Battle** (`/battle`), the follower lists, sign-in, username and legal pages all use the same pieces.
 - **Landing** (`/`): a server redirect to the feed (`next.config.js`), signed in or not, so a QR scan lands in one hop. The feed sends an account without a username on to Choose username. It used to play the intro tour in `components/IntroDemo.tsx`, a 14-second tour in a mock phone (ink bezel, `shadow-riso-lg`) with four scenes (the feed with the Log tip and a tap, show search with a pick, star rating, and rankings) that ended at sign-up. The tour is no longer shown but is kept in case it's wanted back.

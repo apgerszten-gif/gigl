@@ -8,6 +8,7 @@ import { formatShowDate } from '@/lib/dates'
 import { resolveMediaUrls } from '@/lib/media'
 import { Logo } from '@/components/Logo'
 import { ContentMenu } from '@/components/ContentMenu'
+import { SetlistPanel } from '@/components/SetlistPanel'
 import {
   ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat,
 } from '@/components/ui'
@@ -145,6 +146,11 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
             ))}
           </Card>
         </section>
+
+        {/* A festival set logged from its lineup has a day, not a date. */}
+        {showDate && (
+          <SetlistPanel artist={artistName} isoDate={showDate} venue={listing?.venue ?? venueName} city={listing?.city} />
+        )}
 
         <section>
           <Label className="mb-2.5">What people are saying</Label>
