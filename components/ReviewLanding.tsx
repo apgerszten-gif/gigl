@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { FollowButton } from '@/components/FollowButton'
 import { Logo } from '@/components/Logo'
 import { MediaGrid } from '@/components/MediaGrid'
+import { SetlistPanel } from '@/components/SetlistPanel'
 import { ShareReviewSheet } from '@/components/ShareReviewSheet'
 import {
   ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, LoadingLabel, PersonPhoto, Place, PullQuote, Stars, TopBar,
@@ -176,6 +177,8 @@ export function ReviewLanding({ username, showId, blind }: { username: string; s
             </Link>
           </div>
         )}
+
+        {log.show_date && <SetlistPanel artist={log.artist_name} isoDate={log.show_date} venue={log.venue} />}
 
         {!isOwner && user && (
           <div className="flex items-center justify-between gap-3 rounded-card border-1.5 border-ink/15 bg-cream px-3 py-2.5">

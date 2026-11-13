@@ -81,11 +81,11 @@ interface Artist {
 // across instances, but only keeps 200s - an empty answer (setlist.fm's 404)
 // is only ever remembered here. Bounded, oldest out first.
 const MEMO_LIMIT = 500
-const memo = new Map<string, { at: number; body: unknown }>()
+const memo = new Map<string, { until: number; body: unknown }>()
 
-function remember(url: string, body: unknown) {
+function remember(url: string, body: unknown, ttlSeconds: number) {
   memo.delete(url)
-  memo.set(url, { at: Date.now(), body })
+  memo.set(url, { until: Date.now() + ttlSeconds * 1000, body })
   if (memo.size > MEMO_LIMIT) memo.delete(memo.keys().next().value!)
 }
 
@@ -117,19 +117,23 @@ const RETRY_AFTER_429_MS = 1100
 
 // One request. 'empty' is setlist.fm's 404 for "no results"; null means it
 // couldn't answer (no key, a 429 twice over, an outage).
-async function call<T>(path: string, params: Record<string, string>): Promise<T | 'empty' | null> {
+// `ttlSeconds` is how long the answer is kept, CACHE_SECONDS unless the
+// caller knows it will change sooner (a setlist for last night's show).
+async function call<T>(
+  path: string, params: Record<string, string>, ttlSeconds = CACHE_SECONDS,
+): Promise<T | 'empty' | null> {
   const key = process.env.SETLISTFM_API_KEY
   if (!key) return null
 
   const url = `${API}${path}?${new URLSearchParams(params)}`
   const kept = memo.get(url)
-  if (kept && Date.now() - kept.at < CACHE_SECONDS * 1000) return kept.body as T | 'empty'
+  if (kept && Date.now() < kept.until) return kept.body as T | 'empty'
 
   const request = async () => {
     await waitForSlot()
     return fetch(url, {
       headers: { 'x-api-key': key, Accept: 'application/json', 'Accept-Language': 'en' },
-      next: { revalidate: CACHE_SECONDS },
+      next: { revalidate: ttlSeconds },
     })
   }
 
@@ -140,7 +144,7 @@ async function call<T>(path: string, params: Record<string, string>): Promise<T 
       res = await request()
     }
     if (res.status === 404) {
-      remember(url, 'empty')
+      remember(url, 'empty', ttlSeconds)
       return 'empty'
     }
     if (!res.ok) {
@@ -148,7 +152,7 @@ async function call<T>(path: string, params: Record<string, string>): Promise<T 
       return null
     }
     const body = await res.json() as T
-    remember(url, body)
+    remember(url, body, ttlSeconds)
     return body
   } catch (err) {
     console.error(`[setlistfm] ${path} ${JSON.stringify(params)} failed:`, err)
@@ -318,4 +322,161 @@ export async function searchPastShows(query: string, options: PastShowSearch = {
     })
   }
   return { shows, next }
+}
+
+// ── One show's setlist ───────────────────────────────────────────────────────
+//
+// The songs a logged show's artist played, for the Setlist panel on a show's
+// page and a review page (components/SetlistPanel.tsx, via /api/setlist).
+// Looked up live and only when someone taps for it - never on a page view,
+// and never stored - so it costs a request or two of the daily 1,440 per
+// show per CACHE_SECONDS, whoever asks.
+
+interface SetlistSong {
+  name:   string
+  info?:  string
+  tape?:  boolean
+  cover?: { name: string }
+  with?:  { name: string }
+}
+
+interface FullSetlist extends Setlist {
+  id:    string
+  url:   string
+  tour?: { name: string }
+  sets?: { set?: { name?: string; encore?: number; song?: SetlistSong[] }[] }
+}
+
+export interface ShowSetlistSong {
+  name:   string
+  // The original artist, for a cover: "Crown of Thorns (Mother Love Bone cover)".
+  cover?: string
+  // A guest who joined for it.
+  with?:  string
+  // setlist.fm's note: "acoustic", "with 'Under the Sea' tease".
+  info?:  string
+  // Ran straight into the next song.
+  segue?: boolean
+  // Played from tape - an intro or outro, not performed.
+  tape?:  boolean
+}
+
+export interface ShowSetlist {
+  // The setlist's own page, which the "via setlist.fm" credit links to.
+  url:   string
+  tour:  string | null
+  sets:  { title: string | null; songs: ShowSetlistSong[] }[]
+}
+
+export interface SetlistLookup {
+  artist: string
+  isoDate: string
+  // Both optional, and only used to choose between two setlists the artist
+  // has on one date (an early and a late show, an in-store and a gig).
+  venue?: string | null
+  city?:  string | null
+}
+
+// A show this recent may not have a setlist yet, or only half of one: its
+// answer is kept an hour instead of six, so one posted the morning after
+// turns up the same day.
+const RECENT_DAYS = 3
+const RECENT_CACHE_SECONDS = 60 * 60
+
+function setlistDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-')
+  return `${d}-${m}-${y}`
+}
+
+// Either name the start of the other, as /api/shows/past compares acts: a
+// log says "J Roddy Walston", setlist.fm "J. Roddy Walston & the Business".
+// Safe only because both sides are already on the same date.
+function samePrefix(a: string, b: string): boolean {
+  return !!a && !!b && (a.startsWith(b) || b.startsWith(a))
+}
+
+// A hand-typed or Ticketmaster title can carry the support with it: "Tear
+// Dungeon with So Tired & Holofernes Head". The headliner is what
+// setlist.fm files the show under.
+function headliner(artist: string): string | null {
+  const head = artist.split(/\s+(?:with|w\/|feat\.?|ft\.?|b2b|x|\+|&|and)\s+|,\s+|:\s+/i)[0]?.trim()
+  return head && head.length >= 2 && head !== artist.trim() ? head : null
+}
+
+function shapeSetlist(s: FullSetlist): ShowSetlist | null {
+  let unnamed = 0
+  const sets = (s.sets?.set ?? []).map(set => {
+    const songs = (set.song ?? [])
+      .filter(song => song.name?.trim())
+      .map(song => {
+        // setlist.fm marks a segue with a leading ">" in the note.
+        const raw = song.info?.trim() ?? ''
+        return {
+          name:  song.name.trim(),
+          cover: song.cover?.name,
+          with:  song.with?.name,
+          info:  raw.replace(/^>\s*/, '') || undefined,
+          segue: raw.startsWith('>') || undefined,
+          tape:  song.tape || undefined,
+        }
+      })
+    // setlist.fm writes set names as people typed them, "Set 1:" included.
+    const named = set.name?.trim().replace(/:$/, '') || null
+    const title = set.encore
+      ? (set.encore > 1 ? `Encore ${set.encore}` : 'Encore')
+      : named ?? (unnamed++ > 0 ? `Set ${unnamed}` : null)
+    return { title, songs }
+  }).filter(set => set.songs.length > 0)
+
+  if (sets.length === 0) return null
+  return { url: s.url, tour: s.tour?.name ?? null, sets }
+}
+
+// The setlist for one show, or null when setlist.fm has none with songs in
+// it. Undefined when it couldn't answer (no key, rate-limited, down), which
+// the panel offers to retry, rather than claiming there's nothing.
+export async function findSetlist(show: SetlistLookup): Promise<ShowSetlist | null | undefined> {
+  const artist = show.artist.trim()
+  if (!artist || !/^\d{4}-\d{2}-\d{2}$/.test(show.isoDate)) return null
+  // Nothing to find for a show that hasn't happened yet.
+  const today = new Date().toISOString().slice(0, 10)
+  if (show.isoDate > today) return null
+
+  const ageDays = (Date.parse(today) - Date.parse(show.isoDate)) / 86_400_000
+  const ttl = ageDays <= RECENT_DAYS ? RECENT_CACHE_SECONDS : CACHE_SECONDS
+  const date = setlistDate(show.isoDate)
+
+  // One request in the usual case: setlist.fm's name search is loose, but
+  // pinned to one date it comes back with a handful at most, and only the
+  // acts named like the log's are kept. The bare headliner is tried after
+  // when the full title finds nothing.
+  const names = [artist, headliner(artist)].filter((n): n is string => !!n)
+  let candidates: FullSetlist[] = []
+  for (const name of names) {
+    const body = await call<{ setlist?: FullSetlist[] }>('/search/setlists', { artistName: name, date, p: '1' }, ttl)
+    if (body === null) return undefined
+    if (body === 'empty') continue
+    const typed = looseName(name)
+    const all = body.setlist ?? []
+    const exact = all.filter(s => looseName(s.artist.name) === typed)
+    candidates = exact.length > 0 ? exact : all.filter(s => samePrefix(looseName(s.artist.name), typed))
+    if (candidates.length > 0) break
+  }
+
+  // Two setlists on one date: the one at the log's venue, then in its city,
+  // then whichever has songs. setlist.fm also keeps empty placeholders for
+  // shows nobody has filled in, which never win over one that's filled in.
+  const venue = looseName(show.venue ?? '')
+  const city = looseName(show.city ?? '')
+  const ranked = candidates
+    .map(s => ({ s, shaped: shapeSetlist(s) }))
+    .map(c => ({
+      ...c,
+      rank: (samePrefix(looseName(c.s.venue.name), venue) ? 4 : 0)
+          + (samePrefix(looseName(c.s.venue.city.name), city) ? 2 : 0)
+          + (c.shaped ? 1 : 0),
+    }))
+    .sort((a, b) => b.rank - a.rank)
+
+  return ranked[0]?.shaped ?? null
 }
