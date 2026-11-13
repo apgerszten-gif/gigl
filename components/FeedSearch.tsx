@@ -10,6 +10,7 @@ import { ArtistPhoto, EmptyState, ErrorNote, Label, Place, inputBox } from '@/co
 import { createClient } from '@/lib/supabase/client'
 import { artistHref, venueHref } from '@/lib/showLinks'
 import { useShowSaving } from '@/lib/useShowSaving'
+import { TextReminderNote } from '@/components/TextReminderNote'
 import { useStartLogging } from '@/lib/useStartLogging'
 
 // The Feed's search: one box for artists, venues, shows and people. An artist
@@ -172,6 +173,7 @@ export function FeedSearchResults({ query }: { query: string }) {
             <section>
               <Label className="mb-2">Coming up</Label>
               <UpcomingShowRows shows={results.upcoming} savedIds={savedIds} onToggleSave={toggleSave} />
+              <TextReminderNote className="mt-2" />
             </section>
           )}
 

@@ -6,6 +6,7 @@ import { Building2 } from 'lucide-react'
 import { nameKey } from '@/lib/nameKey'
 import type { ShowRating } from '@/lib/showRatings'
 import { useShowSaving } from '@/lib/useShowSaving'
+import { TextReminderNote } from '@/components/TextReminderNote'
 import { useStartLogging } from '@/lib/useStartLogging'
 import { Logo } from '@/components/Logo'
 import { PastShowRows, ShimmerRows, UpcomingShowRows, type ListedShow, type RowText } from '@/components/ShowRows'
@@ -170,6 +171,7 @@ export function ShowsPage({ kind, name, city, state, photo, upcoming, past, rati
           ) : (
             <div className="space-y-3">
               <UpcomingShowRows shows={upcoming.slice(0, upcomingShown)} savedIds={savedIds} onToggleSave={toggleSave} describe={describe} />
+              <TextReminderNote />
               {upcoming.length > upcomingShown && (
                 <button type="button" onClick={() => setUpcomingShown(n => n + MORE_ROWS)} className={`${btnSecondary} w-full py-2.5 text-[11px]`}>
                   Show more

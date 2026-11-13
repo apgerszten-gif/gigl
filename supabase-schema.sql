@@ -1025,3 +1025,14 @@ end
 $$;
 revoke all on function public.join_show_invite(text) from public;
 grant execute on function public.join_show_invite(text) to authenticated;
+-- ── Review texts ─────────────────────────────────────────────────────────────
+-- The morning after a saved show, /api/cron/review-texts texts its owner to
+-- review it, through Prelude Notify (lib/reviewTexts.ts). Saving a show with a
+-- phone account records consent in saved_shows.text_opt_in_at (the line under
+-- Save says so); review_texted_at stops a second text; and
+-- profiles.review_texts_off_at, set from You or by a STOP reply that Prelude
+-- reports, stops them all. Nothing sends until /admin says Live.
+alter table public.saved_shows add column if not exists review_texted_at timestamp with time zone;
+alter table public.profiles add column if not exists review_texts_off_at timestamp with time zone;
+insert into public.app_settings (key, value) values ('review_texts_mode', '"off"')
+on conflict (key) do nothing;

@@ -58,4 +58,10 @@ export interface AdminStats {
   latestLogs: AdminLog[]
   latestSignups: AdminSignup[]
   venueSync: VenueSyncSummary
+  reviewTexts: {
+    mode:       'off' | 'live'
+    // Whether PRELUDE_API_KEY and PRELUDE_REVIEW_TEMPLATE_ID are set.
+    configured: boolean
+    lastRun:    import('./reviewTexts').ReviewTextsReport | null
+  }
 }

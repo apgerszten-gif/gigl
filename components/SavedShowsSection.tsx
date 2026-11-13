@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Bookmark, Share2, X } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { InviteSheet } from '@/components/InviteSheet'
+import { Toggle } from '@/components/Sheet'
+import { createClient } from '@/lib/supabase/client'
 import { loadInviteRsvps } from '@/lib/invites'
 import { loadSavedShows, unsaveShow, type SavableShow, type SavedShow } from '@/lib/savedShows'
 import { ArtistPhoto, Chip, DateTag, Label, Place } from '@/components/ui'
@@ -19,6 +21,23 @@ export function SavedShowsSection() {
   const [goingWith, setGoingWith] = useState<Record<string, string[]>>({})
   const [inviting, setInviting]   = useState<SavableShow | null>(null)
   const closeInvite = useCallback(() => setInviting(null), [])
+  // The morning-after review texts (lib/reviewTexts.ts), on unless turned off
+  // here or by replying STOP. Only for accounts with a phone number.
+  const [textsOn, setTextsOn] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!user?.phone) return
+    createClient().from('profiles').select('review_texts_off_at').eq('id', user.id).single()
+      .then(({ data, error }) => { if (!error) setTextsOn(!data?.review_texts_off_at) })
+  }, [user?.id, user?.phone])
+
+  async function changeTexts(next: boolean) {
+    if (!user) return
+    setTextsOn(next)
+    const { error } = await createClient().from('profiles')
+      .update({ review_texts_off_at: next ? null : new Date().toISOString() }).eq('id', user.id)
+    if (error) { console.error('review texts switch failed:', error.message); setTextsOn(!next) }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -105,6 +124,12 @@ export function SavedShowsSection() {
           <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">We&apos;ll remind you to review it</p>
         </div>
       </Link>
+
+      {textsOn !== null && (
+        <div className="mt-3 rounded-card border-1.5 border-ink/15 bg-cream px-3.5 py-3">
+          <Toggle label="Text me the morning after to review saved shows" checked={textsOn} onChange={changeTexts} />
+        </div>
+      )}
 
       {inviting && <InviteSheet show={inviting} onClose={closeInvite} />}
     </section>

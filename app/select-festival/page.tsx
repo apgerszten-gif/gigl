@@ -6,6 +6,7 @@ import { Building2, MapPin, Plus, Search, X } from 'lucide-react'
 import { useNearby, RADIUS_OPTIONS } from '@/lib/useNearby'
 import { useSearchCity } from '@/lib/useSearchCity'
 import { useShowSaving } from '@/lib/useShowSaving'
+import { TextReminderNote } from '@/components/TextReminderNote'
 import { useStartLogging } from '@/lib/useStartLogging'
 import { CityPicker, placeName } from '@/components/CityPicker'
 import { useAuth } from '@/components/AuthProvider'
@@ -26,7 +27,6 @@ const PAST_MIN_QUERY   = 3
 
 // Whether this device last agreed to text reminders. The saved row keeps the
 // actual record of consent; this only saves ticking the box every time.
-const TEXT_OPT_IN_KEY = 'gigl.text-reminders.v1'
 
 type View = 'past' | 'upcoming'
 
@@ -53,12 +53,10 @@ export default function SelectShowPage() {
 
   // Saving, on the Upcoming list. Tapping Save signed out opens the sign-up
   // sheet, and the save finishes once it hands back an account.
-  const [textOptIn, setTextOptIn] = useState(false)
-  const { savedIds, saveFailed, toggleSave, signUpSheet } = useShowSaving(textOptIn)
+  const { savedIds, saveFailed, toggleSave, signUpSheet } = useShowSaving()
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('view') === 'upcoming') setView('upcoming')
-    try { setTextOptIn(localStorage.getItem(TEXT_OPT_IN_KEY) === '1') } catch { /* blocked storage: stays unticked */ }
   }, [])
 
   function changeView(next: View) {
@@ -67,11 +65,6 @@ export default function SelectShowPage() {
     setResults([])
     setLoading(true)
     setView(next)
-  }
-
-  function changeTextOptIn(next: boolean) {
-    setTextOptIn(next)
-    try { localStorage.setItem(TEXT_OPT_IN_KEY, next ? '1' : '0') } catch { /* this session still has it */ }
   }
 
   // A typed city is the way to search by place without sharing a location.
@@ -362,19 +355,9 @@ export default function SelectShowPage() {
         )}
       </div>
 
-      {/* Only offered to accounts with a phone number. Unticked by default,
-          and nothing is texted until the reminders are switched on. */}
-      {view === 'upcoming' && user?.phone && (
-        <label className="mx-5 mt-2.5 flex items-start gap-2 text-[11px] leading-snug text-ink-muted">
-          <input
-            type="checkbox"
-            checked={textOptIn}
-            onChange={e => changeTextOptIn(e.target.checked)}
-            className="mt-0.5 flex-shrink-0 accent-accent"
-          />
-          <span>Also text me to review shows I save, once text reminders start. Message and data rates may apply. Reply STOP to opt out.</span>
-        </label>
-      )}
+      {/* Saving now always means a review text the morning after, for phone
+          accounts; this line is how people know before they tap Save. */}
+      {view === 'upcoming' && <TextReminderNote className="mx-5 mt-2.5" />}
 
       {saveFailed && <div className="px-5 pt-2.5"><ErrorNote>Couldn&apos;t update your saved shows. Try again.</ErrorNote></div>}
 

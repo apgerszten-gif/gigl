@@ -12,10 +12,10 @@ import { fetchSavedShowIds, saveShow, unsaveShow, type SavableShow } from '@/lib
 // failed, and the sign-up sheet to render: tapping Save signed out opens it,
 // and the save goes through once it hands back an account.
 //
-// `textOptIn` is the Log screen's "also text me" checkbox, which only it
-// shows. Everywhere else passes nothing, so no save records a consent the
-// person wasn't asked for on that screen.
-export function useShowSaving(textOptIn = false) {
+// Every save records consent to the morning-after review text
+// (text_opt_in_at), which the TextReminderNote beside each list of Save
+// buttons tells people about. It only ever reaches a phone account.
+export function useShowSaving() {
   const { user } = useAuth()
 
   const [savedIds, setSavedIds]       = useState<Set<string>>(new Set())
@@ -42,7 +42,7 @@ export function useShowSaving(textOptIn = false) {
     setSaveFailed(false)
     setSavedIds(ids => new Set(ids).add(show.id))
     try {
-      await saveShow(userId, show, textOptIn && !!user?.phone)
+      await saveShow(userId, show, true)
       setJustSaved(show)
     } catch (err) {
       console.error('saving a show failed:', err)

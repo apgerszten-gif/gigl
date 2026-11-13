@@ -12,6 +12,7 @@ import { formatShowDate } from '@/lib/dates'
 import { getInvite, hasRsvped, rsvp, type ShowInvite } from '@/lib/invites'
 import { saveShow } from '@/lib/savedShows'
 import { venueHref } from '@/lib/showLinks'
+import { TextReminderNote } from '@/components/TextReminderNote'
 
 // What a friend sees from an invite link: who's going, the show, and one big
 // "I'm going too". Works signed out; the tap asks for an account in place,
@@ -44,7 +45,7 @@ export function InviteLanding({ token }: { token: string }) {
       await saveShow(userId, {
         id: invite.show_id, artist: invite.artist, venue: invite.venue, city: invite.city, state: invite.state,
         isoDate: invite.show_date, imageUrl: invite.image_url,
-      }, false)
+      }, true)
     } catch (err) {
       console.error('saving the invited show failed:', err)
       setFailed(true)
@@ -127,6 +128,7 @@ export function InviteLanding({ token }: { token: string }) {
                   {busy ? 'One sec…' : "I'm going too"}
                 </button>
                 <Link href="/feed" className="block text-center text-[12px] text-ink-muted underline underline-offset-[3px]">Not for me</Link>
+                <TextReminderNote className="text-center pt-1" />
               </div>
             )}
           </div>
