@@ -148,11 +148,6 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           </Card>
         </section>
 
-        {/* A festival set logged from its lineup has a day, not a date. */}
-        {showDate && (
-          <SetlistPanel artist={artistName} isoDate={showDate} venue={listing?.venue ?? venueName} city={listing?.city} />
-        )}
-
         <section>
           <Label className="mb-2.5">What people are saying</Label>
           {reviews.length === 0 ? (
@@ -187,7 +182,12 @@ export default async function ArtistPage({ params }: { params: { artistId: strin
           )}
         </section>
 
-        {/* A festival set is logged from its lineup, which knows the stage. */}
+        {/* After the reviews: the setlist, then logging your own. A festival
+            set logged from its lineup has a day, not a date, and is logged
+            from that lineup, which knows the stage. */}
+        {showDate && (
+          <SetlistPanel artist={artistName} isoDate={showDate} venue={listing?.venue ?? venueName} city={listing?.city} />
+        )}
         {!stage && showDate && (
           <LogThisShow show={{
             id:       params.artistId,
