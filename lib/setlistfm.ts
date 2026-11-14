@@ -480,3 +480,35 @@ export async function findSetlist(show: SetlistLookup): Promise<ShowSetlist | nu
 
   return ranked[0]?.shaped ?? null
 }
+
+// ── Where a venue is ─────────────────────────────────────────────────────────
+
+export interface SetlistVenueCity {
+  city:  string
+  state: string
+  lat:   number
+  lng:   number
+}
+
+// The city a setlist.fm venue is in, with that city's coordinates
+// (setlist.fm places venues no closer than their city). For saving where a
+// logged setlist.fm show happened onto the log itself (lib/shows/locate.ts):
+// a log is the person's own record, so its city is kept the way its artist,
+// venue and date are. Undefined when setlist.fm couldn't answer, null when it
+// doesn't know the venue or has no coordinates for its city.
+export async function findVenueCity(venueId: string): Promise<SetlistVenueCity | null | undefined> {
+  if (!/^[0-9a-f]{4,12}$/i.test(venueId)) return null
+  const body = await call<{ city?: { name: string; stateCode?: string; coords?: { lat: number; long: number }; country: { code: string } } }>(
+    `/venue/${venueId}`, {},
+  )
+  if (body === null) return undefined
+  if (body === 'empty' || !body.city?.coords) return null
+  const { city } = body
+  const country = city.country.code
+  return {
+    city:  city.name,
+    state: country === 'US' || country === 'CA' ? city.stateCode ?? '' : country,
+    lat:   city.coords!.lat,
+    lng:   city.coords!.long,
+  }
+}

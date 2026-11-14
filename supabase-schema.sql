@@ -1025,3 +1025,14 @@ end
 $$;
 revoke all on function public.join_show_invite(text) from public;
 grant execute on function public.join_show_invite(text) to authenticated;
+
+-- Where each logged show happened, at city level, for Near me on the Feed.
+-- A log used to keep only the venue's name. lib/shows/locate.ts works out
+-- the city and its coordinates from the show's id (catalogue row, festival
+-- lineup or setlist.fm venue), and lib/pendingLogs.ts saves them once a log
+-- syncs; scripts/backfill-log-places.mjs fills in logs made before this.
+-- These are a venue's or a city's coordinates, never anyone's own location.
+alter table public.logged_shows
+  add column if not exists city text,
+  add column if not exists lat  double precision,
+  add column if not exists lng  double precision;

@@ -71,6 +71,22 @@ export function getPendingTagsForArtist(userId: string, artistId: string): strin
   return readQueue().find(q => q.payload.user_id === userId && q.payload.artist_id === artistId)?.taggedUserIds
 }
 
+// Where the show was, saved onto the log so Near me on the Feed can place it
+// (lib/shows/locate.ts works it out from the show's id). Kept out of the
+// payload, like the tags, and best-effort and unawaited: the rating is what
+// this queue protects, and a log that isn't placed yet only drops out of
+// Near me until scripts/backfill-log-places.mjs catches it.
+function saveLogPlace(supabase: ReturnType<typeof createClient>, logId: string, showId: string) {
+  fetch(`/api/shows/locate?${new URLSearchParams({ id: showId })}`)
+    .then(res => (res.ok ? res.json() : null))
+    .then(async (body: { place: { city: string; lat: number; lng: number } | null } | null) => {
+      if (!body?.place) return
+      const { error } = await supabase.from('logged_shows').update(body.place).eq('id', logId)
+      if (error) console.error('saving where the show was failed:', error.message)
+    })
+    .catch(err => console.error('locating the show failed:', err))
+}
+
 let flushing = false
 
 // Attempts to sync every queued rating to Supabase. Safe to call repeatedly
@@ -97,6 +113,7 @@ export async function flushPendingLogs(): Promise<void> {
           await syncShowTags(supabase, data.id, entry.taggedUserIds)
             .catch(err => console.error('syncing tags failed:', err))
         }
+        if (data?.id) saveLogPlace(supabase, data.id, entry.payload.artist_id)
         writeQueue(readQueue().filter(q => q.localId !== entry.localId))
       }
     }

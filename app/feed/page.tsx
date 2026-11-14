@@ -28,6 +28,9 @@ import { useAuth } from '@/components/AuthProvider'
 import { readCache, writeCache } from '@/lib/staleCache'
 import { timeQuery, timeMark } from '@/lib/queryTiming'
 import { useArtistImages } from '@/lib/useArtistImages'
+import { useNearby } from '@/lib/useNearby'
+import { distanceInMiles } from '@/lib/geo'
+import { FeedNearMe } from '@/components/FeedNearMe'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const FEED_CACHE_KEY = 'gigl_feed_cache'
@@ -65,6 +68,10 @@ interface GlobalLog {
   media_urls:  string[] | null
   review:      string | null
   tags:        string[] | null
+  // Where the show was, at city level (lib/shows/locate.ts), for Near me.
+  // Null until the log has been placed; missing on older feed caches.
+  lat?:        number | null
+  lng?:        number | null
   // Everyone tagged on it (show_tags). Missing on feed caches written
   // before tagging came back.
   tagged?:     { username: string; avatar_url: string | null }[]
@@ -101,6 +108,11 @@ function FeedInner() {
   // for the stream below. Kept in the URL (?q=), so coming back from an
   // artist or venue page it opened lands on the same results.
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '')
+
+  // Location is asked for as the app opens, here, rather than on the Log
+  // screen: the Feed is where the app lands, and Near me is its default
+  // view. The answer is shared with the Log screen (lib/useNearby.ts).
+  const nearby = useNearby()
   const searching = searchQuery.trim().length >= FEED_SEARCH_MIN
 
   useEffect(() => {
@@ -136,7 +148,7 @@ function FeedInner() {
 
     const logsQuery = supabase
       .from('logged_shows')
-      .select('id, artist_id, artist_name, performance_rating, venue_rating, created_at, user_id, stage, day, venue, show_date, photo_url, media_urls, review, tags, show_tags(tagged_user_id)')
+      .select('id, artist_id, artist_name, performance_rating, venue_rating, created_at, user_id, stage, day, venue, show_date, lat, lng, photo_url, media_urls, review, tags, show_tags(tagged_user_id)')
       .order('created_at', { ascending: false })
       .limit(200)
 
@@ -326,9 +338,17 @@ function FeedInner() {
   // Rankings) asked for it.
   const activeFilter = user ? filterMode : 'all'
 
-  const visibleFeed = activeFilter === 'following'
+  const byPeople = activeFilter === 'following'
     ? globalFeed.filter(item => item.user_id === user?.id || followingIds.has(item.user_id))
     : globalFeed
+
+  // Near me keeps the logs of shows within the chosen radius. A log that
+  // hasn't been placed yet (no lat/lng) can't be shown as near anything.
+  const centre = nearby.active ? nearby.coords : null
+  const visibleFeed = centre
+    ? byPeople.filter(item => item.lat != null && item.lng != null
+        && distanceInMiles(centre, { lat: item.lat, lng: item.lng }) <= nearby.radiusMiles)
+    : byPeople
 
   const artistImage = useArtistImages(visibleFeed.map(item => item.artist_name ?? ''))
 
@@ -383,6 +403,8 @@ function FeedInner() {
             }}
           />
           <FeedSearchBar value={searchQuery} onChange={setSearchQuery} />
+          {/* Search looks everywhere, so the filter steps aside while it's on. */}
+          {!searching && <FeedNearMe nearby={nearby} />}
         </div>
       </div>
 
@@ -394,11 +416,20 @@ function FeedInner() {
         )}
 
         {!loading && visibleFeed.length === 0 && (
-          <EmptyState>
-            {activeFilter === 'following'
-              ? 'No activity yet from people you follow.'
-              : 'No ratings yet. Be the first to log a show.'}
-          </EmptyState>
+          centre && byPeople.length > 0 ? (
+            <EmptyState>
+              Nothing logged within {nearby.radiusMiles} mi of you yet.{' '}
+              <button type="button" onClick={nearby.disable} className="font-semibold text-accent underline underline-offset-[3px]">
+                See everywhere
+              </button>
+            </EmptyState>
+          ) : (
+            <EmptyState>
+              {activeFilter === 'following'
+                ? 'No activity yet from people you follow.'
+                : 'No ratings yet. Be the first to log a show.'}
+            </EmptyState>
+          )
         )}
 
         {visibleFeed.map((item, i) => {
