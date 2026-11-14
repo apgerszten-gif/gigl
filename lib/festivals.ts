@@ -481,3 +481,11 @@ export function hasDayOccurred(festival: Festival, day: string, now: Date = new 
 }
 
 export const LOCAL_STORAGE_KEY = 'gigl_festival_id'
+
+// Which festival a lineup set belongs to, for where it happened: a festival
+// log stores its stage and day but no city (lib/shows/locate.ts).
+const FESTIVAL_BY_ARTIST = new Map(FESTIVALS.flatMap(f => f.artists.map(a => [a.id, f] as const)))
+
+export function festivalOfArtist(artistId: string | null | undefined): Festival | null {
+  return (artistId && FESTIVAL_BY_ARTIST.get(artistId)) || null
+}
