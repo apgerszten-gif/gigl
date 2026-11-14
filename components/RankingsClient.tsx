@@ -158,8 +158,11 @@ export function RankingsClient({ initial, initialView, initialMetric, initialFil
   // Each artist's all-time battle record across every user, summed over all
   // their shows - a public consensus view, never any one user's own record
   // (that's Profile's job). Battles are fought between shows, so records are
-  // kept per show id.
+  // kept per show id. Only read, and only shown, once the viewer has Battle
+  // Mode: to a new account a "3-1" trophy explains nothing, and tapping it
+  // used to answer with a gate ("unlocks once you've logged 10 shows").
   useEffect(() => {
+    if (!battleModeUnlocked) return
     const artistOf = new Map<string, string>()
     rankings.artists.forEach(a => a.showIds.forEach(id => artistOf.set(id, a.key)))
     const showIds = Array.from(artistOf.keys())
@@ -175,7 +178,7 @@ export function RankingsClient({ initial, initialView, initialMetric, initialFil
         })
         setBattleAggMap(map)
       })
-  }, [rankings.artists])
+  }, [rankings.artists, battleModeUnlocked])
 
   // Ranks are taken before the search narrows the list, so a search shows
   // where something actually stands ("#12"), not its place among matches.
@@ -288,7 +291,7 @@ export function RankingsClient({ initial, initialView, initialMetric, initialFil
                 <Breakdown scores={row.scores} metric={metric} />
                 <div className="mt-1.5 flex items-center justify-between gap-2">
                   <Counts shows={row.shows} ratings={row.count} onOpen={mode => setDetail({ name: row.name, showIds: row.showIds, mode })} />
-                  {battleAggMap[row.key] && (
+                  {battleModeUnlocked && battleAggMap[row.key] && (
                     <BattleRecordBadge
                       wins={battleAggMap[row.key].wins}
                       losses={battleAggMap[row.key].losses}

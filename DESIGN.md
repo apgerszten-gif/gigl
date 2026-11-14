@@ -136,7 +136,7 @@ Where the photos come from:
   - the review as a pull quote, with tagged people's `@username` as sienna underlined links to their profiles, then its tags as chips
   - when anyone is tagged, a "with @mo and @mei" line (`WithLine` in `components/TagDisplay.tsx`): up to three overlapping 18px photos, then the handles in `ink`, "and 2 others" past three
   - the reaction bar (heart, fire, laugh, wow, comments)
-- The Battle Mode card once it's unlocked, and a first-visit tip pointing at the Log button.
+- The Battle Mode card once it's unlocked (10 logs), and a first-visit tip pointing at the Log button. The card is the only invitation to Battle Mode: a `Trophy` tile, "Battle Mode" with a compact "Optional" `Chip`, two lines on what a battle is, a small primary "Try a battle" and an underlined "Not for me" that puts it away for good. Nothing pops up over the tenth log, and the trophy win-loss records on Rankings only show to people who have unlocked it.
 - Signed out, a `Card` above the controls: "Rate the shows you've been to", a line in `ink-muted` saying an account is only needed to post, a small "Log a show" primary button (to `/select-festival`) and an "I have an account" link. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
 
 ### Rankings (`/rankings`)

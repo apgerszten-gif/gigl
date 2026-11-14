@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Pencil, Plus, Search, Share2 } from 'lucide-react'
+import { BattleModeCard } from '@/components/BattleModeCard'
 import { DockBar } from '@/components/BottomNav'
 import { SuggestField } from '@/components/SuggestField'
 import { Logo } from '@/components/Logo'
@@ -131,6 +132,9 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
       </div>
 
       <main className="px-5 pt-4 space-y-4">
+        {/* Shown once someone has logged 10 shows, until they put it away. */}
+        <BattleModeCard onDismiss={() => {}} onEnter={() => {}} />
+
         {REVIEWS.map(review => (
           <Card key={review.handle} className="overflow-hidden">
             <div className="px-3.5 pt-2.5 pb-2.5 space-y-1.5">
