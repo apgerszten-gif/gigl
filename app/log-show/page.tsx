@@ -9,7 +9,6 @@ import { formatShowDate } from '@/lib/dates'
 import { computeShowScore, deriveLegacyEmoji } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
 import { FirstShowCelebration } from '@/components/FirstShowCelebration'
-import { BattleModeUnlockedModal } from '@/components/BattleModeUnlockedModal'
 import { useAuth } from '@/components/AuthProvider'
 import { ArtistPhoto, Card, Label, Place, Stars, btnPrimary, btnSecondary, headerClass } from '@/components/ui'
 import { SignUpSheet } from '@/components/SignUpSheet'
@@ -219,7 +218,6 @@ function LogShowInner() {
   const [logged, setLogged]           = useState<{ username: string | null; score: number } | null>(null)
   const [sharing, setSharing]         = useState(false)
   const leave = useCallback(() => router.push('/feed'), [router])
-  const [battleUnlock, setBattleUnlock] = useState(false)
   const [signUpOpen, setSignUpOpen]     = useState(false)
 
   // Ratings, review and tags from a log that hasn't reached the server yet:
@@ -440,17 +438,10 @@ function LogShowInner() {
     }, tagIds)
 
     let isFirstShow = false
-    let wasUnlocked = true
-    let priorCount = 0
     if (!existingId) {
       try {
-        const [{ count }, { data: profileBefore }] = await Promise.all([
-          timeQuery('log-show:count-logged_shows', supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', userId)),
-          timeQuery('log-show:profiles', supabase.from('profiles').select('battle_mode_unlocked').eq('id', userId).single()),
-        ])
-        priorCount = count ?? 0
-        isFirstShow = priorCount === 0
-        wasUnlocked = profileBefore?.battle_mode_unlocked ?? true
+        const { count } = await timeQuery('log-show:count-logged_shows', supabase.from('logged_shows').select('id', { count: 'exact', head: true }).eq('user_id', userId))
+        isFirstShow = (count ?? 0) === 0
       } catch {
         isFirstShow = false
       }
@@ -462,14 +453,11 @@ function LogShowInner() {
     // queue exists for.
     void flushPendingLogs()
 
-    // Optimistic: this save is about to push shows_logged_count past the
-    // trigger's threshold, so we celebrate immediately from data already in
-    // hand rather than a round trip to confirm the server-side flip.
-    // Everywhere the feature actually gates on (Feed/Rankings cards) always
-    // reads the live battle_mode_unlocked value, so a rare desync here just
-    // means the celebration and the real unlock land a beat apart, not that
-    // the feature opens before it should.
-    const battleModeJustUnlocked = !existingId && !wasUnlocked && (priorCount + 1) >= 10
+    // The tenth log unlocks Battle Mode (a trigger flips
+    // profiles.battle_mode_unlocked), and nothing marks it here: a pop-up
+    // over the log people just saved read as a gate they had to deal with.
+    // The invitation is the card on Feed and Rankings
+    // (components/BattleModeCard.tsx), there when they next look.
 
     // Came from a friend's shared review: straight back to it, where both
     // ratings now sit side by side. Before any celebration, since a first
@@ -485,13 +473,6 @@ function LogShowInner() {
       setCelebration({ username: profileRow?.username ?? null })
       setSaving(false)
       timeMark('log-show:save total (first show)', saveStart)
-      return
-    }
-
-    if (battleModeJustUnlocked) {
-      setBattleUnlock(true)
-      setSaving(false)
-      timeMark('log-show:save total (battle unlock)', saveStart)
       return
     }
 
@@ -666,9 +647,6 @@ function LogShowInner() {
           }}
           onClose={leave}
         />
-      )}
-      {battleUnlock && (
-        <BattleModeUnlockedModal onDismiss={() => { setBattleUnlock(false); router.push('/feed') }} />
       )}
     </div>
   )

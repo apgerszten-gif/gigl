@@ -146,9 +146,13 @@ function BattleInner() {
         </div>
 
         <Label tone="accent" className="mb-1">Battle {battles + 1} of {sessionLimit}</Label>
-        <h1 className="font-display text-[34px] font-bold tracking-tight leading-[1.05] mb-7">
+        <h1 className="font-display text-[34px] font-bold tracking-tight leading-[1.05] mb-2.5">
           Which set hit<br />harder<span className="text-accent">?</span>
         </h1>
+        <p className="mb-6 text-[13px] leading-snug text-ink-muted">
+          Two shows you&apos;ve logged. Each pick adds a win and a loss to their records on Rankings and your
+          profile. Your star ratings don&apos;t change.
+        </p>
 
         {pair && (
           <>

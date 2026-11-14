@@ -395,7 +395,7 @@ function FeedInner() {
             since that's what the filter is for. */}
         <div className="space-y-2.5">
           <FeedTabs
-            value={activeFilter}
+            filter={activeFilter}
             onFilterChange={next => {
               if (next === 'following' && !user) { setSignUpMode('signup'); return }
               setFilterMode(next)

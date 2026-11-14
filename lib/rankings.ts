@@ -181,13 +181,32 @@ export function rankVenues(logs: LoggedShowForRanking[], places: Record<string, 
 // PostgREST puts `in` filters in the URL, so ids go up in chunks.
 const ID_CHUNK = 100
 
+// Everyone's logs, or only those by `userIds` (the Following view: you and
+// the people you follow), read a chunk of people at a time.
+async function readLogs(client: SupabaseClient, userIds?: string[]): Promise<LoggedShowForRanking[]> {
+  if (!userIds) {
+    const { data, error } = await client.from('logged_shows').select(RANKINGS_SELECT)
+    // A failed read must not look like "no ratings yet" with nothing logged.
+    if (error) console.error('[rankings] logged_shows query failed:', error.message)
+    return (data ?? []) as LoggedShowForRanking[]
+  }
+  const logs: LoggedShowForRanking[] = []
+  for (let i = 0; i < userIds.length; i += ID_CHUNK) {
+    const { data, error } = await client
+      .from('logged_shows').select(RANKINGS_SELECT).in('user_id', userIds.slice(i, i + ID_CHUNK))
+    if (error) { console.error('[rankings] logged_shows query failed:', error.message); break }
+    logs.push(...((data ?? []) as LoggedShowForRanking[]))
+  }
+  return logs
+}
+
 // Everything the page needs, read the same way by the server render
-// (app/rankings/page.tsx) and the live refresh (RankingsClient).
-export async function loadRankings(client: SupabaseClient): Promise<{ artists: ArtistRanking[]; venues: VenueRanking[] }> {
-  const { data, error } = await client.from('logged_shows').select(RANKINGS_SELECT)
-  // A failed read must not look like "no ratings yet" with nothing logged.
-  if (error) console.error('[rankings] logged_shows query failed:', error.message)
-  const logs = (data ?? []) as LoggedShowForRanking[]
+// (app/rankings/page.tsx) and the live refresh (RankingsClient). `userIds`
+// narrows it to those people's ratings.
+export async function loadRankings(
+  client: SupabaseClient, userIds?: string[],
+): Promise<{ artists: ArtistRanking[]; venues: VenueRanking[] }> {
+  const logs = await readLogs(client, userIds)
 
   const ids = Array.from(new Set(logs.filter(l => l.venue && !l.stage).map(l => l.artist_id)))
   const places: Record<string, ListingPlace> = {}
