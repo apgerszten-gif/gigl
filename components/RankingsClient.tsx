@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, ChevronRight, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -10,8 +10,9 @@ import { AppHeader } from '@/components/AppHeader'
 import { Logo } from '@/components/Logo'
 import { RankingDetailSheet } from '@/components/RankingDetailSheet'
 import BottomNav from '@/components/BottomNav'
-import { FeedTabs, type RankingsView } from '@/components/FeedTabs'
-import { ArtistPhoto, Card, Chip, EmptyState, Label, Place, Stars, inputBox } from '@/components/ui'
+import { FeedTabs, type FeedFilter, type RankingsView } from '@/components/FeedTabs'
+import { SignUpSheet } from '@/components/SignUpSheet'
+import { ArtistPhoto, Card, Chip, EmptyState, Label, LoadingLabel, Place, Stars, inputBox } from '@/components/ui'
 import { useAuth } from '@/components/AuthProvider'
 import { nameKey } from '@/lib/nameKey'
 import { timeQuery } from '@/lib/queryTiming'
@@ -28,30 +29,56 @@ function listOf(view: RankingsView): 'artists' | 'venues' {
   return view === 'venues' ? 'venues' : 'artists'
 }
 
-// The view and the ranking are kept in the URL (?view=venues, ?by=both), so
-// a shared link or a reload opens the same list. A list's own default (see
-// lib/rankings.ts) is left out.
-function rankingsUrl(view: RankingsView, metric: RankMetric): string {
+// The view, the ranking and whose ratings count are kept in the URL
+// (?view=venues, ?by=both, ?filter=following), so a shared link or a reload
+// opens the same list. A list's own default (see lib/rankings.ts) is left out.
+function rankingsUrl(view: RankingsView, metric: RankMetric, filter: FeedFilter): string {
   const params = new URLSearchParams()
   if (view === 'venues') params.set('view', 'venues')
   if (metric !== defaultRankMetric(listOf(view))) params.set('by', metric)
+  if (filter === 'following') params.set('filter', 'following')
   const qs = params.toString()
   return qs ? `/rankings?${qs}` : '/rankings'
 }
 
-export function RankingsClient({ initial, initialView, initialMetric }: {
+const NO_RANKINGS: Rankings = { artists: [], venues: [] }
+
+// "Based on 14 ratings from you and the 6 people you follow." Whose ratings a
+// list is built from, said outright: people couldn't tell whether Rankings
+// came from their friends or from everyone.
+function basisLine(ratings: number, following: number | null): string {
+  const n = `${ratings} ${ratings === 1 ? 'rating' : 'ratings'}`
+  if (following == null) return `Based on ${n} from everyone on Gigl.`
+  if (following === 0) return `Based on your own ${n}. Follow people to count theirs too.`
+  return `Based on ${n} from you and the ${following === 1 ? '1 person' : `${following} people`} you follow.`
+}
+
+export function RankingsClient({ initial, initialView, initialMetric, initialFilter }: {
   initial:       Rankings
   initialView:   RankingsView
   initialMetric: RankMetric
+  initialFilter: FeedFilter
 }) {
   const router   = useRouter()
   const supabase = createClient()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   const [rankings, setRankings] = useState<Rankings>(initial)
   const [view, setView]         = useState<RankingsView>(initialView)
   const [metric, setMetric]     = useState<RankMetric>(initialMetric)
   const [query, setQuery]       = useState('')
+  // Whose ratings count: everyone's, or yours and the people you follow -
+  // the same switch as on Feed (components/FeedTabs.tsx). `mine` is the
+  // Following ranking and the people it's built from, read once it's asked
+  // for; the server only ever sends everyone's.
+  const [filter, setFilter]     = useState<FeedFilter>(initialFilter)
+  const [mine, setMine]         = useState<{ userIds: string[]; rankings: Rankings } | null>(null)
+  const mineIds = useRef<string[] | null>(null)
+  const [signUp, setSignUp]     = useState(false)
+  // Following means nothing without an account, as on Feed. While the
+  // session is still loading it's taken at its word, so a signed-in reload
+  // doesn't flash everyone's rankings first.
+  const following = filter === 'following' && (authLoading || !!user)
   // The card whose "N shows" or "N ratings" is open, in a sheet over the list.
   const [detail, setDetail]     = useState<{ name: string; showIds: string[]; mode: 'shows' | 'ratings' } | null>(null)
   const closeDetail = useCallback(() => setDetail(null), [])
@@ -60,8 +87,24 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
   const [battleAggMap, setBattleAggMap] = useState<Record<string, { wins: number; losses: number }>>({})
 
   useEffect(() => {
-    window.history.replaceState(null, '', rankingsUrl(view, metric))
-  }, [view, metric])
+    window.history.replaceState(null, '', rankingsUrl(view, metric, following ? 'following' : 'all'))
+  }, [view, metric, following])
+
+  useEffect(() => {
+    if (filter !== 'following' || !user) return
+    let cancelled = false
+    async function load(userId: string) {
+      const { data, error } = await supabase.from('follows').select('following_id').eq('follower_id', userId)
+      if (error) console.error('[rankings] follows lookup failed:', error.message)
+      const userIds = [userId, ...(data ?? []).map(row => row.following_id as string)]
+      const next = await loadRankings(supabase, userIds)
+      if (cancelled) return
+      mineIds.current = userIds
+      setMine({ userIds, rankings: next })
+    }
+    load(user.id)
+    return () => { cancelled = true }
+  }, [filter, user?.id])
 
   // Each list opens ranked on its own stars: artists on Performance, venues
   // on Venue.
@@ -81,6 +124,8 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
       .channel('rankings-logged_shows')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logged_shows' }, async () => {
         setRankings(await loadRankings(supabase))
+        const userIds = mineIds.current
+        if (userIds) setMine({ userIds, rankings: await loadRankings(supabase, userIds) })
       })
       .subscribe()
 
@@ -134,17 +179,21 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
 
   // Ranks are taken before the search narrows the list, so a search shows
   // where something actually stands ("#12"), not its place among matches.
+  const loadingMine = following && !mine
+  const shown = following ? mine?.rankings ?? NO_RANKINGS : rankings
   const typed = nameKey(query)
-  const artists = sortRankings(rankings.artists, metric)
+  const artists = sortRankings(shown.artists, metric)
     .map((row, i) => ({ row, rank: i + 1 }))
     .filter(({ row }) => !typed || nameKey(row.name).includes(typed))
-  const venues = sortRankings(rankings.venues, metric)
+  const venues = sortRankings(shown.venues, metric)
     .map((row, i) => ({ row, rank: i + 1 }))
     .filter(({ row }) => !typed || nameKey(`${row.name} ${row.city}`).includes(typed))
 
   const artistImage = useArtistImages(view === 'rankings' ? artists.map(a => a.row.name) : [])
   const listLength = view === 'rankings' ? artists.length : venues.length
-  const total = view === 'rankings' ? rankings.artists.length : rankings.venues.length
+  const listed = view === 'rankings' ? shown.artists : shown.venues
+  const total = listed.length
+  const ratingCount = listed.reduce((sum, row) => sum + row.count, 0)
 
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
@@ -155,11 +204,19 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
       </AppHeader>
       <h1 className="sr-only">{view === 'rankings' ? 'Artist rankings' : 'Venue rankings'}</h1>
 
-      {/* Same control as Feed, with a rankings option selected. From here
-          the two filter options navigate back to Feed, and the two rankings
+      {/* Same control as Feed, with a rankings option selected. The filter
+          bar picks whose ratings the list is ranked on, and the two rankings
           switch in place. See components/FeedTabs.tsx. */}
       <div className="px-5 pt-3 space-y-2.5">
-        <FeedTabs value={view} onRankingsChange={changeView} />
+        <FeedTabs
+          filter={following ? 'following' : 'all'}
+          rankings={view}
+          onFilterChange={next => {
+            if (next === 'following' && !user) { setSignUp(true); return }
+            setFilter(next)
+          }}
+          onRankingsChange={changeView}
+        />
 
         <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5 focus-within:ring-2 focus-within:ring-accent/40`}>
           <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
@@ -190,6 +247,12 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
             </button>
           ))}
         </div>
+
+        {!loadingMine && total > 0 && (
+          <p className="text-[12px] leading-snug text-ink-muted">
+            {basisLine(ratingCount, following ? (mine?.userIds.length ?? 1) - 1 : null)}
+          </p>
+        )}
       </div>
 
       <main className="px-5 pt-4 space-y-3">
@@ -197,7 +260,17 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
           <BattleModeCard onDismiss={dismissBattleCard} onEnter={() => router.push('/battle')} />
         )}
 
-        {total === 0 && <EmptyState>No ratings yet</EmptyState>}
+        {loadingMine && <LoadingLabel />}
+        {!loadingMine && total === 0 && (following ? (
+          <EmptyState>
+            No {view === 'venues' ? 'venue ' : ''}ratings yet from you or the people you follow.{' '}
+            <button type="button" onClick={() => setFilter('all')} className="font-semibold text-accent underline underline-offset-[3px]">
+              See everyone&apos;s
+            </button>
+          </EmptyState>
+        ) : (
+          <EmptyState>No ratings yet</EmptyState>
+        ))}
         {total > 0 && listLength === 0 && (
           <EmptyState>No {view === 'rankings' ? 'artist' : 'venue'} with ratings matches &ldquo;{query.trim()}&rdquo;.</EmptyState>
         )}
@@ -260,7 +333,18 @@ export function RankingsClient({ initial, initialView, initialMetric }: {
           name={detail.name}
           showIds={detail.showIds}
           metric={metric}
+          userIds={following ? mine?.userIds : null}
           onClose={closeDetail}
+        />
+      )}
+
+      {signUp && (
+        <SignUpSheet
+          title="Join in"
+          blurb="Make an account to follow people and rank shows on just your ratings and theirs."
+          initialMode="signup"
+          onClose={() => setSignUp(false)}
+          onSignedIn={() => { setSignUp(false); setFilter('following') }}
         />
       )}
     </div>

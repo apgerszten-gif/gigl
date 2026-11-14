@@ -24,6 +24,9 @@ interface Props {
   name:    string
   showIds: string[]
   metric:  RankMetric
+  // Set when Rankings is on Following: only ratings by these people (you
+  // and who you follow) count, so the sheet matches the card it opened from.
+  userIds?: string[] | null
   onClose: () => void
 }
 
@@ -68,7 +71,7 @@ function scoreOf(log: Log, metric: RankMetric): number {
   return (log.performance_rating! + log.venue_rating!) / 2
 }
 
-export function RankingDetailSheet({ list, mode, name, showIds, metric, onClose }: Props) {
+export function RankingDetailSheet({ list, mode, name, showIds, metric, userIds: onlyUsers, onClose }: Props) {
   const [shown, setShown]   = useState(false)
   const [logs, setLogs]     = useState<Log[] | null>(null)
   const [people, setPeople] = useState<Record<string, Person>>({})
@@ -96,7 +99,8 @@ export function RankingDetailSheet({ list, mode, name, showIds, metric, onClose 
         if (error) { console.error('ranking detail failed:', error.message); if (!cancelled) setFailed(true); return }
         found.push(...((data ?? []) as Log[]))
       }
-      const rated = found.filter(isRated)
+      const only = onlyUsers ? new Set(onlyUsers) : null
+      const rated = found.filter(isRated).filter(log => !only || only.has(log.user_id))
 
       const userIds = Array.from(new Set(rated.map(l => l.user_id)))
       const map: Record<string, Person> = {}
@@ -110,7 +114,7 @@ export function RankingDetailSheet({ list, mode, name, showIds, metric, onClose 
     }
     load()
     return () => { cancelled = true }
-  }, [showIds, mode])
+  }, [showIds, mode, onlyUsers])
 
   // One row per show, ranked on the stars Rankings is set to.
   const shows: RatedShow[] = []
@@ -141,7 +145,7 @@ export function RankingDetailSheet({ list, mode, name, showIds, metric, onClose 
   const count = mode === 'shows' ? shows.length : ratings.length
   const blurb = logs == null
     ? `Ranked by ${METRIC_NAMES[metric]}`
-    : `${count} ${mode === 'shows' ? (count === 1 ? 'show' : 'shows') : (count === 1 ? 'rating' : 'ratings')}, ranked by ${METRIC_NAMES[metric]}`
+    : `${count} ${mode === 'shows' ? (count === 1 ? 'show' : 'shows') : (count === 1 ? 'rating' : 'ratings')}${onlyUsers ? ' from you and people you follow' : ''}, ranked by ${METRIC_NAMES[metric]}`
 
   // On an artist's card every show is theirs, so a show is named by where it
   // was; on a venue's card, by who played.
