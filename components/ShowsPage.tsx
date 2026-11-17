@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2 } from 'lucide-react'
+import { Building2, Check, Share2 } from 'lucide-react'
 import { nameKey } from '@/lib/nameKey'
 import type { ShowRating } from '@/lib/showRatings'
+import { shareLink } from '@/lib/share'
 import { useShowSaving } from '@/lib/useShowSaving'
+import { useShowSharing } from '@/lib/useShowSharing'
 import { useStartLogging } from '@/lib/useStartLogging'
+import { FollowNameButton } from '@/components/FollowNameButton'
 import { Logo } from '@/components/Logo'
 import { PastShowRows, ShimmerRows, UpcomingShowRows, type ListedShow, type RowText } from '@/components/ShowRows'
-import { ArtistPhoto, BackHeader, Card, EmptyState, ErrorNote, Label, Place, Stars, Stat, btnSecondary } from '@/components/ui'
+import { ArtistPhoto, BackHeader, Card, EmptyState, ErrorNote, Label, Place, Stars, Stat, btnSecondary, iconBtn } from '@/components/ui'
 
 // The body of an artist's page (/artists) or a venue's (/venues): every show
 // Gigl has for it, coming up and past, each one a tap from Save or Log. The
@@ -57,6 +60,21 @@ export function ShowsPage({ kind, name, city, state, photo, upcoming, past, rati
   const router = useRouter()
   const startLogging = useStartLogging()
   const { savedIds, saveFailed, toggleSave, signUpSheet } = useShowSaving()
+  const { share, shareSheet } = useShowSharing()
+
+  // The page itself, to send someone: needs no account to open.
+  const [pageCopied, setPageCopied] = useState(false)
+  async function sharePage() {
+    const result = await shareLink({
+      title: `${name} on Gigl`,
+      text:  kind === 'artist' ? `${name}'s shows on Gigl` : `Shows at ${name} on Gigl`,
+      url:   window.location.href,
+    })
+    if (result === 'copied') {
+      setPageCopied(true)
+      setTimeout(() => setPageCopied(false), 2500)
+    }
+  }
 
   const [upcomingShown, setUpcomingShown] = useState(FIRST_ROWS)
   const [pastShown, setPastShown] = useState(FIRST_ROWS)
@@ -136,7 +154,20 @@ export function ShowsPage({ kind, name, city, state, photo, upcoming, past, rati
 
   return (
     <div className="min-h-screen bg-paper text-ink">
-      <BackHeader title={<Logo />} onBack={goBack} />
+      <BackHeader
+        title={<Logo />}
+        onBack={goBack}
+        right={(
+          <button
+            type="button"
+            onClick={sharePage}
+            aria-label={pageCopied ? 'Link copied' : `Share ${name}'s page`}
+            className={`${iconBtn} flex-shrink-0`}
+          >
+            {pageCopied ? <Check className="w-4 h-4" strokeWidth={2.5} /> : <Share2 className="w-4 h-4" strokeWidth={2} />}
+          </button>
+        )}
+      />
 
       <div className="px-5 pt-5 pb-24 space-y-5">
         <div className="flex items-center gap-4">
@@ -148,6 +179,11 @@ export function ShowsPage({ kind, name, city, state, photo, upcoming, past, rati
             <h1 className="font-display text-[28px] font-bold tracking-tight leading-none break-words">{name}</h1>
             {kind === 'venue' && place && <Place>{place}</Place>}
             {kind === 'artist' && overall && <Stars score={overall.score} size={20} />}
+            {/* Following puts their upcoming shows under Following on the
+                Upcoming tab. */}
+            <div className="pt-1">
+              <FollowNameButton follow={{ kind, name, city: city ?? '', state: state ?? '' }} />
+            </div>
           </div>
         </div>
 
@@ -169,7 +205,7 @@ export function ShowsPage({ kind, name, city, state, photo, upcoming, past, rati
             <EmptyState>No upcoming shows listed{kind === 'artist' ? ' for them' : ' here'} yet.</EmptyState>
           ) : (
             <div className="space-y-3">
-              <UpcomingShowRows shows={upcoming.slice(0, upcomingShown)} savedIds={savedIds} onToggleSave={toggleSave} describe={describe} />
+              <UpcomingShowRows shows={upcoming.slice(0, upcomingShown)} savedIds={savedIds} onToggleSave={toggleSave} onShare={share} describe={describe} />
               {upcoming.length > upcomingShown && (
                 <button type="button" onClick={() => setUpcomingShown(n => n + MORE_ROWS)} className={`${btnSecondary} w-full py-2.5 text-[11px]`}>
                   Show more
@@ -226,6 +262,7 @@ export function ShowsPage({ kind, name, city, state, photo, upcoming, past, rati
       </div>
 
       {signUpSheet}
+      {shareSheet}
     </div>
   )
 }

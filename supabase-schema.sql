@@ -1036,3 +1036,32 @@ alter table public.logged_shows
   add column if not exists city text,
   add column if not exists lat  double precision,
   add column if not exists lng  double precision;
+
+-- Artists and venues someone follows, for the Upcoming tab's Following view
+-- (app/upcoming, lib/followedNames.ts). Run by hand in the SQL editor, like
+-- everything else in this file; until it has run, Follow buttons fail with a
+-- note and Following shows nothing.
+--
+-- A follow is a name, not an id: the catalogue has no artist or venue table,
+-- and /artists?name= and /venues?name=&city=&state= are matched on names
+-- ignoring case, so a follow is too. A venue is its name and its city, the
+-- way the venue pages count rooms. Owner-only, like saved_shows: what you
+-- follow says where you'll likely be.
+create table if not exists public.artist_venue_follows (
+  id         uuid default gen_random_uuid() primary key,
+  user_id    uuid references public.profiles(id) on delete cascade not null,
+  kind       text not null check (kind in ('artist', 'venue')),
+  name       text not null,
+  city       text not null default '',
+  state      text not null default '',
+  created_at timestamp with time zone not null default now()
+);
+create unique index if not exists artist_venue_follows_unique
+  on public.artist_venue_follows (user_id, kind, lower(name), lower(city), state);
+alter table public.artist_venue_follows enable row level security;
+drop policy if exists "artist_venue_follows_read" on public.artist_venue_follows;
+create policy "artist_venue_follows_read" on public.artist_venue_follows for select using (auth.uid() = user_id);
+drop policy if exists "artist_venue_follows_insert" on public.artist_venue_follows;
+create policy "artist_venue_follows_insert" on public.artist_venue_follows for insert with check (auth.uid() = user_id);
+drop policy if exists "artist_venue_follows_delete" on public.artist_venue_follows;
+create policy "artist_venue_follows_delete" on public.artist_venue_follows for delete using (auth.uid() = user_id);

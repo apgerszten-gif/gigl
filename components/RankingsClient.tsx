@@ -200,16 +200,16 @@ export function RankingsClient({ initial, initialView, initialMetric, initialFil
 
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
-      {/* The Feed's own header: the rankings are views on the Feed tab, and
-          the bar below already says which one is showing. */}
+      {/* The Feed's header, logo and photo: Rankings is its own dock tab now,
+          but the bars below already say which ranking is showing. */}
       <AppHeader>
         <Logo href="/feed" />
       </AppHeader>
       <h1 className="sr-only">{view === 'rankings' ? 'Artist rankings' : 'Venue rankings'}</h1>
 
-      {/* Same control as Feed, with a rankings option selected. The filter
-          bar picks whose ratings the list is ranked on, and the two rankings
-          switch in place. See components/FeedTabs.tsx. */}
+      {/* Feed's filter bar, then the rankings bar only Rankings has. The
+          filter picks whose ratings the list is ranked on, and the two
+          rankings switch in place. See components/FeedTabs.tsx. */}
       <div className="px-5 pt-3 space-y-2.5">
         <FeedTabs
           filter={following ? 'following' : 'all'}

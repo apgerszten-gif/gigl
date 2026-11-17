@@ -241,10 +241,13 @@ export function dateParts(isoDate: string | null | undefined): { month: string; 
 }
 
 // Show date stuck onto the corner of an ArtistPhoto like a sticker, with the
-// year in smaller type underneath when it isn't this year's.
-export function DateTag({ isoDate }: { isoDate: string | null | undefined }) {
-  const parts = dateParts(isoDate)
-  if (!parts) return null
+// year in smaller type underneath when it isn't this year's. `withYear`
+// prints it this year too, where a list mixes years (the Log screen's past
+// shows, which reach back five).
+export function DateTag({ isoDate, withYear = false }: { isoDate: string | null | undefined; withYear?: boolean }) {
+  const parsed = dateParts(isoDate)
+  if (!parsed) return null
+  const parts = withYear && !parsed.year ? { ...parsed, year: (isoDate ?? '').slice(0, 4) } : parsed
   return (
     <span className="absolute -bottom-1.5 -right-1.5 -rotate-3 min-w-[28px] rounded bg-cream border-1.5 border-ink shadow-riso px-1 py-0.5 text-center leading-none">
       <span className="block text-[8px] font-bold uppercase tracking-label text-ink-muted">{parts.month}</span>

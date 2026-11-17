@@ -4,15 +4,14 @@ import { notFound } from 'next/navigation'
 import { showScore } from '@/lib/rating'
 import { getArtistImages } from '@/lib/artistImages'
 import { resolveMediaUrls } from '@/lib/media'
-import { MediaGrid } from '@/components/MediaGrid'
 import { FollowButton } from '@/components/FollowButton'
 import { ContentMenu } from '@/components/ContentMenu'
 import { TaggedInList } from '@/components/TagDisplay'
-import { loadTaggedIn } from '@/lib/tags'
+import { PublicShowHistory, type PublicLog } from '@/components/PublicShowHistory'
+import type { HistoryPerson } from '@/components/ShowHistory'
+import { loadTagsForLogs, loadTaggedIn } from '@/lib/tags'
 import { Logo } from '@/components/Logo'
-import {
-  ArtistPhoto, BackHeader, Card, Chip, DateTag, EmptyState, Label, PersonPhoto, Place, PullQuote, Stars, Stat, placeOf, btnPrimary,
-} from '@/components/ui'
+import { BackHeader, Card, PersonPhoto, Stars, Stat, btnPrimary } from '@/components/ui'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 
@@ -38,7 +37,36 @@ export default async function PublicProfile({ params }: { params: { username: st
   ])
 
   const shows = (showsRaw ?? []).slice().sort((a, b) => showScore(b) - showScore(a))
-  const artistImage = await getArtistImages(supabase, [...shows.map(s => s.artist_name), ...taggedIn.map(t => t.artistName)])
+  const artistNames = [...shows.map(s => s.artist_name as string), ...taggedIn.map(t => t.artistName)]
+  const [artistImage, tagged] = await Promise.all([
+    getArtistImages(supabase, artistNames),
+    loadTagsForLogs(supabase, shows.map(s => s.id)),
+  ])
+
+  // Who each log was with, by handle and photo.
+  const taggedIds = Array.from(new Set(Object.values(tagged).flat()))
+  const { data: people } = taggedIds.length > 0
+    ? await supabase.from('profiles').select('id, username, avatar_url').in('id', taggedIds)
+    : { data: [] as { id: string; username: string; avatar_url: string | null }[] }
+  const personOf = new Map<string, HistoryPerson>((people ?? []).map(p => [p.id, { username: p.username, avatar_url: p.avatar_url }]))
+
+  const logs: PublicLog[] = shows.map(s => ({
+    id:                 s.id,
+    artist_id:          s.artist_id,
+    artist_name:        s.artist_name,
+    stage:              s.stage,
+    day:                s.day,
+    venue:              s.venue,
+    show_date:          s.show_date,
+    performance_rating: s.performance_rating,
+    venue_rating:       s.venue_rating,
+    review:             s.review,
+    tags:               s.tags,
+    media:              resolveMediaUrls(s).map(resolvePhotoUrl),
+    people:             (tagged[s.id] ?? []).flatMap(id => personOf.get(id) ?? []),
+  }))
+  const artistImages = Object.fromEntries(artistNames.map(name => [name, artistImage(name)]))
+
   const ratedShows = shows.filter(s => s.performance_rating != null && s.venue_rating != null)
   const avgScore = ratedShows.length > 0
     ? ratedShows.reduce((acc, s) => acc + showScore(s), 0) / ratedShows.length
@@ -81,54 +109,7 @@ export default async function PublicProfile({ params }: { params: { username: st
           </div>
         </Card>
 
-        <section>
-          <Label className="mb-2.5">Their rankings</Label>
-
-          {shows.length === 0 ? (
-            <EmptyState>No shows logged yet</EmptyState>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {shows.map((show, i) => {
-                const score     = showScore(show)
-                const hasScore  = show.performance_rating != null && show.venue_rating != null
-                const mediaUrls = resolveMediaUrls(show).map(resolvePhotoUrl)
-                const place     = placeOf(show)
-                return (
-                  <Card key={show.id} className="overflow-hidden">
-                    {mediaUrls.length > 0 && (
-                      <div className="border-b-1.5 border-ink">
-                        <MediaGrid urls={mediaUrls} maxHeight={220} />
-                      </div>
-                    )}
-                    <Link href={`/artist/${show.artist_id}`} className="p-3 flex items-center gap-3">
-                      <span className="font-display text-2xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
-                      <ArtistPhoto name={show.artist_name} src={artistImage(show.artist_name)} className="w-12 h-12" iconSize={16}>
-                        <DateTag isoDate={show.show_date} />
-                      </ArtistPhoto>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="font-display text-[15px] font-bold leading-tight truncate">{show.artist_name}</h3>
-                          {hasScore && <Stars score={score} size={12} />}
-                        </div>
-                        {place && <Place className="mt-0.5">{place}</Place>}
-                      </div>
-                    </Link>
-                    {(show.review || (show.tags && show.tags.length > 0)) && (
-                      <div className="px-3 pb-3 space-y-2.5">
-                        {show.review && <PullQuote>{show.review}</PullQuote>}
-                        {show.tags && show.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {show.tags.map((tag: string) => <Chip key={tag}>{tag}</Chip>)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </section>
+        <PublicShowHistory logs={logs} artistImages={artistImages} />
 
         <TaggedInList logs={taggedIn} artistImage={artistImage} />
 

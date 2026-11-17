@@ -13,6 +13,24 @@ export function formatShowDate(isoDate: string | null | undefined): string {
     : { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// 'YYYY-MM-DD' -> 'Sat, Oct 11, 2026', always with the year: the profile's
+// Timeline, where a show is read as a memory, and a year left off makes last
+// October and the one before indistinguishable.
+export function formatLongDate(isoDate: string | null | undefined): string {
+  if (!isoDate) return 'Date unknown'
+  const d = new Date(`${isoDate}T00:00:00`)
+  if (isNaN(d.getTime())) return 'Date unknown'
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// A local Date -> 'YYYY-MM-DD', for date ranges worked out on this device
+// (the Upcoming tab's Tonight, This weekend and so on).
+export function localIso(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
 // ── The catalogue window ─────────────────────────────────────────────────────
 // Gigl is a record of shows you went to, so the `shows` catalogue holds shows
 // that have already happened rather than ones on sale: a listing you couldn't
@@ -67,10 +85,7 @@ export function upcomingEndIso(): string {
 // passed. The window functions above are UTC, which is already tomorrow by a
 // US evening: a reminder would turn up while the show was still on.
 export function localTodayIso(): string {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${now.getFullYear()}-${month}-${day}`
+  return localIso(new Date())
 }
 
 // How long a show is kept once it has happened, which is longer than search

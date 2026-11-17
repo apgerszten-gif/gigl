@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { Bookmark, Check } from 'lucide-react'
+import { Bookmark, Check, Share2 } from 'lucide-react'
 import { formatDistance } from '@/lib/geo'
 import type { ShowRating } from '@/lib/showRatings'
-import { ArtistPhoto, DateTag, Place, Stars, btnPrimary, btnSecondary } from '@/components/ui'
+import { ArtistPhoto, DateTag, Place, Stars, btnPrimary, btnQuiet, btnSecondary } from '@/components/ui'
 
 // The list-row pattern for shows, wherever they're listed to log or save: the
 // Log screen, the Feed's search, and the artist and venue pages. One card of
@@ -42,11 +42,11 @@ export function describeByArtist(show: ListedShow): RowText {
   }
 }
 
-function RowBody({ show, text, rating }: { show: ListedShow; text: RowText; rating?: ShowRating }) {
+function RowBody({ show, text, rating, withYear = false }: { show: ListedShow; text: RowText; rating?: ShowRating; withYear?: boolean }) {
   return (
     <>
       <ArtistPhoto name={show.artist} src={show.imageUrl} className="w-14 h-14" iconSize={18}>
-        <DateTag isoDate={show.isoDate} />
+        <DateTag isoDate={show.isoDate} withYear={withYear} />
       </ArtistPhoto>
       <div className="flex-1 min-w-0">
         <h3 className="font-display text-[15px] font-bold leading-tight truncate">{text.title}</h3>
@@ -79,18 +79,25 @@ function RowsCard({ children }: { children: React.ReactNode }) {
 // Shows that have happened. Tapping a row starts logging it, unless Gigl
 // already has ratings for it: then the row opens its page of reviews
 // (/artist/<id>), and "+ Log" is the way in.
-export function PastShowRows({ shows, onLog, ratings, describe = describeByArtist }: {
+//
+// `loggedIds` marks the shows you've already logged: their button reads
+// "Logged" with a check, and still opens the log to update it. `withYear`
+// puts the year on every date sticker, for lists that span years.
+export function PastShowRows({ shows, onLog, ratings, describe = describeByArtist, loggedIds, withYear = false }: {
   shows:    ListedShow[]
   onLog:    (show: ListedShow) => void
   ratings?: Record<string, ShowRating>
   describe?: (show: ListedShow) => RowText
+  loggedIds?: Set<string>
+  withYear?: boolean
 }) {
   return (
     <RowsCard>
       {shows.map((s, i) => {
         const rating = ratings?.[s.id]
         const canLog = s.canLog !== false
-        const body = <RowBody show={s} text={describe(s)} rating={rating} />
+        const logged = loggedIds?.has(s.id) ?? false
+        const body = <RowBody show={s} text={describe(s)} rating={rating} withYear={withYear} />
         return (
           <div key={s.id} className={`${rowClass(i)} hover:bg-accent/5`}>
             {rating ? (
@@ -103,11 +110,16 @@ export function PastShowRows({ shows, onLog, ratings, describe = describeByArtis
             {(canLog || s.distanceMiles != null) && (
               <div className="flex-shrink-0 flex flex-col items-end gap-1">
                 <Distance miles={s.distanceMiles} />
-                {canLog && (
+                {canLog && (logged ? (
+                  <button type="button" onClick={() => onLog(s)} aria-label={`Logged. Update your log of ${s.artist}`} className={`${btnQuiet} gap-1 px-2.5 py-1 text-[10px] uppercase tracking-label`}>
+                    <Check className="w-3 h-3" strokeWidth={2.5} />
+                    Logged
+                  </button>
+                ) : (
                   <button type="button" onClick={() => onLog(s)} className={`${btnSecondary} px-2.5 py-1 text-[10px]`}>
                     + Log
                   </button>
-                )}
+                ))}
               </div>
             )}
           </div>
@@ -117,31 +129,52 @@ export function PastShowRows({ shows, onLog, ratings, describe = describeByArtis
   )
 }
 
-// Shows that haven't happened: nothing to log yet, so only Save acts.
-export function UpcomingShowRows({ shows, savedIds, onToggleSave, describe = describeByArtist }: {
+// Shows that haven't happened: nothing to log yet, so Save is the action.
+// The Upcoming tab and the artist and venue pages also pass `onShare`, a
+// small share button beside Save that sends a friend the show, and the
+// Upcoming tab passes `hrefOf` so a row opens that artist's page (where
+// they can be followed).
+export function UpcomingShowRows({ shows, savedIds, onToggleSave, onShare, hrefOf, describe = describeByArtist }: {
   shows:        ListedShow[]
   savedIds:     Set<string>
   onToggleSave: (show: ListedShow) => void
+  onShare?:     (show: ListedShow) => void
+  hrefOf?:      (show: ListedShow) => string
   describe?:    (show: ListedShow) => RowText
 }) {
   return (
     <RowsCard>
       {shows.map((s, i) => {
         const saved = savedIds.has(s.id)
+        const body = <RowBody show={s} text={describe(s)} />
         return (
-          <div key={s.id} className={rowClass(i)}>
-            <RowBody show={s} text={describe(s)} />
+          <div key={s.id} className={`${rowClass(i)} ${hrefOf ? 'hover:bg-accent/5' : ''}`}>
+            {hrefOf
+              ? <Link href={hrefOf(s)} className="flex-1 min-w-0 flex items-center gap-3">{body}</Link>
+              : body}
             <div className="flex-shrink-0 flex flex-col items-end gap-1">
               <Distance miles={s.distanceMiles} />
-              <button
-                type="button"
-                aria-pressed={saved}
-                onClick={() => onToggleSave(s)}
-                className={`${saved ? btnPrimary : btnSecondary} gap-1 px-2.5 py-1 text-[10px]`}
-              >
-                {saved ? <Check className="w-3 h-3" strokeWidth={2.5} /> : <Bookmark className="w-3 h-3" strokeWidth={2.5} />}
-                {saved ? 'Saved' : 'Save'}
-              </button>
+              <div className="flex items-center gap-1.5">
+                {onShare && s.isoDate && (
+                  <button
+                    type="button"
+                    onClick={() => onShare(s)}
+                    aria-label={`Share ${s.artist} with a friend`}
+                    className={`${btnSecondary} p-1.5`}
+                  >
+                    <Share2 className="w-3 h-3" strokeWidth={2.5} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  aria-pressed={saved}
+                  onClick={() => onToggleSave(s)}
+                  className={`${saved ? btnPrimary : btnSecondary} gap-1 px-2.5 py-1 text-[10px]`}
+                >
+                  {saved ? <Check className="w-3 h-3" strokeWidth={2.5} /> : <Bookmark className="w-3 h-3" strokeWidth={2.5} />}
+                  {saved ? 'Saved' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
         )

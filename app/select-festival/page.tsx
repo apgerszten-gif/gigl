@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Building2, MapPin, Plus, Search, X } from 'lucide-react'
-import { useNearby, RADIUS_OPTIONS } from '@/lib/useNearby'
+import { CalendarDays, Plus, Search, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { formatLongDate, localTodayIso } from '@/lib/dates'
+import { useNearby } from '@/lib/useNearby'
 import { useSearchCity } from '@/lib/useSearchCity'
 import { useShowSaving } from '@/lib/useShowSaving'
 import { useStartLogging } from '@/lib/useStartLogging'
-import { CityPicker, placeName } from '@/components/CityPicker'
+import { PlaceFilter } from '@/components/PlaceFilter'
 import { useAuth } from '@/components/AuthProvider'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
@@ -30,6 +32,23 @@ const TEXT_OPT_IN_KEY = 'gigl.text-reminders.v1'
 
 type View = 'past' | 'upcoming'
 
+// "When was it?" on Been to: any time, one year, or one date. The year chips
+// reach back as far as setlist.fm's five years; the catalogue only keeps one,
+// so an older year is answered by "More shows" alone.
+type When = { kind: 'any' } | { kind: 'year'; year: string } | { kind: 'date'; date: string }
+const YEAR_CHIPS = 4
+
+function yearChoices(): string[] {
+  const thisYear = new Date().getFullYear()
+  return Array.from({ length: YEAR_CHIPS }, (_, i) => String(thisYear - i))
+}
+
+function inWhen(isoDate: string | null, when: When): boolean {
+  if (when.kind === 'any') return true
+  if (!isoDate) return false
+  return when.kind === 'year' ? isoDate.startsWith(when.year) : isoDate === when.date
+}
+
 // Two decimal places is about 1km, which is a fraction of even the tightest
 // radius on offer - so the filter behaves identically, but a precise home
 // address never lands in a URL or a server log.
@@ -50,6 +69,23 @@ export default function SelectShowPage() {
   const [query, setQuery] = useState('')
   const [view, setView]   = useState<View>('past')
   const nearby = useNearby()
+
+  const [when, setWhen]           = useState<When>({ kind: 'any' })
+  const [pickingDate, setPickingDate] = useState(false)
+  const whenKey = when.kind === 'any' ? 'any' : when.kind === 'year' ? `y${when.year}` : `d${when.date}`
+
+  // Shows you've already logged, so their rows say so (and open the log to
+  // update it) instead of offering "+ Log" again. A log's artist_id is the
+  // show's id.
+  const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    if (!user) { setLoggedIds(new Set()); return }
+    createClient().from('logged_shows').select('artist_id').eq('user_id', user.id)
+      .then(({ data, error }) => {
+        if (error) { console.error('logged show ids failed:', error.message); return }
+        setLoggedIds(new Set((data ?? []).map(row => row.artist_id as string)))
+      })
+  }, [user?.id])
 
   // Saving, on the Upcoming list. Tapping Save signed out opens the sign-up
   // sheet, and the save finishes once it hands back an account.
@@ -77,8 +113,6 @@ export default function SelectShowPage() {
   // A typed city is the way to search by place without sharing a location.
   // It goes down the same lat/lng/radius path as Near me, and wins while set.
   const searchCity = useSearchCity()
-  const [pickingCity, setPickingCity] = useState(false)
-  const nearMeOn = nearby.active && !searchCity.city
   const centre = searchCity.city ?? (nearby.active ? nearby.coords : null)
   const area = centre
     ? `within ${nearby.radiusMiles} mi${searchCity.city ? ` of ${searchCity.city.city}` : ''}`
@@ -122,6 +156,8 @@ export default function SelectShowPage() {
       try {
         const params = new URLSearchParams({ q: trimmed })
         if (view === 'upcoming') params.set('when', 'upcoming')
+        else if (when.kind === 'year') params.set('year', when.year)
+        else if (when.kind === 'date') params.set('date', when.date)
         if (nearbyLat && nearbyLng) {
           params.set('lat', nearbyLat)
           params.set('lng', nearbyLng)
@@ -144,7 +180,8 @@ export default function SelectShowPage() {
     }, trimmed ? SEARCH_DEBOUNCE_MS : 0)
 
     return () => { clearTimeout(timeoutId); controller.abort() }
-  }, [query, view, retryToken, nearby.ready, nearbyLat, nearbyLng, nearbyRadius])
+    // `when` is followed through whenKey, its primitive form.
+  }, [query, view, retryToken, nearby.ready, nearbyLat, nearbyLng, nearbyRadius, whenKey])
 
   async function loadMoreUpcoming() {
     if (upcomingNext == null || upcomingMoreLoading) return
@@ -252,9 +289,14 @@ export default function SelectShowPage() {
   }
 
   const trimmedQuery = query.trim()
+  // setlist.fm is read newest first a load at a time, so a year or date chip
+  // narrows what's been loaded; "Show earlier shows" reaches further back.
+  const pastShown = past.filter(s => inWhen(s.isoDate, when))
   // `pastNext` alone keeps the section up too: a first load can be all
   // announced dates with older shows still to come.
-  const showPast = view === 'past' && trimmedQuery.length >= PAST_MIN_QUERY && (pastLoading || past.length > 0 || pastNext != null)
+  const showPast = view === 'past' && trimmedQuery.length >= PAST_MIN_QUERY && (pastLoading || pastShown.length > 0 || pastNext != null)
+
+  const whenLabel = when.kind === 'year' ? when.year : when.kind === 'date' ? formatLongDate(when.date) : null
 
   return (
     <div className="min-h-screen bg-paper text-ink pb-28">
@@ -286,80 +328,69 @@ export default function SelectShowPage() {
           />
         </label>
 
-        {/* Location is requested on arrival, so this chip reports the
-            filter rather than starting it. Turning it off is remembered and
-            stops the asking; tapping it back on is also the retry after a
-            refusal. See lib/useNearby.ts. */}
-        <div className="pt-2.5 flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            aria-pressed={nearMeOn}
-            disabled={nearby.status === 'locating'}
-            onClick={() => {
-              if (nearMeOn) { nearby.disable(); return }
-              searchCity.clear()
-              setPickingCity(false)
-              if (!nearby.active) nearby.enable()
-            }}
-          >
-            <Chip active={nearMeOn}>
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="w-3 h-3" strokeWidth={2.5} />
-                {nearby.status === 'locating' ? 'Locating…' : 'Near me'}
-              </span>
-            </Chip>
-          </button>
-
-          {/* Picking a city also turns Near me off, which is remembered, so
-              someone who chose this over sharing a location isn't asked
-              again next time. */}
-          <button
-            type="button"
-            aria-pressed={searchCity.city != null}
-            onClick={() => {
-              if (searchCity.city) searchCity.clear()
-              else setPickingCity(open => !open)
-            }}
-          >
-            <Chip active={searchCity.city != null}>
-              <span className="inline-flex items-center gap-1">
-                <Building2 className="w-3 h-3" strokeWidth={2.5} />
-                {searchCity.city ? placeName(searchCity.city) : 'Search city'}
-                {searchCity.city && <X className="w-3 h-3" strokeWidth={2.5} />}
-              </span>
-            </Chip>
-          </button>
-
-          {centre && RADIUS_OPTIONS.map(miles => (
-            <button
-              key={miles}
-              type="button"
-              aria-pressed={nearby.radiusMiles === miles}
-              onClick={() => nearby.setRadius(miles)}
-            >
-              <Chip active={nearby.radiusMiles === miles}>{miles} mi</Chip>
-            </button>
-          ))}
+        <div className="pt-2.5">
+          <PlaceFilter nearby={nearby} searchCity={searchCity} />
         </div>
 
-        {pickingCity && !searchCity.city && (
-          <CityPicker
-            onPick={city => {
-              searchCity.choose(city)
-              setPickingCity(false)
-              nearby.disable()
-            }}
-            onClose={() => setPickingCity(false)}
-          />
+        {/* "When was it?": past shows only. A year, or one night picked
+            from a calendar, for the show you remember the date of but not
+            the name. */}
+        {view === 'past' && (
+          <div className="pt-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-label text-ink-muted mr-0.5">When</span>
+              <button type="button" aria-pressed={when.kind === 'any'} onClick={() => { setWhen({ kind: 'any' }); setPickingDate(false) }}>
+                <Chip active={when.kind === 'any'}>Any time</Chip>
+              </button>
+              {yearChoices().map(year => {
+                const on = when.kind === 'year' && when.year === year
+                return (
+                  <button
+                    key={year}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => { setWhen(on ? { kind: 'any' } : { kind: 'year', year }); setPickingDate(false) }}
+                  >
+                    <Chip active={on}>{year}</Chip>
+                  </button>
+                )
+              })}
+              <button
+                type="button"
+                aria-pressed={when.kind === 'date'}
+                onClick={() => {
+                  if (when.kind === 'date') { setWhen({ kind: 'any' }); return }
+                  setPickingDate(open => !open)
+                }}
+              >
+                <Chip active={when.kind === 'date' || pickingDate}>
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarDays className="w-3 h-3" strokeWidth={2.5} />
+                    {when.kind === 'date' ? formatLongDate(when.date) : 'Pick a date'}
+                    {when.kind === 'date' && <X className="w-3 h-3" strokeWidth={2.5} />}
+                  </span>
+                </Chip>
+              </button>
+            </div>
+            {pickingDate && when.kind !== 'date' && (
+              <label className={`${inputBox} mt-2 flex items-center gap-2 px-3 py-2`}>
+                <CalendarDays className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
+                <span className="sr-only">Date of the show</span>
+                <input
+                  type="date"
+                  max={localTodayIso()}
+                  onChange={e => {
+                    if (!e.target.value) return
+                    setWhen({ kind: 'date', date: e.target.value })
+                    setPickingDate(false)
+                  }}
+                  className="flex-1 min-w-0 bg-transparent text-base text-ink focus:outline-none"
+                />
+              </label>
+            )}
+          </div>
         )}
 
-        {!searchCity.city && !pickingCity && (nearby.status === 'denied' || nearby.status === 'unavailable') && (
-          <p className="pt-1.5 text-[11px] leading-snug text-ink-faint">
-            {nearby.status === 'denied'
-              ? 'Gigl can’t see your location. Allow it in your browser’s site settings, or pick a city.'
-              : 'Couldn’t get your location. Check that location services are on, then tap Near me again, or pick a city.'}
-          </p>
-        )}
       </div>
 
       {/* Only offered to accounts with a phone number. Unticked by default,
@@ -380,9 +411,11 @@ export default function SelectShowPage() {
 
       <Label className="px-5 pt-4 pb-2">
         {trimmedQuery
-          ? <>Results for &ldquo;{trimmedQuery}&rdquo;{area ? ` · ${area}` : ''}</>
+          ? <>Results for &ldquo;{trimmedQuery}&rdquo;{whenLabel && view === 'past' ? ` · ${whenLabel}` : ''}{area ? ` · ${area}` : ''}</>
           : view === 'upcoming'
           ? (area ? `Coming up ${area}` : 'Coming up')
+          : whenLabel
+          ? `${when.kind === 'date' ? 'Shows on' : 'Shows from'} ${whenLabel}${area ? ` ${area}` : ''} · newest first`
           : area ? `This past week ${area}` : 'This past week'}
       </Label>
 
@@ -411,6 +444,10 @@ export default function SelectShowPage() {
               ? (trimmedQuery
                 ? <>Nothing coming up matched &ldquo;{trimmedQuery}&rdquo;{area ? ` ${area}` : ''}.</>
                 : `No upcoming shows ${area ?? 'to show right now'}.`)
+              : whenLabel
+              ? (trimmedQuery
+                ? <>Nothing on Gigl matched &ldquo;{trimmedQuery}&rdquo; {when.kind === 'date' ? 'on' : 'in'} {whenLabel}{area ? ` ${area}` : ''}. Type at least 3 letters to look further back, or try Any time.</>
+                : <>Gigl&apos;s list of shows {when.kind === 'date' ? `on ${whenLabel}` : `from ${whenLabel}`} is empty{area ? ` ${area}` : ''}. Type an artist or venue to search older shows.</>)
               : trimmedQuery
               ? <>Nothing from the past year matched &ldquo;{trimmedQuery}&rdquo;{area ? ` ${area}` : ''}.</>
               : area
@@ -422,7 +459,7 @@ export default function SelectShowPage() {
         {!loading && !error && results.length > 0 && (
           view === 'upcoming'
             ? <UpcomingShowRows shows={results} savedIds={savedIds} onToggleSave={toggleSave} />
-            : <PastShowRows shows={results} onLog={select} />
+            : <PastShowRows shows={results} onLog={select} loggedIds={loggedIds} withYear />
         )}
 
         {!loading && !error && view === 'upcoming' && upcomingNext != null && (
@@ -451,7 +488,11 @@ export default function SelectShowPage() {
                 via setlist.fm
               </a>
             </div>
-            {pastLoading ? <ShimmerRows count={2} /> : past.length > 0 && <PastShowRows shows={past} onLog={select} />}
+            {pastLoading
+              ? <ShimmerRows count={2} />
+              : pastShown.length > 0
+              ? <PastShowRows shows={pastShown} onLog={select} loggedIds={loggedIds} withYear />
+              : <p className="text-[12px] text-ink-muted">Nothing {when.kind === 'date' ? 'on that date' : `from ${whenLabel}`} in what&apos;s loaded yet.</p>}
             {!pastLoading && pastNext && (
               <button
                 type="button"

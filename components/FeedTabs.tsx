@@ -3,26 +3,19 @@
 import { useRouter } from 'next/navigation'
 import { Segmented } from '@/components/ui'
 
-// The two bars that sit under the header on Feed and Rankings.
+// The bars that sit under the header on Feed and Rankings.
 //
-// Two tiers rather than one row of four, because they answer two different
-// questions. The first is whose logs count: everyone's ("All activity") or
-// yours and the people you follow ("Following"). The second is how to read
-// them: as a stream (neither option lit), or as artist or venue rankings.
-// Stacking also keeps the labels legible.
+// The first is whose logs count: everyone's ("All activity") or yours and
+// the people you follow ("Following"). It's on both pages: on Rankings,
+// Following ranks only on ratings from you and the people you follow. Feed
+// is state and Rankings is a route, so the choice crosses between them in
+// the URL (`?filter=`), or a ranking opened from Following would quietly
+// show everyone's.
 //
-// Rankings used to be its own dock tab. It isn't a separate destination
-// though - it's the same logged shows read as an aggregate instead of as a
-// stream - so it became a view here when the dock dropped to three tabs. See
-// components/BottomNav.tsx.
-//
-// The first bar applies on both pages: on Rankings, Following ranks only on
-// ratings from you and the people you follow. Feed is state and Rankings is
-// a route, so the choice crosses between them in the URL (`?filter=`), or a
-// ranking opened from Following would quietly show everyone's.
-//
-// Tapping the ranking that's already lit turns it off, which is the way back
-// to the stream from Rankings (the dock's Feed tab and the logo go there too).
+// The second, Artist rankings / Venue rankings, is only on Rankings. It used
+// to sit on Feed as well, when Rankings was a view on Feed rather than a
+// dock tab; with Rankings back in the dock (components/BottomNav.tsx), Feed
+// is just the stream.
 export type FeedFilter = 'all' | 'following'
 export type RankingsView = 'rankings' | 'venues'
 
@@ -46,20 +39,15 @@ export function rankingsHref(view: RankingsView, filter: FeedFilter = 'all'): st
   return qs ? `/rankings?${qs}` : '/rankings'
 }
 
-export function feedHref(filter: FeedFilter): string {
-  return filter === 'following' ? '/feed?filter=following' : '/feed'
-}
-
 const NONE = ''
 
 export function FeedTabs({ filter, rankings = null, onFilterChange, onRankingsChange }: {
   filter:   FeedFilter
-  // The ranking showing, on Rankings; null on Feed.
+  // The ranking showing, on Rankings; null on Feed, which has no second bar.
   rankings?: RankingsView | null
   // Both pages change the filter in place.
   onFilterChange: (value: FeedFilter) => void
-  // Given only on Rankings, which switches between artists and venues in
-  // place. From Feed, either one is a navigation.
+  // Rankings switches between artists and venues in place.
   onRankingsChange?: (value: RankingsView) => void
 }) {
   const router = useRouter()
@@ -67,16 +55,18 @@ export function FeedTabs({ filter, rankings = null, onFilterChange, onRankingsCh
   return (
     <div className="space-y-2">
       <Segmented options={FILTERS} value={filter} onChange={onFilterChange} />
-      <Segmented
-        options={RANKINGS}
-        value={rankings ?? NONE}
-        onChange={next => {
-          const view = next as RankingsView
-          if (view === rankings) { router.push(feedHref(filter)); return }
-          if (onRankingsChange) { onRankingsChange(view); return }
-          router.push(rankingsHref(view, filter))
-        }}
-      />
+      {rankings && (
+        <Segmented
+          options={RANKINGS}
+          value={rankings ?? NONE}
+          onChange={next => {
+            const view = next as RankingsView
+            if (view === rankings) return
+            if (onRankingsChange) { onRankingsChange(view); return }
+            router.push(rankingsHref(view, filter))
+          }}
+        />
+      )}
     </div>
   )
 }
