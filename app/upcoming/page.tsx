@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import { useAuth } from '@/components/AuthProvider'
 import { AppHeader } from '@/components/AppHeader'
 import BottomNav from '@/components/BottomNav'
 import { placeName } from '@/components/CityPicker'
+import { FEED_SEARCH_MIN, FeedSearchBar } from '@/components/FeedSearch'
+import { UpcomingSearchResults } from '@/components/UpcomingSearch'
 import { PlaceFilter } from '@/components/PlaceFilter'
 import { ShimmerRows, UpcomingShowRows, type ListedShow } from '@/components/ShowRows'
 import { SignUpSheet } from '@/components/SignUpSheet'
@@ -32,6 +33,12 @@ import { useShowSharing } from '@/lib/useShowSharing'
 //
 // Shows are grouped by day. Each row saves the show, shares it as an invite
 // link that opens without the app, or opens the artist's page to follow them.
+//
+// The search box under the Everything / Following switch is the Feed's,
+// narrowed to what's coming up (components/UpcomingSearch.tsx): artists,
+// venues, and their upcoming shows anywhere. Its results stand in for the
+// list while it holds a search, and it's kept in the URL (?q=) like the
+// Feed's, so coming back from an artist page lands on the same results.
 
 type RangeId = 'tonight' | 'weekend' | 'week' | 'month'
 type Scope = 'all' | 'following'
@@ -92,6 +99,26 @@ export default function UpcomingPage() {
   const [scope, setScope] = useState<Scope>('all')
   const [range, setRange] = useState<RangeId>('week')
   const [askingSignUp, setAskingSignUp] = useState(false)
+
+  // Read from the URL after mounting rather than with useSearchParams, which
+  // would need a Suspense boundary around the whole page.
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchRestored, setSearchRestored] = useState(false)
+  const searching = searchQuery.trim().length >= FEED_SEARCH_MIN
+
+  useEffect(() => {
+    setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '')
+    setSearchRestored(true)
+  }, [])
+
+  useEffect(() => {
+    if (!searchRestored) return
+    const params = new URLSearchParams(window.location.search)
+    if (searchQuery.trim()) params.set('q', searchQuery)
+    else params.delete('q')
+    const qs = params.toString()
+    window.history.replaceState(null, '', qs ? `/upcoming?${qs}` : '/upcoming')
+  }, [searchQuery, searchRestored])
 
   const centre = searchCity.city ?? (nearby.active ? nearby.coords : null)
   const lat = centre ? centre.lat.toFixed(COORD_PRECISION) : null
@@ -215,6 +242,9 @@ export default function UpcomingPage() {
   const whenWords = range === 'tonight' ? 'tonight' : range === 'weekend' ? 'this weekend' : `in the ${rangeLabel}`
 
   function changeScope(nextScope: Scope) {
+    // As on the Feed, picking a view mid-search brings the list back, since
+    // that's what the switch is for.
+    setSearchQuery('')
     if (nextScope === scope) return
     if (nextScope === 'following' && !user) { setAskingSignUp(true); return }
     setShows([])
@@ -240,28 +270,43 @@ export default function UpcomingPage() {
           onChange={changeScope}
         />
 
-        <div>
-          <PlaceFilter nearby={nearby} searchCity={searchCity} />
-          {!centre && nearby.status !== 'denied' && nearby.status !== 'unavailable' && nearby.status !== 'locating' && (
-            <p className="pt-1.5 text-[11px] leading-snug text-ink-faint">
-              Showing every city. Turn on Near me or pick a city to see what&apos;s on around you.
-            </p>
-          )}
-        </div>
+        <FeedSearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search artists and venues"
+          label="Search upcoming shows by artist or venue"
+        />
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-label text-ink-muted mr-0.5">When</span>
-          {RANGES.map(r => (
-            <button key={r.id} type="button" aria-pressed={range === r.id} onClick={() => setRange(r.id)}>
-              <Chip active={range === r.id}>{r.label}</Chip>
-            </button>
-          ))}
-        </div>
+        {/* Search looks everywhere, so the place and date filters step aside
+            while it's on. They sit below the box, so it doesn't move. */}
+        {!searching && (
+          <>
+            <div>
+              <PlaceFilter nearby={nearby} searchCity={searchCity} />
+              {!centre && nearby.status !== 'denied' && nearby.status !== 'unavailable' && nearby.status !== 'locating' && (
+                <p className="pt-1.5 text-[11px] leading-snug text-ink-faint">
+                  Showing every city. Turn on Near me or pick a city to see what&apos;s on around you.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-label text-ink-muted mr-0.5">When</span>
+              {RANGES.map(r => (
+                <button key={r.id} type="button" aria-pressed={range === r.id} onClick={() => setRange(r.id)}>
+                  <Chip active={range === r.id}>{r.label}</Chip>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {saveFailed && <div className="px-5 pt-2.5"><ErrorNote>Couldn&apos;t update your saved shows. Try again.</ErrorNote></div>}
 
-      <main className="px-5 pt-4 space-y-5">
+      {searching ? (
+        <UpcomingSearchResults query={searchQuery} savedIds={savedIds} onToggleSave={toggleSave} onShare={share} />
+      ) : <main className="px-5 pt-4 space-y-5">
         {loading && <ShimmerRows count={4} />}
 
         {!loading && error && (
@@ -279,10 +324,7 @@ export default function UpcomingPage() {
 
         {!loading && !error && scope === 'following' && followed.follows.length === 0 && (
           <EmptyState>
-            You&apos;re not following any artists or venues yet. Search one on the Feed, open their page and tap Follow: their shows will collect here.
-            <Link href="/feed" className="block mx-auto mt-2.5 text-xs font-bold uppercase tracking-label text-accent">
-              Go to search
-            </Link>
+            You&apos;re not following any artists or venues yet. Search for one above, open their page and tap Follow: their shows will collect here.
           </EmptyState>
         )}
 
@@ -317,7 +359,7 @@ export default function UpcomingPage() {
             {moreLoading ? 'Loading…' : 'Show more'}
           </button>
         )}
-      </main>
+      </main>}
 
       {askingSignUp && (
         <SignUpSheet
