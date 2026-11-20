@@ -32,6 +32,21 @@ export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim()
   if (q.length < MIN_QUERY) return NextResponse.json({ artists: [], venues: [], reviewed: [], past: [], upcoming: [], ratings: {} })
 
+  // `only=names` is the Upcoming tab's search (components/UpcomingSearch.tsx):
+  // just the artists and venues, since it lists the shows itself, paged, from
+  // /api/shows/search?when=upcoming.
+  if (req.nextUrl.searchParams.get('only') === 'names') {
+    try {
+      const [artists, venues] = await Promise.all([searchArtists(q, ARTIST_LIMIT), searchVenues(q, VENUE_LIMIT)])
+      const unphotographed = artists.filter(a => !a.imageUrl).map(a => a.name)
+      const photo = unphotographed.length > 0 ? await artistPhotos(unphotographed, PHOTO_LOOKUPS) : () => null
+      return NextResponse.json({ artists: artists.map(a => (a.imageUrl ? a : { ...a, imageUrl: photo(a.name) })), venues })
+    } catch (err) {
+      console.error('name search failed:', err)
+      return NextResponse.json({ error: 'Search is temporarily unavailable.' }, { status: 502 })
+    }
+  }
+
   try {
     const [artists, venues, reviewed, stored, soon] = await Promise.all([
       searchArtists(q, ARTIST_LIMIT),

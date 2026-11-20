@@ -24,8 +24,8 @@ export const FEED_SEARCH_MIN = 2
 const SEARCH_DEBOUNCE_MS = 300
 const PEOPLE_LIMIT = 4
 
-interface ArtistMatch { name: string; shows: number; imageUrl: string | null }
-interface VenueMatch  { name: string; city: string; state: string; shows: number }
+export interface ArtistMatch { name: string; shows: number; imageUrl: string | null }
+export interface VenueMatch  { name: string; city: string; state: string; shows: number }
 interface Results {
   artists:  ArtistMatch[]
   venues:   VenueMatch[]
@@ -36,7 +36,16 @@ interface Results {
   people:   Person[]
 }
 
-export function FeedSearchBar({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+// The Upcoming tab uses this bar too (components/UpcomingSearch.tsx), with
+// its own placeholder, since it searches artists and venues only.
+export function FeedSearchBar({
+  value, onChange, placeholder = 'Artists, venues, shows, people', label = 'Search artists, venues, shows and people',
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  label?: string
+}) {
   return (
     <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5 focus-within:ring-2 focus-within:ring-accent/40`}>
       <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
@@ -44,8 +53,8 @@ export function FeedSearchBar({ value, onChange }: { value: string; onChange: (v
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') onChange('') }}
-        placeholder="Artists, venues, shows, people"
-        aria-label="Search artists, venues, shows and people"
+        placeholder={placeholder}
+        aria-label={label}
         enterKeyHint="search"
         autoComplete="off"
         className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
@@ -147,40 +156,7 @@ export function FeedSearchResults({ query }: { query: string }) {
             </section>
           )}
 
-          {results.artists.length > 0 && (
-            <section>
-              <Label className="mb-2">Artists</Label>
-              <LinkRows>
-                {results.artists.map((a, i) => (
-                  <LinkRow key={a.name} href={artistHref(a.name)} index={i}>
-                    <ArtistPhoto name={a.name} src={a.imageUrl} className="w-12 h-12" iconSize={16} />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display text-[15px] font-bold leading-tight truncate">{a.name}</h3>
-                      <ShowCount count={a.shows} />
-                    </div>
-                  </LinkRow>
-                ))}
-              </LinkRows>
-            </section>
-          )}
-
-          {results.venues.length > 0 && (
-            <section>
-              <Label className="mb-2">Venues</Label>
-              <LinkRows>
-                {results.venues.map((v, i) => (
-                  <LinkRow key={`${v.name}|${v.city}|${v.state}`} href={venueHref(v)} index={i}>
-                    <ArtistPhoto name={v.name} src={null} icon={Building2} className="w-12 h-12" iconSize={16} />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display text-[15px] font-bold leading-tight truncate">{v.name}</h3>
-                      <Place className="mt-0.5">{[v.city, v.state].filter(Boolean).join(', ')}</Place>
-                      <ShowCount count={v.shows} />
-                    </div>
-                  </LinkRow>
-                ))}
-              </LinkRows>
-            </section>
-          )}
+          <NameMatchSections artists={results.artists} venues={results.venues} />
 
           {results.upcoming.length > 0 && (
             <section>
@@ -223,6 +199,49 @@ export function FeedSearchResults({ query }: { query: string }) {
 
       {signUpSheet}
     </main>
+  )
+}
+
+// The Artists and Venues sections, each row opening that artist's or venue's
+// page of shows, where Follow is. Shared with the Upcoming tab's search.
+export function NameMatchSections({ artists, venues }: { artists: ArtistMatch[]; venues: VenueMatch[] }) {
+  return (
+    <>
+      {artists.length > 0 && (
+        <section>
+          <Label className="mb-2">Artists</Label>
+          <LinkRows>
+            {artists.map((a, i) => (
+              <LinkRow key={a.name} href={artistHref(a.name)} index={i}>
+                <ArtistPhoto name={a.name} src={a.imageUrl} className="w-12 h-12" iconSize={16} />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display text-[15px] font-bold leading-tight truncate">{a.name}</h3>
+                  <ShowCount count={a.shows} />
+                </div>
+              </LinkRow>
+            ))}
+          </LinkRows>
+        </section>
+      )}
+
+      {venues.length > 0 && (
+        <section>
+          <Label className="mb-2">Venues</Label>
+          <LinkRows>
+            {venues.map((v, i) => (
+              <LinkRow key={`${v.name}|${v.city}|${v.state}`} href={venueHref(v)} index={i}>
+                <ArtistPhoto name={v.name} src={null} icon={Building2} className="w-12 h-12" iconSize={16} />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display text-[15px] font-bold leading-tight truncate">{v.name}</h3>
+                  <Place className="mt-0.5">{[v.city, v.state].filter(Boolean).join(', ')}</Place>
+                  <ShowCount count={v.shows} />
+                </div>
+              </LinkRow>
+            ))}
+          </LinkRows>
+        </section>
+      )}
+    </>
   )
 }
 
