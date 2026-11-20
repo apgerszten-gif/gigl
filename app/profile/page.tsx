@@ -28,7 +28,8 @@ import { useArtistImages } from '@/lib/useArtistImages'
 import { SUPPORT_MAILTO } from '@/lib/contact'
 import { TaggedInList } from '@/components/TagDisplay'
 import { ShareReviewSheet, type SharedReview } from '@/components/ShareReviewSheet'
-import { loadTaggedIn, type TaggedInLog } from '@/lib/tags'
+import { HistoryControls, NoHistoryMatches, TimelineList, useShowHistory, type HistoryPerson } from '@/components/ShowHistory'
+import { loadTagsForLogs, loadTaggedIn, type TaggedInLog } from '@/lib/tags'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const TAGS = ['transcendent', 'intimate', 'chaotic', 'nostalgic', 'epic', 'euphoric', 'sleeper hit', 'top 3', 'made me cry', 'peak performance']
@@ -104,6 +105,8 @@ export default function ProfilePage() {
   const [avatarBusy, setAvatarBusy]         = useState(false)
   const [avatarError, setAvatarError]       = useState<string | null>(null)
   const [taggedIn, setTaggedIn]             = useState<TaggedInLog[]>([])
+  // Who you went with, per log, for the Timeline's "with" line.
+  const [withPeople, setWithPeople]         = useState<Record<string, HistoryPerson[]>>({})
 
   // Taking yourself off someone else's log. If their review still has your
   // @name, saving that log again would tag you again.
@@ -150,12 +153,27 @@ export default function ProfilePage() {
       setFollowingCount(following ?? 0)
 
       setTaggedIn(await loadTaggedIn(supabase, userId))
+      setWithPeople(await loadWithPeople((showData || []).map(s => s.id)))
 
       setLoading(false)
       timeMark(`profile:load total (${(showData || []).length} shows)`, loadStart)
     }
     load(user.id)
   }, [authLoading, user, router])
+
+  // The people tagged on each of your logs, with their handles and photos.
+  async function loadWithPeople(logIds: string[]): Promise<Record<string, HistoryPerson[]>> {
+    const tagged = await loadTagsForLogs(supabase, logIds)
+    const ids = Array.from(new Set(Object.values(tagged).flat()))
+    if (ids.length === 0) return {}
+    const { data: people } = await supabase.from('profiles').select('id, username, avatar_url').in('id', ids)
+    const personOf = new Map((people ?? []).map(p => [p.id as string, { username: p.username as string, avatar_url: p.avatar_url as string | null }]))
+    const result: Record<string, HistoryPerson[]> = {}
+    for (const [logId, userIds] of Object.entries(tagged)) {
+      result[logId] = userIds.flatMap(id => personOf.get(id) ?? [])
+    }
+    return result
+  }
 
   // Your own profile link rather than the home page, so whoever joins from it
   // lands on someone to follow.
@@ -282,6 +300,7 @@ export default function ProfilePage() {
   }
 
   const artistImage = useArtistImages([...shows.map(s => s.artist_name), ...taggedIn.map(t => t.artistName)])
+  const history = useShowHistory(shows)
 
   if (loading) return (
     <div className="min-h-screen bg-paper flex items-center justify-center">
@@ -367,8 +386,8 @@ export default function ProfilePage() {
 
         <SavedShowsSection />
 
-        <section>
-          <Label className="mb-2.5">My rankings</Label>
+        <section className="space-y-3">
+          <Label>My shows</Label>
 
           {shows.length === 0 ? (
             <EmptyState>
@@ -376,8 +395,22 @@ export default function ProfilePage() {
               <Link href="/select-festival" className={`${btnPrimary} px-6 py-3 text-xs`}>Log your first show →</Link>
             </EmptyState>
           ) : (
+            <>
+            <HistoryControls history={history} />
+            {history.filtered.length === 0 ? (
+              <NoHistoryMatches onClear={history.clear} />
+            ) : history.view === 'timeline' ? (
+              <TimelineList
+                groups={history.timeline}
+                artistImage={artistImage}
+                mediaOf={show => resolveMediaUrls(show).map(u => resolvePhotoUrl(u)!)}
+                peopleOf={show => withPeople[show.id] ?? []}
+                hrefOf={show => `/artist/${encodeURIComponent(show.artist_id)}`}
+                onTop={year => { history.setYear(year); history.setView('ranked') }}
+              />
+            ) : (
             <div className="flex flex-col gap-3">
-              {shows.map((show, i) => {
+              {history.ranked.map((show, i) => {
                 const score     = showScore(show)
                 const hasScore  = show.performance_rating != null && show.venue_rating != null
                 const isEditing = editingId === show.id
@@ -554,6 +587,8 @@ export default function ProfilePage() {
                 )
               })}
             </div>
+            )}
+            </>
           )}
         </section>
 

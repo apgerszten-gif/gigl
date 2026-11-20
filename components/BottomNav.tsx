@@ -2,32 +2,27 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CircleUser, Newspaper, Plus, X } from 'lucide-react'
+import { CalendarDays, CircleUser, ListOrdered, Newspaper, Plus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 
-export type DockTab = 'feed' | 'log' | 'profile'
+export type DockTab = 'feed' | 'upcoming' | 'log' | 'rankings' | 'profile'
 
-// Three tabs, Log dead centre with one either side.
+// Five tabs, Log dead centre with two either side.
 //
-// There used to be five. Search was the fourth, and DESIGN.md admitted why:
-// it existed "so that Log can sit in the middle with two tabs either side".
-// It also pointed at the same screen as Log - both opened /select-festival,
-// differing only in a heading - and once search started returning only shows
-// that have already happened, "find a show" stopped being a separate idea
-// from "log a show" altogether. A spacer with a job title.
-//
-// Rankings moved to a view on Feed rather than a destination of its own:
-// both are the same logs read two ways, activity and aggregate. See
-// components/FeedTabs.tsx.
-
-// `nudge` pulls the outer two tabs in towards Log. Padding rather than a
-// translate, so it shifts where the icon and label sit without moving the
-// tap target off them: each tab still spans its full third of the bar.
+// It was three for a while. Search had been the fourth tab and pointed at
+// the same screen as Log, so it went; Rankings became a view on Feed. Then
+// the interviews found the job Gigl wasn't doing: working out what to see
+// next. Upcoming (/upcoming) is that, a destination of its own rather than a
+// spacer, and with it in the dock Rankings came back as a tab too, so Log
+// keeps the middle and Feed is only the stream. Rankings still shares Feed's
+// All activity / Following choice (components/FeedTabs.tsx).
 const TABS: { id: DockTab; label: string; href: string; Icon: LucideIcon; nudge?: string }[] = [
-  { id: 'feed',    label: 'Feed', href: '/feed',             Icon: Newspaper,  nudge: 'pl-7' },
-  { id: 'log',     label: 'Log',  href: '/select-festival',  Icon: Plus },
-  { id: 'profile', label: 'You',  href: '/profile',          Icon: CircleUser, nudge: 'pr-7' },
+  { id: 'feed',     label: 'Feed',     href: '/feed',            Icon: Newspaper },
+  { id: 'upcoming', label: 'Upcoming', href: '/upcoming',        Icon: CalendarDays },
+  { id: 'log',      label: 'Log',      href: '/select-festival', Icon: Plus },
+  { id: 'rankings', label: 'Rankings', href: '/rankings',        Icon: ListOrdered },
+  { id: 'profile',  label: 'You',      href: '/profile',         Icon: CircleUser },
 ]
 
 interface Props {
@@ -36,16 +31,16 @@ interface Props {
   onDismissLogTip?: () => void
 }
 
-// The persistent 3-tab dock from DESIGN.md, routed. No Suspense wrapper any
-// more: the only thing that needed useSearchParams was telling the Log tab
-// apart from the Search tab by `?mode=log`, and neither survives.
+// The persistent dock from DESIGN.md, routed. No Suspense wrapper: nothing
+// here needs the query string.
 export default function BottomNav(props: Props) {
   const pathname = usePathname()
   const { user, loading } = useAuth()
 
   let active: DockTab | null = null
-  // /rankings lights Feed, because Rankings is one of Feed's views now.
-  if (pathname.startsWith('/feed') || pathname.startsWith('/rankings')) active = 'feed'
+  if (pathname.startsWith('/feed')) active = 'feed'
+  else if (pathname.startsWith('/upcoming')) active = 'upcoming'
+  else if (pathname.startsWith('/rankings')) active = 'rankings'
   else if (pathname.startsWith('/profile')) active = 'profile'
   // /log and /log-show are both caught by the /log prefix.
   else if (pathname.startsWith('/select-festival') || pathname.startsWith('/log')) active = 'log'
@@ -80,7 +75,9 @@ export function DockBar({
       <div className="max-w-md mx-auto bg-cream border-t-1.5 border-ink flex safe-bottom">
         {TABS.map(({ id, label, href, Icon, nudge }) => {
           const isActive = active === id
-          const labelClass = `text-[11px] font-bold uppercase tracking-label ${isActive ? 'text-accent' : 'text-ink-faint'}`
+          // 10px rather than 11 with five tabs, so "Upcoming" and "Rankings"
+          // fit a fifth of a 320px phone.
+          const labelClass = `text-[10px] font-bold uppercase tracking-label ${isActive ? 'text-accent' : 'text-ink-faint'}`
 
           if (id === 'log') {
             return (
@@ -104,7 +101,7 @@ export function DockBar({
           }
 
           return (
-            <Tab key={id} {...tab} id={id} href={id === 'profile' && profileHref ? profileHref : href} className={`flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1 ${nudge ?? ''}`}>
+            <Tab key={id} {...tab} id={id} href={id === 'profile' && profileHref ? profileHref : href} className={`flex-1 min-w-0 flex flex-col items-center gap-1 pt-2.5 pb-1 ${nudge ?? ''}`}>
               <Icon className={`w-6 h-6 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
               <span className={labelClass}>{label}</span>
             </Tab>

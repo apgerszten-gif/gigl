@@ -1,12 +1,8 @@
 'use client'
 
 import Image from 'next/image'
+import { isVideoUrl } from '@/lib/media'
 import { VideoPlayer } from './VideoPlayer'
-
-function isVideoUrl(url: string): boolean {
-  const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
-  return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(ext ?? '')
-}
 
 export function MediaGrid({ urls, maxHeight = 220 }: { urls: string[]; maxHeight?: number }) {
   if (urls.length === 0) return null

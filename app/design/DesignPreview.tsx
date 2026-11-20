@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Pencil, Plus, Search, Share2 } from 'lucide-react'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { DockBar } from '@/components/BottomNav'
+import { UpcomingShowRows, type ListedShow } from '@/components/ShowRows'
 import { SuggestField } from '@/components/SuggestField'
 import { Logo } from '@/components/Logo'
 import {
@@ -20,7 +21,7 @@ import {
 
 // 'pick' is the show picker the Log button opens; 'log' is the rating form
 // it leads to. There is no 'search' any more - see components/BottomNav.tsx.
-type Screen = 'feed' | 'rankings' | 'pick' | 'add' | 'log' | 'profile'
+type Screen = 'feed' | 'upcoming' | 'rankings' | 'pick' | 'add' | 'log' | 'profile'
 
 const ME = { name: 'Alex Gerszten', handle: 'gers_tunes' }
 
@@ -38,17 +39,17 @@ export function DesignPreview() {
         Style guide · sample data
       </div>
 
-      {screen === 'feed'     && <FeedScreen onProfile={openProfile} onRankings={() => setScreen('rankings')} />}
-      {screen === 'rankings' && <RankingsScreen onProfile={openProfile} onFeed={() => setScreen('feed')} />}
+      {screen === 'feed'     && <FeedScreen onProfile={openProfile} />}
+      {screen === 'upcoming' && <UpcomingScreen onProfile={openProfile} />}
+      {screen === 'rankings' && <RankingsScreen onProfile={openProfile} />}
       {screen === 'log'      && <LogShowScreen />}
       {screen === 'pick'     && <PickShowScreen onProfile={openProfile} onPick={() => setScreen('log')} onAdd={() => setScreen('add')} />}
       {screen === 'add'      && <AddShowScreen />}
       {screen === 'profile'  && <ProfileScreen />}
 
-      {/* Rankings is a view of Feed and the picker belongs to Log, so both
-          map onto the three real tabs rather than getting one each. */}
+      {/* The picker and Add a show belong to Log, so both light that tab. */}
       <DockBar
-        active={screen === 'rankings' ? 'feed' : screen === 'pick' || screen === 'add' ? 'log' : screen}
+        active={screen === 'pick' || screen === 'add' ? 'log' : screen}
         mode="buttons"
         onSelect={tab => setScreen(tab === 'log' ? 'pick' : tab)}
       />
@@ -96,7 +97,7 @@ const REVIEWS = [
   },
 ]
 
-function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankings: () => void }) {
+function FeedScreen({ onProfile }: { onProfile: () => void }) {
   const [filter, setFilter] = useState<string>('all')
   return (
     <div className="pb-28">
@@ -105,9 +106,9 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
       </DemoHeader>
 
       <div className="px-5 pt-3 space-y-2.5">
-        {/* Two tiers: whose logs, then the separate aggregate view. The real
-            one is components/FeedTabs.tsx - inlined here because the style
-            guide must not actually navigate. */}
+        {/* Whose logs. The real one is components/FeedTabs.tsx - inlined
+            here because the style guide must not actually navigate. The
+            rankings live on their own dock tab. */}
         <Segmented
           options={[
             { value: 'all', label: 'All activity' },
@@ -115,14 +116,6 @@ function FeedScreen({ onProfile, onRankings }: { onProfile: () => void; onRankin
           ]}
           value={filter}
           onChange={setFilter}
-        />
-        <Segmented
-          options={[
-            { value: 'rankings', label: 'Artist rankings' },
-            { value: 'venues', label: 'Venue rankings' },
-          ]}
-          value=""
-          onChange={onRankings}
         />
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <Chip active>This weekend</Chip>
@@ -182,7 +175,7 @@ const RANKED = [
   { artist: 'Mitski',       shows: 2, count: 17, performance: 4.5, venue: 4.5 },
 ]
 
-function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: () => void }) {
+function RankingsScreen({ onProfile }: { onProfile: () => void }) {
   return (
     <div className="pb-28">
       <DemoHeader onProfile={onProfile}>
@@ -195,8 +188,8 @@ function RankingsScreen({ onProfile, onFeed }: { onProfile: () => void; onFeed: 
             { value: 'all', label: 'All activity' },
             { value: 'following', label: 'Following' },
           ]}
-          value=""
-          onChange={onFeed}
+          value="all"
+          onChange={() => {}}
         />
         <Segmented
           options={[
@@ -429,6 +422,71 @@ function PickShowScreen({ onProfile, onPick, onAdd }: { onProfile: () => void; o
           <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Add it yourself</p>
         </div>
       </button>
+    </div>
+  )
+}
+
+// ── Screen: Upcoming ─────────────────────────────────────────────────────────
+
+const COMING_UP: { day: string; today?: boolean; shows: ListedShow[] }[] = [
+  { day: 'Tonight · Mon, Nov 16', today: true, shows: [
+    { id: 'u1', artist: 'Japanese Breakfast', venue: 'The Fillmore', city: 'San Francisco', state: 'CA', isoDate: '2026-11-16', imageUrl: null, distanceMiles: 2.1 },
+  ] },
+  { day: 'Fri, Nov 20', shows: [
+    { id: 'u2', artist: 'Turnstile', venue: 'The Warfield', city: 'San Francisco', state: 'CA', isoDate: '2026-11-20', imageUrl: null, distanceMiles: 1.4 },
+    { id: 'u3', artist: 'Four Tet', venue: 'Bill Graham Civic Auditorium', city: 'San Francisco', state: 'CA', isoDate: '2026-11-20', imageUrl: null, distanceMiles: 0.9 },
+  ] },
+]
+
+function UpcomingScreen({ onProfile }: { onProfile: () => void }) {
+  const [scope, setScope] = useState('all')
+  const [saved, setSaved] = useState<Set<string>>(new Set(['u2']))
+  const toggle = (show: ListedShow) => setSaved(ids => {
+    const next = new Set(ids)
+    if (next.has(show.id)) next.delete(show.id)
+    else next.add(show.id)
+    return next
+  })
+
+  return (
+    <div className="pb-28">
+      <DemoHeader onProfile={onProfile}>
+        <div className="min-w-0">
+          <Label>San Francisco, CA</Label>
+          <h1 className="font-display text-2xl font-bold tracking-tight leading-tight">What&apos;s on<span className="text-accent">?</span></h1>
+        </div>
+      </DemoHeader>
+
+      <div className="px-5 pt-3 space-y-2.5">
+        <Segmented
+          options={[{ value: 'all', label: 'Everything' }, { value: 'following', label: 'Following' }]}
+          value={scope}
+          onChange={setScope}
+        />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Chip>Near me</Chip>
+          <Chip active>San Francisco, CA ×</Chip>
+          <Chip>10 mi</Chip>
+          <Chip active>50 mi</Chip>
+          <Chip>100 mi</Chip>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-label text-ink-muted mr-0.5">When</span>
+          <Chip>Tonight</Chip>
+          <Chip>This weekend</Chip>
+          <Chip active>Next 7 days</Chip>
+          <Chip>Next 30 days</Chip>
+        </div>
+      </div>
+
+      <main className="px-5 pt-4 space-y-5">
+        {COMING_UP.map(group => (
+          <section key={group.day}>
+            <Label tone={group.today ? 'accent' : 'ink'} className="mb-2">{group.day}</Label>
+            <UpcomingShowRows shows={group.shows} savedIds={saved} onToggleSave={toggle} onShare={() => {}} />
+          </section>
+        ))}
+      </main>
     </div>
   )
 }

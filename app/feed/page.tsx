@@ -390,8 +390,8 @@ function FeedInner() {
 
         <ReviewReminders />
 
-        {/* The two view bars, then the search under them, the same order
-            as Rankings. Picking a filter mid-search brings the stream back,
+        {/* The filter bar, then the search under it, the same order as
+            Rankings. Picking a filter mid-search brings the stream back,
             since that's what the filter is for. */}
         <div className="space-y-2.5">
           <FeedTabs

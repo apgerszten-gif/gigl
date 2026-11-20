@@ -84,6 +84,9 @@ export interface SearchOptions {
   // carrying its `distanceMiles`. Rows with no coordinates are excluded
   // rather than guessed at.
   nearby?: NearbyFilter | null
+  // Inclusive ISO dates replacing the usual window: the Log screen's year
+  // and date chips. The caller keeps them inside what the catalogue holds.
+  range?:  { from: string; to: string } | null
 }
 
 // Blank keyword -> browse mode: the past week's shows, most recent first,
@@ -101,7 +104,7 @@ export interface SearchOptions {
 // particular show, however long ago. Browsing stays on the past week, where
 // "what happened around here recently" is still the right reading.
 export async function searchStoredShows(keyword: string, options: SearchOptions = {}): Promise<Show[]> {
-  const { limit = DEFAULT_LIMIT, nearby } = options
+  const { limit = DEFAULT_LIMIT, nearby, range } = options
   const trimmed = escapeForOrFilter(keyword)
 
   let query = supabase
@@ -109,8 +112,8 @@ export async function searchStoredShows(keyword: string, options: SearchOptions 
     .select(SHOW_COLUMNS)
     // The upper bound matters as much as the lower one: a show that hasn't
     // happened yet is not something anyone can have been to.
-    .gte('show_date', trimmed ? retainStartIso() : windowStartIso())
-    .lte('show_date', windowEndIso())
+    .gte('show_date', range ? range.from : trimmed ? retainStartIso() : windowStartIso())
+    .lte('show_date', range ? range.to : windowEndIso())
     .order('show_date', { ascending: false })
     .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
 
@@ -159,20 +162,35 @@ export interface UpcomingPage {
 // the last one this page used. Ordered by id as well as date because hundreds
 // of shows can share a date, and without a fixed order among them a row could
 // land on two pages or none.
+// The Upcoming window, narrowed by the Upcoming tab's date chips. `from` can
+// reach one day behind the server's UTC today and no further: "Tonight" is
+// the phone's date, which on a US evening is already yesterday in UTC.
+function upcomingBounds(from?: string, until?: string): { from: string; until: string } {
+  const yesterday = new Date()
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+  const floor = yesterday.toISOString().slice(0, 10)
+  const ceiling = upcomingEndIso()
+  return {
+    from:  from ? (from < floor ? floor : from) : windowEndIso(),
+    until: until ? (until > ceiling ? ceiling : until) : ceiling,
+  }
+}
+
 export async function upcomingShows(
   keyword: string,
-  options: { limit: number; offset?: number; nearby?: NearbyFilter | null },
+  options: { limit: number; offset?: number; nearby?: NearbyFilter | null; from?: string; until?: string },
 ): Promise<UpcomingPage> {
   const { limit, offset = 0, nearby } = options
   const trimmed = escapeForOrFilter(keyword)
   const rowsToRead = nearby ? limit * NEARBY_OVERFETCH : limit
+  const bounds = upcomingBounds(options.from, options.until)
 
   let query = supabase
     .from('shows')
     .select(SHOW_COLUMNS)
     // Today counts: tonight's show is both loggable and still worth saving.
-    .gte('show_date', windowEndIso())
-    .lte('show_date', upcomingEndIso())
+    .gte('show_date', bounds.from)
+    .lte('show_date', bounds.until)
     .order('show_date', { ascending: true })
     .order('id', { ascending: true })
     .range(offset, offset + rowsToRead - 1)
@@ -203,6 +221,66 @@ export async function upcomingShows(
   // may have more beyond it, even if this page used every row it was given.
   const more = used < rows.length || rows.length === rowsToRead
   return { shows, next: more ? offset + used : null }
+}
+
+export interface FollowedVenue {
+  name:  string
+  city:  string
+  state: string
+}
+
+// Rows per followed name. A touring act has a few dozen dates a year and a
+// busy room a few hundred, and only the next month or so is usually asked for.
+const FOLLOWED_ROWS = 200
+
+// Upcoming shows by the artists and at the venues someone follows, soonest
+// first: the Upcoming tab's Following view. One read per name, matched
+// exactly (ignoring case) like the artist and venue pages, so following
+// "Turnstile" doesn't bring in a tribute act. An artist counts on the bill as
+// support too. Not paged: a follow list is short, and each read is bounded.
+export async function followedUpcoming(options: {
+  artists: string[]
+  venues:  FollowedVenue[]
+  from?:   string
+  until?:  string
+  nearby?: NearbyFilter | null
+}): Promise<Show[]> {
+  const { artists, venues, nearby } = options
+  const bounds = upcomingBounds(options.from, options.until)
+  const windowed = <T extends { gte: (c: string, v: string) => T; lte: (c: string, v: string) => T }>(q: T) =>
+    q.gte('show_date', bounds.from).lte('show_date', bounds.until)
+
+  const reads: PromiseLike<{ data: ShowRow[] | null; error: { message: string } | null }>[] = []
+  for (const artist of artists) {
+    const exact = exactPattern(artist)
+    if (!exact) continue
+    reads.push(windowed(supabase.from('shows').select(SHOW_COLUMNS).ilike('artist', exact)).limit(FOLLOWED_ROWS))
+    // Same caveat as showsByArtist: a name with a comma or brace can't be
+    // matched inside the support array, so those only match as headliners.
+    if (!/[,{}"\\]/.test(artist)) {
+      reads.push(windowed(supabase.from('shows').select(SHOW_COLUMNS).contains('support', [artist.trim()])).limit(FOLLOWED_ROWS))
+    }
+  }
+  for (const venue of venues) {
+    const exact = exactPattern(venue.name)
+    if (!exact) continue
+    let q = windowed(supabase.from('shows').select(SHOW_COLUMNS).ilike('venue', exact))
+    if (venue.city) q = q.ilike('city', exactPattern(venue.city))
+    if (venue.state) q = q.eq('state', venue.state)
+    reads.push(q.limit(FOLLOWED_ROWS))
+  }
+
+  const results = await Promise.all(reads)
+  const byId = new Map<string, ShowRow>()
+  for (const { data, error } of results) {
+    if (error) { console.error('followed upcoming read failed:', error.message); continue }
+    for (const row of data ?? []) byId.set(row.id, row)
+  }
+
+  return Array.from(byId.values())
+    .sort((a, b) => (a.show_date ?? '').localeCompare(b.show_date ?? '') || a.id.localeCompare(b.id))
+    .map(row => toShow(row, nearby?.centre))
+    .filter(show => !nearby || (show.distanceMiles != null && show.distanceMiles <= nearby.radiusMiles))
 }
 
 // -- Global search, and the artist and venue pages --------------------------

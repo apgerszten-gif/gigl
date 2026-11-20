@@ -94,7 +94,7 @@ export function SavedShowsSection() {
       )}
 
       <Link
-        href="/select-festival?view=upcoming"
+        href="/upcoming"
         className="flex items-center gap-3 rounded-card border-1.5 border-dashed border-ink/30 px-3.5 py-3 hover:border-accent/50"
       >
         <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
