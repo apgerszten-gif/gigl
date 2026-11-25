@@ -30,7 +30,7 @@ export function FollowNameButton({ follow }: { follow: FollowedName }) {
           {on ? <Check className="w-3 h-3" strokeWidth={2.5} /> : <Plus className="w-3 h-3" strokeWidth={2.5} />}
           {on ? 'Following' : 'Follow'}
         </button>
-        {failed && <span className="text-[11px] text-[#B03030]">Couldn&apos;t update that. Try again.</span>}
+        {failed && <span className="text-[11px] text-[#E0786B]">Couldn&apos;t update that. Try again.</span>}
       </div>
       {signUpSheet}
     </>

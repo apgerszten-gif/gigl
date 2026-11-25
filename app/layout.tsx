@@ -5,7 +5,7 @@ import { AuthProvider } from '@/components/AuthProvider'
 import { PendingLogsSync } from '@/components/PendingLogsSync'
 import { VisitTracker } from '@/components/VisitTracker'
 import { WrappedStashSync } from '@/components/wrapped/WrappedStashSync'
-import { spaceGrotesk, inter } from '@/lib/fonts'
+import { alfaSlab, courierPrime, fraunces, instrumentSans } from '@/lib/fonts'
 
 export const metadata: Metadata = {
   // Link previews (shared invites and reviews) need absolute image URLs.
@@ -27,11 +27,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="en" className={`${fraunces.variable} ${instrumentSans.variable} ${alfaSlab.variable} ${courierPrime.variable}`}>
       <head>
-        <meta name="theme-color" content="#EDE3D0" />
+        <meta name="theme-color" content="#1B1612" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
       </head>
       <body className="bg-paper min-h-screen font-sans antialiased">
         <AuthProvider>

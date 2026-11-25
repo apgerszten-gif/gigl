@@ -171,7 +171,7 @@ function ContentMenuSheet({
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className={`absolute inset-0 bg-ink/55 transition-opacity duration-[280ms] ${shown ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/60 transition-opacity duration-[280ms] ${shown ? 'opacity-100' : 'opacity-0'}`}
       />
 
       <div
@@ -203,7 +203,7 @@ function ContentMenuSheet({
                 {busy ? 'Unblocking…' : `Unblock ${who}`}
               </button>
             ) : (
-              <button type="button" onClick={() => go('block')} disabled={blocked === null} className={`${row} text-[#B03030] disabled:opacity-50`}>
+              <button type="button" onClick={() => go('block')} disabled={blocked === null} className={`${row} text-[#E0786B] disabled:opacity-50`}>
                 <Ban className="w-4 h-4" strokeWidth={2} />
                 Block {who}
               </button>
