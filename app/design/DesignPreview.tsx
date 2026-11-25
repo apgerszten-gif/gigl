@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Pencil, Plus, Search, Share2 } from 'lucide-react'
 import { BattleModeCard } from '@/components/BattleModeCard'
 import { DockBar } from '@/components/BottomNav'
+import { NotificationsView } from '@/components/NotificationsSection'
+import type { Notification } from '@/lib/notifications'
 import { UpcomingShowRows, type ListedShow } from '@/components/ShowRows'
 import { SuggestField } from '@/components/SuggestField'
 import { Logo } from '@/components/Logo'
@@ -52,6 +54,7 @@ export function DesignPreview() {
         active={screen === 'pick' || screen === 'add' ? 'log' : screen}
         mode="buttons"
         onSelect={tab => setScreen(tab === 'log' ? 'pick' : tab)}
+        profileBadge={screen === 'profile' ? 0 : SAMPLE_NOTIFICATIONS.filter(n => n.unseen).length}
       />
     </div>
   )
@@ -493,6 +496,24 @@ function UpcomingScreen({ onProfile }: { onProfile: () => void }) {
 
 // ── Screen 5: You ────────────────────────────────────────────────────────────
 
+// One of each kind (components/NotificationsSection.tsx). The first four are
+// new, so the dock shows 4 everywhere but on You.
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString()
+const mo  = { id: 'p-mo',  username: 'mo',  display_name: 'Mo',  avatar_url: null }
+const mei = { id: 'p-mei', username: 'mei', display_name: 'Mei', avatar_url: null }
+const jo  = { id: 'p-jo',  username: 'jo',  display_name: 'Jo',  avatar_url: null }
+const SAMPLE_NOTIFICATIONS: Notification[] = [
+  { kind: 'show', key: 'show', at: hoursAgo(6), unseen: true, when: 'tomorrow',
+    show: { id: 's1', artist: 'Fred again..', venue: 'Kia Forum', city: 'Inglewood', state: 'CA', show_date: '2026-11-25', image_url: null } },
+  { kind: 'like', key: 'like', at: hoursAgo(1), unseen: true, actors: [mo, mei, jo], total: 3,
+    log: { id: 'l1', artistId: 'a1', artistName: 'Prospa' } },
+  { kind: 'comment', key: 'comment', at: hoursAgo(3), unseen: true, actor: mei, body: 'The second encore was unreal',
+    log: { id: 'l1', artistId: 'a1', artistName: 'Prospa' } },
+  { kind: 'follow', key: 'follow', at: hoursAgo(20), unseen: true, actor: jo, followingBack: false },
+  { kind: 'tag', key: 'tag', at: hoursAgo(50), unseen: false, actor: mo,
+    log: { id: 'l2', artistId: 'a2', artistName: 'Rüfüs Du Sol' } },
+]
+
 function ProfileScreen() {
   return (
     <div className="pb-28">
@@ -538,6 +559,14 @@ function ProfileScreen() {
             </div>
           </div>
         </Card>
+
+        <NotificationsView
+          items={SAMPLE_NOTIFICATIONS}
+          username={ME.handle}
+          followed={{}}
+          onFollowBack={() => {}}
+          onOpenComments={() => {}}
+        />
 
         <div className="grid grid-cols-2 gap-2">
           <Card className="p-2.5">

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { CalendarDays, CircleUser, ListOrdered, Newspaper, Plus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
+import { useNotificationCount } from '@/lib/notifications'
 
 export type DockTab = 'feed' | 'upcoming' | 'log' | 'rankings' | 'profile'
 
@@ -48,21 +49,26 @@ export default function BottomNav(props: Props) {
   // Someone who hasn't signed up has no profile to open, so You is where
   // they sign up or sign in.
   const profileHref = !loading && !user ? '/auth' : undefined
+  // New notifications (lib/notifications.ts), shown on You. Opening You
+  // clears it.
+  const notificationCount = useNotificationCount(user?.id ?? null)
 
-  return <DockBar active={active} mode="links" profileHref={profileHref} {...props} />
+  return <DockBar active={active} mode="links" profileHref={profileHref} profileBadge={notificationCount} {...props} />
 }
 
 // The dock itself, without routing. `mode` picks what the tabs are: links
 // (the app), buttons calling onSelect (the style guide), or inert (the intro
 // demo, which sits it inside a mock phone with `contained`).
 export function DockBar({
-  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle, profileHref,
+  active, mode, onSelect, contained = false, showLogTip, onDismissLogTip, logTip, logExtras, logButtonStyle, profileHref, profileBadge = 0,
 }: Props & {
   active: DockTab | null
   mode: 'links' | 'buttons' | 'static'
   onSelect?: (tab: DockTab) => void
   // Where You goes instead of /profile (sign-in, when signed out).
   profileHref?: string
+  // New notifications, as a sienna count on You's icon. Hidden at 0.
+  profileBadge?: number
   contained?: boolean
   logTip?: React.ReactNode
   logExtras?: React.ReactNode
@@ -102,7 +108,15 @@ export function DockBar({
 
           return (
             <Tab key={id} {...tab} id={id} href={id === 'profile' && profileHref ? profileHref : href} className={`flex-1 min-w-0 flex flex-col items-center gap-1 pt-2.5 pb-1 ${nudge ?? ''}`}>
-              <Icon className={`w-6 h-6 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
+              <span className="relative">
+                <Icon className={`w-6 h-6 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
+                {id === 'profile' && profileBadge > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-cream border-1.5 border-ink text-[10px] font-bold leading-none flex items-center justify-center">
+                    {profileBadge > 9 ? '9+' : profileBadge}
+                    <span className="sr-only"> new notifications</span>
+                  </span>
+                )}
+              </span>
               <span className={labelClass}>{label}</span>
             </Tab>
           )

@@ -1065,3 +1065,12 @@ drop policy if exists "artist_venue_follows_insert" on public.artist_venue_follo
 create policy "artist_venue_follows_insert" on public.artist_venue_follows for insert with check (auth.uid() = user_id);
 drop policy if exists "artist_venue_follows_delete" on public.artist_venue_follows;
 create policy "artist_venue_follows_delete" on public.artist_venue_follows for delete using (auth.uid() = user_id);
+
+-- Notifications (components/NotificationsSection.tsx, lib/notifications.ts).
+-- There is no notifications table: the list is worked out on each load from
+-- follows, show_likes, show_comments, show_tags and saved_shows, the way
+-- saved-show reminders are. This is the one thing it stores: when you last
+-- opened the list on You. The dock's badge counts what's newer than it. The
+-- existing profiles_update policy already limits the write to your own row.
+-- Until this has run, the app keeps the time in the browser instead.
+alter table public.profiles add column if not exists notifications_seen_at timestamp with time zone;
