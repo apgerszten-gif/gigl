@@ -10,6 +10,7 @@ import { resolveMediaUrls } from '@/lib/media'
 import { MediaGrid } from '@/components/MediaGrid'
 import { UserSearch } from '@/components/UserSearch'
 import { SavedShowsSection } from '@/components/SavedShowsSection'
+import { NotificationsSection } from '@/components/NotificationsSection'
 import { BattleRecordBadge } from '@/components/BattleRecordBadge'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
@@ -383,6 +384,8 @@ export default function ProfilePage() {
             </div>
           </div>
         </Card>
+
+        <NotificationsSection username={profile?.username ?? null} />
 
         <SavedShowsSection />
 
