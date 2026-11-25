@@ -41,14 +41,12 @@ function resolvePhotoUrl(url: string): string {
 }
 
 interface Interactions {
-  likeCount:      number
-  likedByMe:      boolean
-  reactionCounts: Record<string, number>
-  myReactions:    string[]
-  commentCount:   number
+  likeCount:    number
+  likedByMe:    boolean
+  commentCount: number
 }
 
-const EMPTY_INTERACTIONS: Interactions = { likeCount: 0, likedByMe: false, reactionCounts: {}, myReactions: [], commentCount: 0 }
+const EMPTY_INTERACTIONS: Interactions = { likeCount: 0, likedByMe: false, commentCount: 0 }
 
 interface GlobalLog {
   id:                 string
@@ -223,24 +221,18 @@ function FeedInner() {
   async function loadInteractions(showIds: string[], userId: string | null): Promise<Record<string, Interactions>> {
     if (showIds.length === 0) return {}
 
-    const [{ data: likeRows }, { data: reactionRows }, { data: commentRows }] = await Promise.all([
+    const [{ data: likeRows }, { data: commentRows }] = await Promise.all([
       timeQuery('feed:show_likes', supabase.from('show_likes').select('logged_show_id, user_id').in('logged_show_id', showIds)),
-      timeQuery('feed:show_reactions', supabase.from('show_reactions').select('logged_show_id, user_id, emoji').in('logged_show_id', showIds)),
       timeQuery('feed:show_comments-count', supabase.from('show_comments').select('logged_show_id').in('logged_show_id', showIds)),
     ])
 
     const map: Record<string, Interactions> = {}
-    const ensure = (id: string) => (map[id] ??= { likeCount: 0, likedByMe: false, reactionCounts: {}, myReactions: [], commentCount: 0 })
+    const ensure = (id: string) => (map[id] ??= { likeCount: 0, likedByMe: false, commentCount: 0 })
 
     likeRows?.forEach(r => {
       const entry = ensure(r.logged_show_id)
       entry.likeCount++
       if (r.user_id === userId) entry.likedByMe = true
-    })
-    reactionRows?.forEach(r => {
-      const entry = ensure(r.logged_show_id)
-      entry.reactionCounts[r.emoji] = (entry.reactionCounts[r.emoji] ?? 0) + 1
-      if (r.user_id === userId) entry.myReactions.push(r.emoji)
     })
     commentRows?.forEach(r => { ensure(r.logged_show_id).commentCount++ })
 
@@ -267,32 +259,6 @@ function FeedInner() {
         const entry = prev[showId] ?? EMPTY_INTERACTIONS
         return { ...prev, [showId]: { ...entry, likedByMe: !next, likeCount: entry.likeCount + (next ? -1 : 1) } }
       })
-    }
-  }
-
-  async function toggleReaction(showId: string, emoji: string) {
-    if (!user) { setSignUpMode('signup'); return }
-    const current = interactions[showId] ?? EMPTY_INTERACTIONS
-    const alreadyReacted = current.myReactions.includes(emoji)
-
-    function applyDelta(delta: 1 | -1, reacted: boolean) {
-      setInteractions(prev => {
-        const entry = prev[showId] ?? EMPTY_INTERACTIONS
-        const myReactions = reacted ? [...entry.myReactions, emoji] : entry.myReactions.filter(e => e !== emoji)
-        const count = (entry.reactionCounts[emoji] ?? 0) + delta
-        return { ...prev, [showId]: { ...entry, myReactions, reactionCounts: { ...entry.reactionCounts, [emoji]: count } } }
-      })
-    }
-
-    applyDelta(alreadyReacted ? -1 : 1, !alreadyReacted)
-
-    const { error } = alreadyReacted
-      ? await supabase.from('show_reactions').delete().eq('logged_show_id', showId).eq('user_id', user.id).eq('emoji', emoji)
-      : await supabase.from('show_reactions').insert({ logged_show_id: showId, user_id: user.id, emoji })
-
-    if (error) {
-      console.error('show_reactions toggle failed:', error.message)
-      applyDelta(alreadyReacted ? 1 : -1, alreadyReacted)
     }
   }
 
@@ -516,11 +482,8 @@ function FeedInner() {
               <ReactionBar
                 likeCount={itemInteractions.likeCount}
                 likedByMe={itemInteractions.likedByMe}
-                reactionCounts={itemInteractions.reactionCounts}
-                myReactions={itemInteractions.myReactions}
                 commentCount={itemInteractions.commentCount}
                 onToggleLike={() => toggleLike(item.id)}
-                onToggleReaction={emoji => toggleReaction(item.id, emoji)}
                 onOpenComments={() => setActiveComments(item.id)}
               />
             </Card>

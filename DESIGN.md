@@ -137,7 +137,7 @@ Where the photos come from:
   - the artist heading and place line, with the artist photo and date sticker beside them (festival logs show the stage and day instead, with the festival in parentheses)
   - the review as a pull quote, with tagged people's `@username` as sienna underlined links to their profiles, then its tags as chips
   - when anyone is tagged, a "with @mo and @mei" line (`WithLine` in `components/TagDisplay.tsx`): up to three overlapping 18px photos, then the handles in `ink`, "and 2 others" past three
-  - the reaction bar (heart, fire, laugh, wow, comments)
+  - the reaction bar (`components/ReactionBar.tsx`): a heart (likes) and a comment button side by side on the left, 18px `lucide` line icons in `ink-muted` with an 11px count once there is one; the heart fills sienna when you've liked it. The old fire, laugh and wow reactions are gone.
 - The Battle Mode card once it's unlocked (10 logs), and a first-visit tip pointing at the Log button. The card is the only invitation to Battle Mode: a `Trophy` tile, "Battle Mode" with a compact "Optional" `Chip`, two lines on what a battle is, a small primary "Try a battle" and an underlined "Not for me" that puts it away for good. Nothing pops up over the tenth log, and the trophy win-loss records on Rankings only show to people who have unlocked it.
 - Signed out, a `Card` above the controls: "Rate the shows you've been to", a line in `ink-muted` saying an account is only needed to post, a small "Log a show" primary button (to `/select-festival`) and an "I have an account" link. Reacting, commenting or picking Following opens the sign-up sheet instead of doing nothing.
 
