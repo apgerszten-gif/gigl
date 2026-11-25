@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { computeShowScore } from '@/lib/rating'
+import { useArtistImages } from '@/lib/useArtistImages'
 import { countsOf, hasStash, readStash, type WrappedStash } from '@/lib/wrapped/stash'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -184,14 +185,15 @@ function PhoneAuthPage() {
 function KeptCollage({ stash }: { stash: WrappedStash }) {
   const cards = [
     ...stash.logs.map(log => ({
-      key: `log-${log.artist_id}`, kind: 'Logged', artist: log.artist_name, isoDate: log.show_date,
+      key: `log-${log.artist_id}`, kind: 'Logged', artist: log.artist_name, isoDate: log.show_date, image: null as string | null,
       detail: <Stars score={computeShowScore(log.performance_rating, log.venue_rating)} size={13} />,
     })),
     ...stash.saves.map(show => ({
-      key: `save-${show.id}`, kind: 'Saved', artist: show.artist, isoDate: show.isoDate,
+      key: `save-${show.id}`, kind: 'Saved', artist: show.artist, isoDate: show.isoDate, image: show.imageUrl ?? null,
       detail: <Place>{show.venue}</Place>,
     })),
   ].slice(0, 2)
+  const artistImage = useArtistImages(cards.map(card => card.artist))
 
   if (cards.length === 0) return <div className="mt-5" />
 
@@ -202,7 +204,7 @@ function KeptCollage({ stash }: { stash: WrappedStash }) {
           key={card.key}
           className={`absolute p-3 flex items-center gap-3 ${i === 0 ? 'left-0 right-8 top-0 -rotate-2' : 'left-10 right-0 top-[84px] rotate-[1.5deg]'}`}
         >
-          <ArtistPhoto name={card.artist} className="w-14 h-14" iconSize={18}>
+          <ArtistPhoto name={card.artist} src={card.image ?? artistImage(card.artist)} className="w-14 h-14" iconSize={18}>
             <DateTag isoDate={card.isoDate} />
           </ArtistPhoto>
           <div className="min-w-0 space-y-1">
