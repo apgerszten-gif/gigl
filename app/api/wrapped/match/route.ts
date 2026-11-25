@@ -93,41 +93,52 @@ export async function POST(req: NextRequest) {
     const resolved = await Promise.all(names.map(entry => resolve(entry.name.trim())))
 
     // Two reads can land on one Gigl artist (the same act on both cards, or
-    // two misreadings of it). The first, higher-ranked one keeps it.
+    // two spellings of it). The first, higher-ranked one keeps it and the
+    // other is left out, rather than listed as "not in Gigl". Ranks count
+    // what's left.
     const taken = new Set<string>()
-    const artists: WrappedArtist[] = names.map((entry, i) => {
+    const artists: WrappedArtist[] = []
+    names.forEach((entry, i) => {
       const match = resolved[i]
-      const matchKey = match ? nameKey(match.name) : null
-      const matched = !!match && !taken.has(matchKey!)
-      if (matched) taken.add(matchKey!)
-      return {
+      const key = nameKey(match ? match.name : entry.name)
+      if (taken.has(key)) return
+      taken.add(key)
+      artists.push({
         read:      entry.name.trim(),
-        name:      matched ? match!.name : entry.name.trim(),
+        name:      match ? match.name : entry.name.trim(),
         from:      entry.from as WrappedCard,
-        rank:      i + 1,
-        matched,
-        corrected: matched && match!.corrected,
-        imageUrl:  matched ? match!.imageUrl : null,
-      }
+        rank:      artists.length + 1,
+        matched:   !!match,
+        corrected: !!match && match.corrected,
+        imageUrl:  match ? match.imageUrl : null,
+      })
     })
 
     const matchedNames = artists.filter(a => a.matched).map(a => a.name)
     const shows = await showsForArtists(matchedNames, from)
 
-    // A show with two of their artists on the bill is listed once, under
-    // whichever ranks higher.
+    // One row per show. Ticketmaster often lists a show twice under two ids
+    // (same act, room and night), and a show with two of their artists on
+    // the bill turns up under both. It's credited to the headliner when the
+    // headliner is one of their artists, otherwise to the higher-ranked one.
     const today = windowEndIso()
-    const seen = new Set<string>()
-    const upcoming: WrappedShow[] = []
-    const past: WrappedShow[] = []
+    const byShow = new Map<string, WrappedShow>()
     for (const name of matchedNames) {
       for (const show of shows.get(name) ?? []) {
-        if (seen.has(show.id) || !show.isoDate) continue
-        seen.add(show.id)
-        const row = toWrappedShow(show, name)
-        if (show.isoDate > today) upcoming.push(row)
-        else past.push(row)
+        if (!show.isoDate) continue
+        const key = `${nameKey(show.artist)}|${nameKey(show.venue)}|${show.isoDate}`
+        const existing = byShow.get(key)
+        if (!existing) byShow.set(key, toWrappedShow(show, name))
+        else if (nameKey(existing.wrappedArtist) !== nameKey(existing.artist) && nameKey(show.artist) === nameKey(name)) {
+          existing.wrappedArtist = name
+        }
       }
+    }
+    const upcoming: WrappedShow[] = []
+    const past: WrappedShow[] = []
+    for (const row of Array.from(byShow.values())) {
+      if (row.isoDate! > today) upcoming.push(row)
+      else past.push(row)
     }
     upcoming.sort((a, b) => (a.isoDate ?? '').localeCompare(b.isoDate ?? '') || a.id.localeCompare(b.id))
     past.sort((a, b) => (b.isoDate ?? '').localeCompare(a.isoDate ?? '') || a.id.localeCompare(b.id))
