@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { refuseUnlessAdmin } from '@/lib/adminAuth'
-import type { AdminLog, AdminSignup, AdminStats } from '@/lib/adminStats'
+import type { AdminLog, AdminSignup, AdminStats, WrappedSummary } from '@/lib/adminStats'
+import { parseWrappedPopup, popupEndsAt } from '@/lib/wrapped/popup'
 import { readVenueSyncMode, readVenueSyncReport } from '@/lib/venues/settings'
 
 // GET /api/admin/stats — everything the admin page (app/admin) shows: today's
@@ -118,6 +119,41 @@ async function signupMethod(): Promise<'phone' | 'email' | null> {
   return data?.value === 'email' ? 'email' : 'phone'
 }
 
+// The Wrapped popup's switch and its funnel since it was last switched on:
+// distinct phones that saw it, added screenshots, logged a show and signed
+// up from it (site_events kind 'wrapped', app/api/wrapped/event).
+async function wrappedSummary(): Promise<WrappedSummary> {
+  const { data } = await supabaseAdmin()
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'wrapped_popup')
+    .maybeSingle()
+  const setting = parseWrappedPopup(data?.value)
+  const summary: WrappedSummary = {
+    on: setting.on,
+    since: setting.since,
+    endsAt: setting.since ? popupEndsAt(setting).toISOString() : null,
+    seen: 0, added: 0, logged: 0, signedUp: 0,
+  }
+  if (!setting.since) return summary
+
+  const rows: EventRow[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await supabaseAdmin()
+      .from('site_events')
+      .select('kind, visitor_id, source')
+      .eq('kind', 'wrapped')
+      .gte('created_at', setting.since)
+      .order('id')
+      .range(from, from + PAGE - 1)
+    if (error) { console.error('[admin/stats] wrapped events failed:', error.message); return summary }
+    rows.push(...(page ?? []))
+    if (!page || page.length < PAGE) break
+  }
+  const phones = (step: string) => new Set(rows.filter(r => r.source === step).map(r => r.visitor_id)).size
+  return { ...summary, seen: phones('seen'), added: phones('added'), logged: phones('logged'), signedUp: phones('signed_up') }
+}
+
 export async function GET(req: NextRequest) {
   const refused = await refuseUnlessAdmin(req)
   if (refused) return refused
@@ -126,7 +162,7 @@ export async function GET(req: NextRequest) {
   const today = dayOf(new Date())
 
   try {
-    const [users, events, logsToday, logsTotal, logs, method, venueMode, venueReport] = await Promise.all([
+    const [users, events, logsToday, logsTotal, logs, method, venueMode, venueReport, wrapped] = await Promise.all([
       allUsers(),
       eventsSince(since),
       countLogs(since),
@@ -135,6 +171,7 @@ export async function GET(req: NextRequest) {
       signupMethod(),
       readVenueSyncMode(),
       readVenueSyncReport(),
+      wrappedSummary(),
     ])
 
     // A phone account exists from the moment its code is requested; it only
@@ -202,6 +239,7 @@ export async function GET(req: NextRequest) {
           totals: venueReport.totals,
         },
       },
+      wrapped,
     }
     return NextResponse.json(stats)
   } catch (err) {

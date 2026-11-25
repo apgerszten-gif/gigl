@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LOCAL_STORAGE_KEY } from '@/lib/festivals'
 import { useAuth } from '@/components/AuthProvider'
+import { flushStash, hasStash, takeNextAfterSignIn } from '@/lib/wrapped/stash'
 import { normalizeUsername, isValidUsername, USERNAME_RULES_TEXT } from '@/lib/username'
 import { Logo } from '@/components/Logo'
 import {
@@ -46,6 +47,15 @@ export default function ChooseUsernamePage() {
       username_set: true,
     })
     if (upsertError) { setError(upsertError.message); setLoading(false); return }
+
+    // Fresh from the Wrapped popup's Done: their shows go onto the account
+    // now that it has a profile, and they finish on You to see them.
+    if (takeNextAfterSignIn() || hasStash()) {
+      await flushStash(user.id)
+      setLoading(false)
+      router.push('/profile')
+      return
+    }
 
     setLoading(false)
 

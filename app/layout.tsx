@@ -4,6 +4,7 @@ import { FestivalThemeProvider } from '@/components/FestivalThemeProvider'
 import { AuthProvider } from '@/components/AuthProvider'
 import { PendingLogsSync } from '@/components/PendingLogsSync'
 import { VisitTracker } from '@/components/VisitTracker'
+import { WrappedStashSync } from '@/components/wrapped/WrappedStashSync'
 import { spaceGrotesk, inter } from '@/lib/fonts'
 
 export const metadata: Metadata = {
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <FestivalThemeProvider>
             <PendingLogsSync />
+            <WrappedStashSync />
             <VisitTracker />
             <div className="max-w-md mx-auto min-h-screen">
               {children}

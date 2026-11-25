@@ -33,6 +33,10 @@ function ago(iso: string, now: number): string {
 }
 
 const euro = (n: number) => `€${n.toFixed(2)}`
+// "Dec 2, 9:04am" for the Wrapped switch's dates.
+const shortDate = (iso: string | null) => iso
+  ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(' AM', 'am').replace(' PM', 'pm')
+  : ''
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 export default function AdminPage() {
@@ -47,6 +51,7 @@ export default function AdminPage() {
   const [removing, setRemoving]     = useState<string | null>(null)
   const [venueSaving, setVenueSaving] = useState(false)
   const [venueRunning, setVenueRunning] = useState(false)
+  const [wrappedSaving, setWrappedSaving] = useState(false)
 
   const call = useCallback(async (path: string, init?: RequestInit) => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -106,6 +111,22 @@ export default function AdminPage() {
     if (!res.ok) { setError(data.error ?? "Couldn't save the switch."); return }
     setError(null)
     setStats(s => s && { ...s, signupMethod: data.signupMethod })
+  }
+
+  async function switchWrapped(next: 'off' | 'on') {
+    if (!stats || wrappedSaving) return
+    const question = next === 'on'
+      ? 'Switch the Wrapped popup on? Everyone sees it once on the Feed, until the end of December.'
+      : 'Switch the Wrapped popup off? Nobody else will see it.'
+    if (!window.confirm(question)) return
+
+    setWrappedSaving(true)
+    const res = await call('/api/admin/settings', { method: 'POST', body: JSON.stringify({ wrappedPopup: next === 'on' }) })
+    const data = await res.json().catch(() => ({}))
+    setWrappedSaving(false)
+    if (!res.ok) { setError(data.error ?? "Couldn't save the switch."); return }
+    setError(null)
+    load()
   }
 
   async function switchVenueSync(next: VenueSyncMode) {
@@ -201,6 +222,8 @@ export default function AdminPage() {
 
   const t = stats.today
   const venueRun = stats.venueSync.lastRun
+  // Still marked on, but past the end of its December.
+  const wrappedOver = !!stats.wrapped.endsAt && now > Date.parse(stats.wrapped.endsAt)
   // Many numbers asking for a code and few typing one in is what texts not
   // arriving looks like from here.
   const textsLookStuck = t.unfinishedNumbers >= 3 && t.unfinishedNumbers >= t.newNumbers / 2
@@ -255,6 +278,28 @@ export default function AdminPage() {
           >
             Check the balance on Prelude <ExternalLink className="w-3.5 h-3.5" strokeWidth={2} />
           </a>
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <Label>Wrapped popup</Label>
+          <Segmented<'off' | 'on'>
+            options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
+            value={stats.wrapped.on && !wrappedOver ? 'on' : 'off'}
+            onChange={switchWrapped}
+          />
+          <p className="text-[12px] leading-snug text-ink-muted">
+            {wrappedSaving ? 'Saving…' : stats.wrapped.on && !wrappedOver
+              ? `On since ${shortDate(stats.wrapped.since)}. Everyone sees it once on the Feed, new visitors and members. It turns itself off after ${shortDate(stats.wrapped.endsAt)}.`
+              : 'Switch it on the day Spotify releases Wrapped. Everyone then sees it once on the Feed until the end of December. Add ?wrapped=1 to the Feed’s address to try it any time.'}
+          </p>
+          {stats.wrapped.since && (
+            <div className="flex">
+              <Stat value={stats.wrapped.seen} label="Saw it" />
+              <Stat value={stats.wrapped.added} label="Added" />
+              <Stat value={stats.wrapped.logged} label="Logged" />
+              <Stat value={stats.wrapped.signedUp} label="Signed up" />
+            </div>
+          )}
         </Card>
 
         <Card className="p-4 space-y-3">

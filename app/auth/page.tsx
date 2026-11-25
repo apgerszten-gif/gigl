@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { computeShowScore } from '@/lib/rating'
+import { countsOf, hasStash, readStash, type WrappedStash } from '@/lib/wrapped/stash'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { pathAfterSignIn } from '@/lib/afterSignIn'
@@ -10,7 +12,7 @@ import { PhoneCodeForm, type PhoneStep } from '@/components/PhoneCodeForm'
 import { EmailAuthPage } from '@/components/EmailAuthPage'
 import { useSignupMethod } from '@/lib/signupMethod'
 import {
-  ArtistPhoto, Card, DateTag, ErrorNote, Field, Label, PersonPhoto, Place, PullQuote, Stars,
+  ArtistPhoto, Card, Chip, DateTag, ErrorNote, Field, Label, PersonPhoto, Place, PullQuote, Stars,
   btnPrimary, fieldInput,
 } from '@/components/ui'
 
@@ -34,6 +36,13 @@ function PhoneAuthPage() {
   const [password, setPassword] = useState('')
   const [error, setError]       = useState<string | null>(null)
   const [loading, setLoading]   = useState(false)
+  // What they kept in the Wrapped popup without an account, if they came
+  // from its Done (lib/wrapped/stash.ts). The page leads with it.
+  const [kept, setKept]         = useState<WrappedStash | null>(null)
+
+  useEffect(() => {
+    if (hasStash()) setKept(readStash())
+  }, [])
 
   function switchStep(next: Step) {
     setStep(next)
@@ -60,7 +69,8 @@ function PhoneAuthPage() {
         <Label>Live music, logged</Label>
       </header>
 
-      {/* A cut-and-paste collage of the app's own cards. */}
+      {kept ? <KeptCollage stash={kept} /> : (
+      /* A cut-and-paste collage of the app's own cards. */
       <div className="relative h-[168px] mt-5 mb-4" aria-hidden>
         <Card className="absolute left-0 right-8 top-0 -rotate-2 p-3 flex items-center gap-3">
           <ArtistPhoto name="Turnstile" className="w-14 h-14" iconSize={18}>
@@ -80,14 +90,19 @@ function PhoneAuthPage() {
           </div>
         </Card>
       </div>
+      )}
 
       <h1 className="font-display text-[32px] font-bold tracking-tight leading-[1.05] mb-4">
-        {step === 'phone' && (
+        {step === 'phone' && (kept ? (
+          <>Keep your<br />shows<span className="text-accent">.</span></>
+        ) : (
           <>Be the critic<span className="text-accent">.</span><br />Own the moment<span className="text-accent">.</span></>
-        )}
+        ))}
         {step === 'code' && <>Check your<br />texts<span className="text-accent">.</span></>}
         {step === 'email' && <>Good to have<br />you back<span className="text-accent">.</span></>}
       </h1>
+
+      {kept && step === 'phone' && <KeptChips stash={kept} />}
 
       {step !== 'email' && (
         <>
@@ -97,6 +112,11 @@ function PhoneAuthPage() {
               onVerified={async userId => router.replace(await pathAfterSignIn(supabase, userId))}
             />
           </Card>
+          {kept && step === 'phone' && (
+            <Link href="/feed" className="mt-4 self-center text-[12px] text-ink-muted underline underline-offset-[3px]">
+              Not now
+            </Link>
+          )}
           {step === 'phone' && (
             <button type="button" onClick={() => switchStep('email')} className="mt-4 self-center text-[12px] text-ink-muted">
               Made your account with email? <span className="font-semibold text-accent">Sign in with email</span>
@@ -154,6 +174,59 @@ function PhoneAuthPage() {
           <Link href="/terms" className="underline underline-offset-[3px]">Terms</Link>
         </p>
       </footer>
+    </div>
+  )
+}
+
+// The top of the page for someone coming from Done in the Wrapped popup: up
+// to two of the shows they're about to keep, logs first, in place of the
+// usual collage.
+function KeptCollage({ stash }: { stash: WrappedStash }) {
+  const cards = [
+    ...stash.logs.map(log => ({
+      key: `log-${log.artist_id}`, kind: 'Logged', artist: log.artist_name, isoDate: log.show_date,
+      detail: <Stars score={computeShowScore(log.performance_rating, log.venue_rating)} size={13} />,
+    })),
+    ...stash.saves.map(show => ({
+      key: `save-${show.id}`, kind: 'Saved', artist: show.artist, isoDate: show.isoDate,
+      detail: <Place>{show.venue}</Place>,
+    })),
+  ].slice(0, 2)
+
+  if (cards.length === 0) return <div className="mt-5" />
+
+  return (
+    <div className={`relative ${cards.length > 1 ? 'h-[168px]' : 'h-[92px]'} mt-5 mb-4`} aria-hidden>
+      {cards.map((card, i) => (
+        <Card
+          key={card.key}
+          className={`absolute p-3 flex items-center gap-3 ${i === 0 ? 'left-0 right-8 top-0 -rotate-2' : 'left-10 right-0 top-[84px] rotate-[1.5deg]'}`}
+        >
+          <ArtistPhoto name={card.artist} className="w-14 h-14" iconSize={18}>
+            <DateTag isoDate={card.isoDate} />
+          </ArtistPhoto>
+          <div className="min-w-0 space-y-1">
+            <Label tone="accent">{card.kind}</Label>
+            <p className="font-display text-lg font-bold leading-none truncate">{card.artist}</p>
+            {card.detail}
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+function KeptChips({ stash }: { stash: WrappedStash }) {
+  const counts = countsOf(stash)
+  const chips = [
+    counts.logs > 0 && `${counts.logs} log${counts.logs === 1 ? '' : 's'}`,
+    counts.saves > 0 && `${counts.saves} saved show${counts.saves === 1 ? '' : 's'}`,
+    counts.follows > 0 && `${counts.follows} artist${counts.follows === 1 ? '' : 's'} followed`,
+  ].filter(Boolean) as string[]
+  if (chips.length === 0) return null
+  return (
+    <div className="-mt-1 mb-4 flex flex-wrap gap-1.5">
+      {chips.map(chip => <Chip key={chip} active>{chip}</Chip>)}
     </div>
   )
 }

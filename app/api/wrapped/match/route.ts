@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { searchArtists, showsForArtists, type ArtistMatch } from '@/lib/shows/repository'
+import { closestMatch, nameKey } from '@/lib/nameKey'
+import { windowEndIso } from '@/lib/dates'
+import type { Show } from '@/lib/ticketmaster'
+import type { MatchResult, WrappedArtist, WrappedCard, WrappedName, WrappedShow } from '@/lib/wrapped/types'
+
+// POST /api/wrapped/match - the names read off someone's Wrapped, matched to
+// Gigl's spelling, with each one's shows: what's coming up and what happened
+// in the past year (as far back as the catalogue keeps).
+//
+//   { names: [{ name, from: 'artists' | 'songs' }], lat?, lng? }
+//   -> { artists, upcoming, past }
+//
+// A screenshot is read exactly as printed, and Spotify's spelling isn't
+// always the catalogue's ("Fontaines DC" / "Fontaines D.C."), or the read
+// slips a letter. So each name is looked up loosely and, when nothing
+// matches it exactly, corrected to the closest name Gigl has (closestMatch,
+// the add-a-show form's "did you mean").
+//
+// Every show comes back, near or far. With lat/lng each carries its distance,
+// and the flow filters by its own Near me control without asking again.
+
+// supabase-js reads go in the Data Cache without this - see the search route.
+export const fetchCache = 'default-no-store'
+export const dynamic = 'force-dynamic'
+
+const MAX_NAMES = 16
+const CANDIDATES = 10
+
+function isName(value: unknown): value is WrappedName {
+  const entry = value as WrappedName
+  return !!entry && typeof entry.name === 'string' && entry.name.trim().length > 0
+    && (entry.from === 'artists' || entry.from === 'songs')
+}
+
+// What to search on when the whole name finds nothing: the start of its first
+// long word. A misread name usually starts right ("Fontains DC" still begins
+// "Font"), and searching on half the word lets a slipped letter later in it
+// through.
+function searchWord(name: string): string | null {
+  const word = name.split(/\s+/).find(w => nameKey(w).replace(/[^a-z0-9]/g, '').length >= 4)
+  if (!word) return null
+  // Half the word, so a slipped letter late in it still matches.
+  return word.slice(0, Math.max(4, Math.ceil(word.length / 2)))
+}
+
+async function resolve(read: string): Promise<{ name: string; corrected: boolean; imageUrl: string | null } | null> {
+  // A failed search throws, so the whole lookup fails rather than reporting
+  // every artist as "not in Gigl yet".
+  const key = nameKey(read)
+  const direct = await searchArtists(read, CANDIDATES)
+  const exact = direct.find(c => nameKey(c.name) === key)
+  if (exact) return { name: exact.name, corrected: false, imageUrl: exact.imageUrl }
+
+  const word = searchWord(read)
+  const loose: ArtistMatch[] = word ? await searchArtists(word, CANDIDATES * 2) : []
+  const candidates = [...direct, ...loose]
+  const looseExact = candidates.find(c => nameKey(c.name) === key)
+  if (looseExact) return { name: looseExact.name, corrected: false, imageUrl: looseExact.imageUrl }
+
+  const closest = closestMatch(read, candidates.map(c => c.name))
+  if (!closest) return null
+  const match = candidates.find(c => c.name === closest)
+  return { name: closest, corrected: true, imageUrl: match?.imageUrl ?? null }
+}
+
+function toWrappedShow(show: Show, wrappedArtist: string): WrappedShow {
+  return {
+    id:            show.id,
+    artist:        show.artist,
+    support:       show.support,
+    venue:         show.venue,
+    city:          show.city,
+    state:         show.state,
+    isoDate:       show.isoDate ?? null,
+    imageUrl:      show.imageUrl ?? null,
+    distanceMiles: show.distanceMiles,
+    wrappedArtist,
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => null) as { names?: unknown; lat?: unknown; lng?: unknown } | null
+  const names = Array.isArray(body?.names) ? body!.names.filter(isName).slice(0, MAX_NAMES) : []
+  if (names.length === 0) return NextResponse.json({ error: 'No artists to look up.' }, { status: 400 })
+
+  const lat = typeof body?.lat === 'number' && Math.abs(body.lat) <= 90 ? body.lat : null
+  const lng = typeof body?.lng === 'number' && Math.abs(body.lng) <= 180 ? body.lng : null
+  const from = lat != null && lng != null ? { lat, lng } : null
+
+  try {
+    const resolved = await Promise.all(names.map(entry => resolve(entry.name.trim())))
+
+    // Two reads can land on one Gigl artist (the same act on both cards, or
+    // two misreadings of it). The first, higher-ranked one keeps it.
+    const taken = new Set<string>()
+    const artists: WrappedArtist[] = names.map((entry, i) => {
+      const match = resolved[i]
+      const matchKey = match ? nameKey(match.name) : null
+      const matched = !!match && !taken.has(matchKey!)
+      if (matched) taken.add(matchKey!)
+      return {
+        read:      entry.name.trim(),
+        name:      matched ? match!.name : entry.name.trim(),
+        from:      entry.from as WrappedCard,
+        rank:      i + 1,
+        matched,
+        corrected: matched && match!.corrected,
+        imageUrl:  matched ? match!.imageUrl : null,
+      }
+    })
+
+    const matchedNames = artists.filter(a => a.matched).map(a => a.name)
+    const shows = await showsForArtists(matchedNames, from)
+
+    // A show with two of their artists on the bill is listed once, under
+    // whichever ranks higher.
+    const today = windowEndIso()
+    const seen = new Set<string>()
+    const upcoming: WrappedShow[] = []
+    const past: WrappedShow[] = []
+    for (const name of matchedNames) {
+      for (const show of shows.get(name) ?? []) {
+        if (seen.has(show.id) || !show.isoDate) continue
+        seen.add(show.id)
+        const row = toWrappedShow(show, name)
+        if (show.isoDate > today) upcoming.push(row)
+        else past.push(row)
+      }
+    }
+    upcoming.sort((a, b) => (a.isoDate ?? '').localeCompare(b.isoDate ?? '') || a.id.localeCompare(b.id))
+    past.sort((a, b) => (b.isoDate ?? '').localeCompare(a.isoDate ?? '') || a.id.localeCompare(b.id))
+
+    const result: MatchResult = { artists, upcoming, past }
+    return NextResponse.json(result)
+  } catch (err) {
+    console.error('[wrapped/match] failed:', err)
+    return NextResponse.json({ error: "Couldn't look up those artists. Try again." }, { status: 500 })
+  }
+}
