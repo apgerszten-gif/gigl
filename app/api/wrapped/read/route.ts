@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { nameKey } from '@/lib/nameKey'
-import type { ReadResult, WrappedCard, WrappedImage } from '@/lib/wrapped/types'
+import type { ReadResult, WrappedImage } from '@/lib/wrapped/types'
 
 // POST /api/wrapped/read - reads the artists off someone's Spotify Wrapped
 // screenshots (the Top artists and Top songs cards) with Claude.
@@ -22,8 +22,8 @@ export const maxDuration = 60
 
 const MODEL = 'claude-opus-5-5'
 
-// Two cards at most, each resized on the phone to well under this.
-const MAX_IMAGES = 2
+// One picture, resized on the phone to well under this.
+const MAX_IMAGES = 1
 const MAX_IMAGE_CHARS = 3_000_000
 const MAX_NAMES = 10
 
@@ -42,17 +42,12 @@ function allowRead(address: string): boolean {
   return true
 }
 
-const CARD_LABEL: Record<WrappedCard, string> = {
-  artists: 'Top artists card',
-  songs:   'Top songs card',
-}
+const INSTRUCTIONS = `This is a screenshot of someone's Spotify Wrapped, the yearly listening recap. Its summary card has a Top Artists column and a Top Songs column side by side.
 
-const INSTRUCTIONS = `These are screenshots from someone's Spotify Wrapped, the yearly listening recap.
+Top Artists column: list the artists in the order shown, most played first. A name ending in "..." was cut off to fit; give the full name if you know who it is, otherwise what is printed without the dots.
+Top Songs column: it lists song titles only, not who made them. Give the artist of each song, in song order, when you are confident who it is. Skip a song if you aren't sure, and don't repeat anyone.
 
-From the Top artists card, list the artists in the order shown, most played first.
-From the Top songs card, list every artist credited on the songs, in song order, without repeating anyone. Leave out the song titles.
-
-Copy each artist name exactly as it is printed, including capitals, accents and punctuation. Leave out numbers, play counts, minutes and anything that isn't an artist's name. If a picture isn't a Wrapped card, or has no names you can read, give an empty list for it. Set is_wrapped to false only if none of the pictures is a Spotify Wrapped card.`
+Copy artist names as they are properly written, with capitals, accents and punctuation. Leave out numbers, minutes, genres and anything that isn't an artist. Set is_wrapped to false only if the picture isn't a Spotify Wrapped card, and then leave both lists empty.`
 
 const OUTPUT_SCHEMA = {
   type: 'object',
@@ -68,7 +63,6 @@ const OUTPUT_SCHEMA = {
 function isImage(value: unknown): value is WrappedImage {
   const image = value as WrappedImage
   return !!image
-    && (image.card === 'artists' || image.card === 'songs')
     && typeof image.data === 'string'
     && image.data.length > 0
     && image.data.length <= MAX_IMAGE_CHARS
@@ -111,7 +105,6 @@ export async function POST(req: NextRequest) {
 
   const content: Anthropic.Beta.BetaContentBlockParam[] = []
   for (const image of images) {
-    content.push({ type: 'text', text: `${CARD_LABEL[image.card]}:` })
     content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image.data } })
   }
   content.push({ type: 'text', text: INSTRUCTIONS })

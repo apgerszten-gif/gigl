@@ -6,7 +6,6 @@
 export type WrappedCard = 'artists' | 'songs'
 
 export interface WrappedImage {
-  card:      WrappedCard
   // Base64 JPEG, without the data: prefix. Resized on the phone first
   // (lib/wrapped/image.ts), so it's a few hundred KB.
   data:      string
