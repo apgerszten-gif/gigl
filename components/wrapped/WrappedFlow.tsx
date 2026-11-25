@@ -17,7 +17,7 @@ import type { MatchResult, ReadResult, WrappedCard, WrappedName, WrappedShow } f
 import { WrappedPopup } from './WrappedPopup'
 import { WrappedUpload } from './WrappedUpload'
 import { WrappedLogSheet } from './WrappedLogSheet'
-import { CheckArtists, DoneButton, FlowScreen, WrappedResults, type ArtistCounts, type PlaceFilter, type ResultsTab } from './WrappedScreens'
+import { CheckArtists, FlowScreen, ResultsFooter, WrappedResults, type ArtistCounts, type PlaceFilter, type ResultsTab } from './WrappedScreens'
 import { btnPrimary } from '@/components/ui'
 
 // "Your top artists, live": the Wrapped popup and everything behind it,
@@ -82,6 +82,11 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
   }, [stage])
 
   const close = useCallback(() => setStage('closed'), [])
+
+  // Each result step starts at the top of its list.
+  useEffect(() => {
+    document.querySelector('[data-wrapped-screen]')?.scrollTo(0, 0)
+  }, [tab])
 
   // ── Screenshots ──────────────────────────────────────────────────────────
 
@@ -336,7 +341,21 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
   if (stage === 'results' && match) {
     return (
       <>
-        <FlowScreen title="Your Wrapped, live" onClose={close} footer={<DoneButton signedIn={signedIn} onDone={done} />}>
+        <FlowScreen
+          title="Your Wrapped, live"
+          onClose={close}
+          footer={
+            <ResultsFooter
+              tab={tab}
+              signedIn={signedIn}
+              loggedCount={past.filter(s => logs[s.id]).length}
+              pastCount={past.length}
+              onNext={() => setTab('past')}
+              onBack={() => setTab('upcoming')}
+              onDone={done}
+            />
+          }
+        >
           <WrappedResults
             tab={tab}
             onTab={setTab}

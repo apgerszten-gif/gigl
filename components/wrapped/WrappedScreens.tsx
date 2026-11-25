@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, X } from 'lucide-react'
-import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Segmented, Stars, Stat, btnPrimary, btnQuiet, btnSecondary, headerClass } from '@/components/ui'
+import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars, btnPrimary, btnQuiet, btnSecondary, headerClass } from '@/components/ui'
 import { UpcomingShowRows, type ListedShow, type RowText } from '@/components/ShowRows'
 import { computeShowScore } from '@/lib/rating'
 import type { GuestDraft } from '@/lib/pendingLogs'
@@ -18,7 +18,7 @@ export function FlowScreen({ title, onClose, children, footer }: {
   footer?: React.ReactNode
 }) {
   return (
-    <div className="fixed inset-0 z-[100] bg-paper text-ink overflow-y-auto">
+    <div data-wrapped-screen className="fixed inset-0 z-[100] bg-paper text-ink overflow-y-auto">
       <div className="max-w-md mx-auto min-h-full flex flex-col">
         <header className={headerClass}>
           <h1 className="flex-1 min-w-0 font-display text-[17px] font-bold tracking-tight truncate">{title}</h1>
@@ -169,17 +169,17 @@ export function WrappedResults({
 
   return (
     <>
-      <Card className="flex py-3">
-        <Stat value={artistCount} label="Artists" />
-        <div className="flex-1 flex border-l border-ink/10"><Stat value={upcoming.length} label="Coming up" /></div>
-        <div className="flex-1 flex border-l border-ink/10"><Stat value={past.length} label="Were you there?" /></div>
-      </Card>
-
-      <Segmented<ResultsTab>
-        options={[{ value: 'upcoming', label: 'Coming up' }, { value: 'past', label: 'Were you there?' }]}
-        value={tab}
-        onChange={onTab}
-      />
+      <div>
+        <Label tone="accent">Step {tab === 'upcoming' ? 1 : 2} of 2</Label>
+        <h2 className="mt-1 font-display text-[24px] font-bold tracking-tight leading-tight">
+          {tab === 'upcoming' ? 'Coming up' : 'Were you there?'}<span className="text-accent">.</span>
+        </h2>
+        <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+          {tab === 'upcoming'
+            ? `${upcoming.length} upcoming show${upcoming.length === 1 ? '' : 's'} by your ${artistCount} artists. Save the ones you want to go to. Next, you'll rate the shows you've already been to.`
+            : `${past.length} show${past.length === 1 ? '' : 's'} by your artists from the past year. Tap I was there on any you went to, and rate it.`}
+        </p>
+      </div>
 
       <div className="flex flex-wrap gap-1.5">
         <button type="button" onClick={() => onPlace('near')}>
@@ -223,9 +223,6 @@ export function WrappedResults({
         </>
       ) : (
         <>
-          <p className="text-[13px] leading-snug text-ink-muted">
-            Your top artists&apos; shows{place === 'near' && canFilterNearby ? ' near you' : ''} in the past year. Went to one? Log it here.
-          </p>
           {past.length > 0 ? (
             <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
               {past.map((show, i) => {
@@ -274,12 +271,32 @@ export function WrappedResults({
   )
 }
 
-export function DoneButton({ signedIn, onDone }: { signedIn: boolean; onDone: () => void }) {
+// The footer of the two result steps: Next from Coming up, then Done after
+// Were you there? (with a way back).
+export function ResultsFooter({ tab, signedIn, loggedCount, pastCount, onNext, onBack, onDone }: {
+  tab:         ResultsTab
+  signedIn:    boolean
+  loggedCount: number
+  pastCount:   number
+  onNext:      () => void
+  onBack:      () => void
+  onDone:      () => void
+}) {
+  if (tab === 'upcoming') {
+    return (
+      <button type="button" onClick={onNext} className={`${btnPrimary} w-full py-4 text-xs`}>
+        Next: were you there?
+      </button>
+    )
+  }
   return (
     <>
-      <button type="button" onClick={onDone} className={`${btnPrimary} w-full py-4 text-xs`}>Done</button>
+      <button type="button" onClick={onDone} className={`${btnPrimary} w-full py-4 text-xs`}>
+        {loggedCount === 0 && pastCount > 0 ? 'Skip and finish' : 'Done'}
+      </button>
+      <button type="button" onClick={onBack} className="w-full mt-2 py-1 text-[12px] font-semibold text-ink-muted">Back</button>
       {!signedIn && (
-        <p className="mt-2 text-center text-[11px] text-ink-faint">Next, your phone number, to keep your logs and saves.</p>
+        <p className="text-center text-[11px] text-ink-faint">Next, your phone number, to keep your logs and saves.</p>
       )}
     </>
   )
