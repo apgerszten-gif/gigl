@@ -168,10 +168,9 @@ export function DjDecks({ size = 20, strokeWidth = 1.75 }: IconProps) {
   )
 }
 
-// Square artist photo, printed warm: greyscale multiplied over the amber tint,
-// so a feed of mismatched press shots and phone photos reads as one print
-// run. The halftone placeholder when there's no photo. `children` (e.g. a
-// DateTag) sits outside the clipped frame so it can overhang the corner.
+// Square artist photo in its own colours, or the halftone placeholder when
+// there's no photo. `children` (e.g. a DateTag) sits outside the clipped
+// frame so it can overhang the corner.
 //
 // `icon` swaps what the placeholder draws. It stays a microphone everywhere
 // by default; an all-DJ bill passes DjDecks.
@@ -182,12 +181,12 @@ export function ArtistPhoto({ name, src, className, iconSize = 20, icon: Icon = 
 }) {
   return (
     <div className={`relative flex-shrink-0 ${className}`}>
-      <div className={`w-full h-full rounded-[10px] overflow-hidden ${src ? 'bg-tint isolate' : tintFor(name)}`}>
+      <div className={`w-full h-full rounded-[10px] overflow-hidden ${src ? 'bg-paper' : tintFor(name)}`}>
         {src ? (
           // Lazy: a festival day can be dozens of photos and a few MB, and on
           // festival signal the ones below the fold shouldn't hold up the
           // ones on screen.
-          <img src={src} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover grayscale contrast-125 mix-blend-multiply" />
+          <img src={src} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : (
           <div className="halftone w-full h-full flex items-center justify-center text-ink/45" aria-label={`${name} (no photo)`}>
             <Icon size={iconSize} strokeWidth={1.75} />
@@ -202,9 +201,9 @@ export function ArtistPhoto({ name, src, className, iconSize = 20, icon: Icon = 
 // Round profile photo; the initial when there's no photo.
 export function PersonPhoto({ name, src, className }: { name: string; src?: string | null; className: string }) {
   return (
-    <div className={`flex-shrink-0 rounded-full overflow-hidden ${src ? 'bg-tint isolate' : 'bg-paper'} flex items-center justify-center font-display font-bold text-ink-muted ${className}`}>
+    <div className={`flex-shrink-0 rounded-full overflow-hidden bg-paper flex items-center justify-center font-display font-bold text-ink-muted ${className}`}>
       {src ? (
-        <img src={src} alt={name} className="w-full h-full object-cover grayscale contrast-125 mix-blend-multiply" />
+        <img src={src} alt={name} className="w-full h-full object-cover" />
       ) : (
         (name.trim().charAt(0) || '?').toUpperCase()
       )}

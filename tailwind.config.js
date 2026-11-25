@@ -7,7 +7,7 @@ module.exports = {
   theme: {
     extend: {
       // Design system tokens - DESIGN.md is the source of truth. This is
-      // Mojave Night: a warm brown-black page, bone text, amber-ochre for
+      // Mojave Night: a warm brown-black page, bone text, earthy clay for
       // actions and stars, dusty rose for places. The token names are the
       // riso ones (paper, cream, ink), so every screen built from them turns
       // dark without being rewritten: paper is the page, cream the cards,
@@ -24,17 +24,16 @@ module.exports = {
           faint:   '#908573',         // timestamps, placeholders, inactive icons
         },
         accent: {
-          DEFAULT: '#C8803E',         // amber-ochre: CTAs, active states, the logo slash
-          hover:   '#D6914F',
-          light:   '#D9975A',         // small accent text on dark, where amber is too dim
+          DEFAULT: '#BF734A',         // earthy clay: CTAs, active states, the logo slash
+          hover:   '#CB8158',
+          light:   '#D3916A',         // small accent text on dark, where clay is too dim
         },
         terra: {
           DEFAULT: '#C08B7E',         // dusty rose: place pins and the place chips
           light:   '#D4A396',         // rose text on dark
         },
-        star:  '#C8803E',             // star ratings - stars only, no numbers or tiers
+        star:  '#BF734A',             // star ratings - stars only, no numbers or tiers
         tape:  '#CBB084',             // the tan tape date tags (DateTag)
-        tint:  '#D8A466',             // the warm second ink every photo is printed in
       },
       // Borders in ink are soft hairlines on the dark page, not full-strength
       // bone; an opacity modifier (border-ink/30) still sets its own alpha.
@@ -59,7 +58,7 @@ module.exports = {
       boxShadow: {
         riso:      '0 1px 0 rgba(0, 0, 0, 0.35)',
         'riso-lg': '0 10px 28px rgba(0, 0, 0, 0.5)',
-        marker:    'inset 0 -8px 0 rgba(200, 128, 62, 0.6)',
+        marker:    'inset 0 -8px 0 rgba(191, 115, 74, 0.6)',
       },
       letterSpacing: {
         label: '0.08em',
