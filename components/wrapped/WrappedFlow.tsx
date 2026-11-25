@@ -13,7 +13,7 @@ import { flushPendingLogs, type GuestDraft } from '@/lib/pendingLogs'
 import { prepareScreenshot, type PreparedImage } from '@/lib/wrapped/image'
 import { fetchWrappedPopup, markPopupSeen, popupIsLive, popupSeen } from '@/lib/wrapped/settings'
 import { markStashDone, queueLog, readStash, stashFollows, stashLog, stashSave, stashUnsave } from '@/lib/wrapped/stash'
-import type { MatchResult, ReadResult, WrappedCard, WrappedName, WrappedShow } from '@/lib/wrapped/types'
+import type { MatchResult, ReadResult, WrappedName, WrappedShow } from '@/lib/wrapped/types'
 import { WrappedPopup } from './WrappedPopup'
 import { WrappedUpload } from './WrappedUpload'
 import { WrappedLogSheet } from './WrappedLogSheet'
@@ -43,7 +43,7 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
   const signedIn = !!user
 
   const [stage, setStage] = useState<Stage>('closed')
-  const [images, setImages] = useState<Partial<Record<WrappedCard, PreparedImage>>>({})
+  const [image, setImage] = useState<PreparedImage | null>(null)
   const [reading, setReading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [names, setNames] = useState<WrappedName[]>([])
@@ -90,14 +90,13 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
 
   // ── Screenshots ──────────────────────────────────────────────────────────
 
-  async function pick(card: WrappedCard, file: File) {
+  async function pick(file: File) {
     setError(null)
     try {
       const prepared = await prepareScreenshot(file)
-      setImages(prev => {
-        const old = prev[card]
-        if (old) URL.revokeObjectURL(old.preview)
-        return { ...prev, [card]: prepared }
+      setImage(prev => {
+        if (prev) URL.revokeObjectURL(prev.preview)
+        return prepared
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't open that picture.")
@@ -120,17 +119,14 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
   }, [coords])
 
   async function read() {
-    const sent = (['artists', 'songs'] as WrappedCard[])
-      .filter(card => images[card])
-      .map(card => ({ card, data: images[card]!.data }))
-    if (sent.length === 0) return
+    if (!image) return
     setReading(true)
     setError(null)
     try {
       const res = await fetch('/api/wrapped/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: sent }),
+        body: JSON.stringify({ images: [{ data: image.data }] }),
       })
       const body = await res.json().catch(() => null) as (ReadResult & { error?: string }) | null
       if (!res.ok || !body) throw new Error(body?.error ?? "Couldn't read those screenshots. Try again.")
@@ -141,7 +137,7 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
       ]
       if (list.length === 0) {
         throw new Error(body.notWrapped
-          ? "Those don't look like Wrapped cards. Screenshot Top artists and Top songs in your Wrapped, then add them here."
+          ? "That doesn't look like a Wrapped card. Screenshot the card that lists your Top Artists and Top Songs, then add it here."
           : "Couldn't find any artists' names in those. Try a clearer screenshot.")
       }
 
@@ -311,7 +307,7 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
   }
 
   if (stage === 'upload') {
-    return <WrappedUpload images={images} reading={reading} error={error} onPick={pick} onRead={read} onClose={close} />
+    return <WrappedUpload image={image} reading={reading} error={error} onPick={pick} onRead={read} onClose={close} />
   }
 
   if (stage === 'check' && match) {

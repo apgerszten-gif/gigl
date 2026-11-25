@@ -37,7 +37,7 @@ export function WrappedPopup({ signedIn, onStart, onDismiss }: {
           Your top artists, <span className="text-accent">live.</span>
         </h2>
         <p className="mt-2 text-[13px] leading-snug text-ink-muted">
-          Add your Spotify Wrapped screenshots. We&apos;ll find who&apos;s playing near you, and the shows you might have been to.
+          Add a screenshot of your Spotify Wrapped. We&apos;ll find who&apos;s playing near you, and the shows you might have been to.
         </p>
 
         <button type="button" onClick={onStart} className={`${btnPrimary} w-full mt-4 py-3.5 text-xs`}>
@@ -54,25 +54,29 @@ export function WrappedPopup({ signedIn, onStart, onDismiss }: {
   )
 }
 
-// Two tilted cards standing in for the two screenshots it asks for. Drawn,
+// A tilted card standing in for the one screenshot it asks for. Drawn,
 // not Spotify's own artwork.
 function ScreenshotPair() {
   return (
     <div className="flex justify-center pt-1" aria-hidden="true">
-      <MiniCard label="Top artists" className="-rotate-6 translate-x-2 bg-accent" />
-      <MiniCard label="Top songs" className="rotate-6 -translate-x-2 translate-y-1 bg-terra" />
+      <MiniCard />
     </div>
   )
 }
 
-function MiniCard({ label, className }: { label: string; className: string }) {
+function MiniCard() {
   return (
-    <div className={`relative w-[62px] h-[104px] rounded-card border-1.5 border-ink shadow-riso overflow-hidden ${className}`}>
+    <div className="relative w-[110px] h-[104px] rounded-card border-1.5 border-ink shadow-riso overflow-hidden bg-accent -rotate-3">
       <div className="halftone absolute inset-0 opacity-60" />
-      <p className="relative px-1.5 pt-1.5 text-[7.5px] font-bold uppercase leading-tight tracking-label text-cream">{label}</p>
-      <div className="absolute inset-x-1.5 bottom-2 space-y-1">
-        {[80, 62, 72, 54].map(w => (
-          <div key={w} className="h-[3px] rounded-full bg-cream/70" style={{ width: `${w}%` }} />
+      <div className="absolute inset-x-2 top-2 h-8 rounded bg-cream/25" />
+      <div className="absolute inset-x-2 bottom-2 grid grid-cols-2 gap-2">
+        {['Top artists', 'Top songs'].map(label => (
+          <div key={label} className="space-y-1">
+            <p className="text-[6px] font-bold uppercase leading-none tracking-label text-cream">{label}</p>
+            {[90, 70, 80, 60].map(w => (
+              <div key={w} className="h-[3px] rounded-full bg-cream/70" style={{ width: `${w}%` }} />
+            ))}
+          </div>
         ))}
       </div>
     </div>
