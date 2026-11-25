@@ -65,7 +65,7 @@ export function CheckArtists({ artists, counts, ticked, photo, nearby, onToggle 
   return (
     <>
       <div>
-        <h2 className="font-display text-[26px] font-bold tracking-tight leading-tight">
+        <h2 className="font-display text-[24px] font-bold tracking-tight leading-tight">
           We found {artists.length} artist{artists.length === 1 ? '' : 's'}<span className="text-accent">.</span>
         </h2>
         <p className="mt-1 text-[13px] leading-snug text-ink-muted">
