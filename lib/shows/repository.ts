@@ -394,6 +394,18 @@ export async function searchVenues(keyword: string, limit: number): Promise<Venu
 // on the bill as support. The name match is exact (ignoring case), because
 // "Turnstile" and "Turnstile Tribute Band" are different pages.
 export async function showsByArtist(name: string): Promise<Show[]> {
+  return (await artistShowRows(name)).map(row => toShow(row))
+}
+
+// The same, for each of several artists at once: the Wrapped flow's lists
+// (app/api/wrapped/match). Keyed by the name as given. With `from`, each show
+// carries its distance from there, for the flow's Near me filter.
+export async function showsForArtists(names: string[], from?: Coords | null): Promise<Map<string, Show[]>> {
+  const found = await Promise.all(names.map(name => artistShowRows(name)))
+  return new Map(names.map((name, i) => [name, found[i].map(row => toShow(row, from ?? undefined))]))
+}
+
+async function artistShowRows(name: string): Promise<ShowRow[]> {
   const exact = exactPattern(name)
   if (!exact) return []
 
@@ -416,7 +428,6 @@ export async function showsByArtist(name: string): Promise<Show[]> {
   for (const row of [...(headlining.data ?? []), ...(supporting.data ?? [])]) byId.set(row.id, row)
   return Array.from(byId.values())
     .sort((a, b) => (a.show_date ?? '').localeCompare(b.show_date ?? ''))
-    .map(row => toShow(row))
 }
 
 // Every show the catalogue has at one venue, soonest first. `city` and

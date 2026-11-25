@@ -1074,3 +1074,18 @@ create policy "artist_venue_follows_delete" on public.artist_venue_follows for d
 -- existing profiles_update policy already limits the write to your own row.
 -- Until this has run, the app keeps the time in the browser instead.
 alter table public.profiles add column if not exists notifications_seen_at timestamp with time zone;
+
+-- The Wrapped popup (components/wrapped/, lib/wrapped/).
+--
+-- Its switch is the wrapped_popup row in app_settings, written by /admin
+-- ({ "on": true, "since": "<when it was switched on>" }), so no table of
+-- its own. It runs to the end of that December (lib/wrapped/popup.ts).
+--
+-- The admin page's funnel for it (saw it, added screenshots, logged a show,
+-- signed up) is site_events rows of a third kind, 'wrapped', with the step
+-- in `source` (app/api/wrapped/event). Until this has run, those inserts
+-- fail and are only logged, and the funnel reads zero.
+alter table public.site_events drop constraint if exists site_events_kind_check;
+alter table public.site_events add constraint site_events_kind_check
+  check (kind in ('scan', 'visit', 'wrapped'));
+create index if not exists site_events_wrapped_idx on public.site_events (created_at) where kind = 'wrapped';

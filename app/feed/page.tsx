@@ -31,6 +31,7 @@ import { useArtistImages } from '@/lib/useArtistImages'
 import { useNearby } from '@/lib/useNearby'
 import { distanceInMiles } from '@/lib/geo'
 import { FeedNearMe } from '@/components/FeedNearMe'
+import { WrappedFlow } from '@/components/wrapped/WrappedFlow'
 
 const SUPABASE_STORAGE = 'https://djjqrjljgwnvwwzbbevp.supabase.co/storage/v1/object/public/show-photos'
 const FEED_CACHE_KEY = 'gigl_feed_cache'
@@ -492,6 +493,9 @@ function FeedInner() {
       </main>}
 
       <BottomNav showLogTip={showLogTip} onDismissLogTip={() => setShowLogTip(false)} />
+
+      {/* The Wrapped popup, once per person while it's switched on in /admin. */}
+      <WrappedFlow nearby={nearby} />
 
       {sharing && <ShareReviewSheet review={sharing} onClose={closeShare} />}
 

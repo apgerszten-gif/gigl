@@ -4,6 +4,8 @@
 // is a random value this browser makes up for itself, and the only other
 // thing recorded is which door they came in by.
 
+import type { WrappedStep } from './wrapped/types'
+
 export const VISIT_SOURCES = ['qr', 'share', 'direct'] as const
 export type VisitSource = typeof VISIT_SOURCES[number]
 
@@ -70,6 +72,17 @@ export function recordVisit() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ visitorId: visitorId(), source }),
+    keepalive: true,
+  }).catch(() => { /* a lost count is not worth an error */ })
+}
+
+// One step through the Wrapped popup (components/wrapped/), for the funnel on
+// the admin page. Same visitor id as the visit count, nothing else.
+export function recordWrappedStep(step: WrappedStep) {
+  fetch('/api/wrapped/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visitorId: visitorId(), step }),
     keepalive: true,
   }).catch(() => { /* a lost count is not worth an error */ })
 }
