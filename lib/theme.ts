@@ -39,8 +39,8 @@ const roo = (a: number) => `rgba(200,137,10,${a})`   // Bonnaroo amber
 // ── Shared fonts ───────────────────────────────────────────────────────────────
 
 const FONTS = {
-  serif: 'var(--font-space-grotesk), sans-serif',  // display / headings — self-hosted via next/font, see lib/fonts.ts
-  sans:  'var(--font-inter), sans-serif',          // body / UI — self-hosted via next/font, see lib/fonts.ts
+  serif: 'var(--font-fraunces), serif',  // display / headings — self-hosted via next/font, see lib/fonts.ts
+  sans:  'var(--font-instrument), sans-serif',     // body / UI — self-hosted via next/font, see lib/fonts.ts
 }
 
 // ── Warm Riso Zine (default) ───────────────────────────────────────────────────

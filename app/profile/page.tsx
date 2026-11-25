@@ -428,7 +428,7 @@ export default function ProfilePage() {
                     )}
 
                     <div className="p-3 flex items-center gap-3">
-                      <span className="font-display text-2xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
+                      <span className="font-slab text-2xl leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
                       <ArtistPhoto name={show.artist_name} src={artistImage(show.artist_name)} className="w-12 h-12" iconSize={16}>
                         <DateTag isoDate={show.show_date} />
                       </ArtistPhoto>
@@ -495,14 +495,14 @@ export default function ProfilePage() {
                               <img src={editPhotoPreview} alt="" className="block w-full max-h-[180px] object-cover" />
                             )}
                             <div className="absolute top-2 right-2 flex gap-1.5">
-                              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full bg-ink/80 px-2.5 py-1 text-[10px] font-semibold text-cream">
+                              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-ink">
                                 Replace
                               </button>
                               <button
                                 type="button"
                                 onClick={() => { setEditPhotoPreview(null); setEditPhotoFile(null) }}
                                 aria-label="Remove photo"
-                                className="w-6 h-6 rounded-full bg-ink/80 text-cream text-sm leading-none"
+                                className="w-6 h-6 rounded-full bg-black/70 text-ink text-sm leading-none"
                               >×</button>
                             </div>
                           </div>
@@ -562,14 +562,14 @@ export default function ProfilePage() {
                               <button
                                 type="button"
                                 onClick={() => deleteShow(show.id)}
-                                className="flex-1 rounded-card border-1.5 border-[#B03030]/30 bg-[#B03030]/10 py-2.5 text-[11px] font-bold text-[#B03030]"
+                                className="flex-1 rounded-card border-1.5 border-[#E0786B]/30 bg-[#E0786B]/10 py-2.5 text-[11px] font-bold text-[#E0786B]"
                               >Delete</button>
                             </>
                           ) : (
                             <button
                               type="button"
                               onClick={() => setConfirmDeleteId(show.id)}
-                              className="flex-1 rounded-card border-1.5 border-ink/15 bg-cream py-2.5 text-[11px] font-semibold text-[#B03030]/60"
+                              className="flex-1 rounded-card border-1.5 border-ink/15 bg-cream py-2.5 text-[11px] font-semibold text-[#E0786B]/60"
                             >Remove rating</button>
                           )}
                         </div>

@@ -39,7 +39,7 @@ export function PlaceFilter({ nearby, searchCity }: {
             if (!nearby.active) nearby.enable()
           }}
         >
-          <Chip active={nearMeOn}>
+          <Chip active={nearMeOn} tone="place">
             <span className="inline-flex items-center gap-1">
               <MapPin className="w-3 h-3" strokeWidth={2.5} />
               {nearby.status === 'locating' ? 'Locating…' : 'Near me'}
@@ -58,7 +58,7 @@ export function PlaceFilter({ nearby, searchCity }: {
             else setPickingCity(open => !open)
           }}
         >
-          <Chip active={searchCity.city != null}>
+          <Chip active={searchCity.city != null} tone="place">
             <span className="inline-flex items-center gap-1">
               <Building2 className="w-3 h-3" strokeWidth={2.5} />
               {searchCity.city ? placeName(searchCity.city) : 'Search city'}
@@ -74,7 +74,7 @@ export function PlaceFilter({ nearby, searchCity }: {
             aria-pressed={nearby.radiusMiles === miles}
             onClick={() => nearby.setRadius(miles)}
           >
-            <Chip active={nearby.radiusMiles === miles}>{miles} mi</Chip>
+            <Chip active={nearby.radiusMiles === miles} tone="place">{miles} mi</Chip>
           </button>
         ))}
       </div>

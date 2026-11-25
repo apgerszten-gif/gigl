@@ -325,7 +325,7 @@ export function TimelineList<T extends HistoryLog>({ groups, artistImage, mediaO
         <section key={group.year ?? 'undated'}>
           <div className="flex items-end justify-between gap-3 border-b-1.5 border-ink pb-1.5 mb-3">
             <div className="flex items-baseline gap-2 min-w-0">
-              <h2 className="font-display text-[28px] font-bold tracking-tight leading-none">{group.year ?? 'Undated'}</h2>
+              <h2 className="font-slab text-[30px] leading-none">{group.year ?? 'Undated'}</h2>
               <span className="text-[12px] text-ink-muted truncate">
                 {plural(group.items.length, 'show')}{group.venues > 0 ? ` · ${plural(group.venues, 'venue')}` : ''}
               </span>
@@ -411,7 +411,7 @@ function MediaStrip({ urls }: { urls: string[] }) {
           {isVideoUrl(url) ? (
             <>
               <video src={url} muted playsInline preload="metadata" className="w-full h-full object-cover" />
-              <span className="absolute inset-0 flex items-center justify-center text-cream">
+              <span className="absolute inset-0 flex items-center justify-center text-ink">
                 <Play className="w-5 h-5 drop-shadow" strokeWidth={2.25} fill="currentColor" />
               </span>
             </>
@@ -419,7 +419,7 @@ function MediaStrip({ urls }: { urls: string[] }) {
             <img src={url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
           )}
           {more > 0 && i === shown.length - 1 && (
-            <span className="absolute inset-0 bg-ink/60 flex items-center justify-center font-display text-base font-bold text-cream">
+            <span className="absolute inset-0 bg-black/60 flex items-center justify-center font-display text-base font-bold text-ink">
               +{more}
             </span>
           )}

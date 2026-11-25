@@ -4,23 +4,45 @@
 
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
+:root { color-scheme: dark; }
+
 body {
-  background: #EDE3D0;
-  color: #4A3528;
-  font-family: var(--font-inter), sans-serif;
+  background: #1B1612;
+  color: #EDE4D1;
+  font-family: var(--font-instrument), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Fraunces' soft, wonky cut: rounded terminals and the old-style italic
+   shapes that make it read as seventies print. Every headline gets it. */
+.font-display { font-variation-settings: 'SOFT' 100, 'WONK' 1; }
+
+/* Film grain over everything, the one texture Mojave Night keeps from the
+   riso zine. Fixed and click-through, so it never moves or catches a tap. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-image: url('/grain.svg');
+  background-size: 220px 220px;
+  opacity: 0.06;
+}
+
+/* The torn ends of the tan tape date tags (DateTag). */
+.tape-edge { clip-path: polygon(4% 0, 96% 6%, 100% 48%, 97% 100%, 3% 94%, 0 52%); }
+
 /* The dock's bottom padding: the home-indicator safe area less 20px. The
-   whole inset (about 34px on an iPhone) left a band of empty cream under the
+   whole inset (about 34px on an iPhone) left a band of empty space under the
    tab labels; this keeps them just clear of the indicator line instead. */
 .safe-bottom { padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - 20px)); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Riso halftone dots - the placeholder texture for missing photos (DESIGN.md). */
+/* Halftone dots - the placeholder texture for missing photos (DESIGN.md). */
 .halftone {
-  background-image: radial-gradient(rgba(74, 53, 40, 0.22) 1px, transparent 1.3px);
+  background-image: radial-gradient(rgba(237, 228, 209, 0.18) 1px, transparent 1.3px);
   background-size: 5px 5px;
 }
 
@@ -29,7 +51,7 @@ body {
   100% { background-position:  200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, #EDE3D0 25%, #FAF3E2 50%, #EDE3D0 75%);
+  background: linear-gradient(90deg, #211A15 25%, #2E261F 50%, #211A15 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
