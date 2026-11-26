@@ -13,6 +13,7 @@ import { FESTIVAL_ARTISTS } from './festivalArtists'
 const ADDED_BY_HAND = [
   'Maribou State',
   'Nine Inch Nails',
+  'Adam Ten',
 ]
 
 export const KNOWN_ARTISTS: readonly string[] = (() => {
