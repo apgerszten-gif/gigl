@@ -15,21 +15,9 @@ const LINES = [
   'Damn… saucy',
   'Ok, edgelord',
   "Wow, you're tastemaxxing right now",
-  'The algorithm is blushing',
-  'Ahh, a person of culture',
   'Certified crate digger',
-  'No skips. Respect.',
-  'Big main-character energy',
-  'Your playlist has a past',
-  'Tell your therapist about track 4',
-  'Bold of you to play that on repeat',
-  'Reading between the bass lines',
-  'Sir, this is a Wednesday',
-  'Finding the ones who would, in fact, mosh',
-  'Spotify knows too much about you',
-  'Oh, so you listen to *that* at 2am',
-  'Ranking your guilty pleasures (no judgment)',
-  'Tuning the crowd noise',
+  "It's time to start therapy, my friend",
+  "Sir, this is a Wendy's",
 ]
 
 const DANCERS = [Guitar, Headphones, Disc3, MicVocal, Drum, Music2, Radio, AudioLines]
