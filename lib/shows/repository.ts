@@ -12,7 +12,7 @@ import { formatShowDate, retainStartIso, upcomingEndIso, windowEndIso, windowSta
 import { nameKey } from '../nameKey'
 import { boundingBox, distanceInMiles, type Coords, type NamedPlace } from '../geo'
 import { SYNC_CITIES } from './cities'
-import { TOP_ARTISTS } from './topArtists'
+import { KNOWN_ARTISTS } from './knownArtists'
 import type { Show, SyncShow } from '../ticketmaster'
 
 // Matches the `shows` table's columns; the API layer maps this to the `Show`
@@ -351,12 +351,12 @@ export async function searchArtists(keyword: string, limit: number): Promise<Art
   for (const row of catalogue.data ?? []) add(row.artist, row.id, row.image_url)
   for (const row of logged.data ?? []) add(row.artist_name, row.artist_id, null)
 
-  // The most-streamed artists are always an option, touring or not (see
-  // topArtists.ts). One already found keeps its show count; one with nothing
+  // The most-streamed artists and the big festivals' lineups are always an option, touring or not (see
+  // knownArtists.ts). One already found keeps its show count; one with nothing
   // in the catalogue comes back with none.
   const wanted = nameKey(trimmed)
   const known = new Set(Array.from(found.keys()))
-  const listed = TOP_ARTISTS
+  const listed = KNOWN_ARTISTS
     .filter(name => !known.has(nameKey(name)) && nameKey(name).includes(wanted))
     .map(name => ({ name, shows: 0, imageUrl: null as string | null, rank: matchRank(name, keyword) }))
 
