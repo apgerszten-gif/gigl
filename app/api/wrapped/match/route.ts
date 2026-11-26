@@ -10,7 +10,7 @@ import type { MatchResult, WrappedArtist, WrappedCard, WrappedName, WrappedShow 
 // Gigl's spelling, with each one's shows: what's coming up and what happened
 // in the past year (as far back as the catalogue keeps).
 //
-//   { names: [{ name, from: 'artists' | 'songs' }], lat?, lng? }
+//   { names: [{ name, from: 'artists' | 'songs' | 'typed' }], lat?, lng? }
 //   -> { artists, upcoming, past }
 //
 // A screenshot is read exactly as printed, and Spotify's spelling isn't
@@ -32,7 +32,7 @@ const CANDIDATES = 10
 function isName(value: unknown): value is WrappedName {
   const entry = value as WrappedName
   return !!entry && typeof entry.name === 'string' && entry.name.trim().length > 0
-    && (entry.from === 'artists' || entry.from === 'songs')
+    && (entry.from === 'artists' || entry.from === 'songs' || entry.from === 'typed')
 }
 
 // What to search on when the whole name finds nothing: the start of its first
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
   const from = lat != null && lng != null ? { lat, lng } : null
 
   try {
-    const resolved = await Promise.all(names.map(entry => resolve(entry.name.trim(), entry.from === 'artists')))
+    const resolved = await Promise.all(names.map(entry => resolve(entry.name.trim(), entry.from !== 'songs')))
 
     // Two reads can land on one Gigl artist (the same act on both cards, or
     // two spellings of it). The first, higher-ranked one keeps it and the
