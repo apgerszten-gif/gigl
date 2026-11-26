@@ -10,8 +10,10 @@ import { WrappedLoading } from './WrappedLoading'
 // Adding the screenshot: one picture of the Wrapped summary card, which has
 // Top Artists and Top Songs side by side. The artists come from both columns.
 
-export function WrappedUpload({ image, reading, error, onPick, onRead, onClose }: {
+export function WrappedUpload({ image, another = false, reading, error, onPick, onRead, onClose }: {
   image:   PreparedImage | null
+  // Adding to a list that's already made, rather than starting one.
+  another?: boolean
   reading: boolean
   error:   string | null
   onPick:  (file: File) => void
@@ -31,8 +33,10 @@ export function WrappedUpload({ image, reading, error, onPick, onRead, onClose }
 
   return (
     <Sheet
-      title="Add your Wrapped"
-      blurb="Screenshot the card in your Wrapped that lists your Top Artists and Top Songs side by side."
+      title={another ? 'Add another screenshot' : 'Add your Wrapped'}
+      blurb={another
+        ? "Got another one? Its artists get added to your list."
+        : 'Screenshot the card in your Wrapped that lists your Top Artists and Top Songs side by side.'}
       onClose={onClose}
     >
       <div className="space-y-4">
@@ -47,6 +51,11 @@ export function WrappedUpload({ image, reading, error, onPick, onRead, onClose }
             e.target.value = ''
           }}
         />
+
+        <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
+          <span className="font-semibold text-ink">Where to find it:</span> near the end of your Wrapped there&apos;s a summary card
+          with your top 5 artists, top 5 songs, minutes listened and top genre. Take a screenshot of that one.
+        </p>
 
         {image ? (
           <div>
