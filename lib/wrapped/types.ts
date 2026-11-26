@@ -3,7 +3,9 @@
 // turns names into Gigl's shows.
 
 // Which Wrapped card a screenshot is of. The upload sheet has a slot for each.
-export type WrappedCard = 'artists' | 'songs'
+// Where a name came from: the Top Artists column, the Top Songs column, or
+// typed in by the person.
+export type WrappedCard = 'artists' | 'songs' | 'typed'
 
 export interface WrappedImage {
   // Base64 JPEG, without the data: prefix. Resized on the phone first
