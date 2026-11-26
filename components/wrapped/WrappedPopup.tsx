@@ -37,7 +37,7 @@ export function WrappedPopup({ signedIn, onStart, onDismiss }: {
           Your top artists, <span className="text-accent">live.</span>
         </h2>
         <p className="mt-2 text-[13px] leading-snug text-ink-muted">
-          Add a screenshot of your Spotify Wrapped. We&apos;ll find who&apos;s playing near you, and the shows you might have been to.
+          Add a screenshot of your Spotify Wrapped or Apple Music Replay. We&apos;ll find who&apos;s playing near you, and the shows you might have been to.
         </p>
 
         <button type="button" onClick={onStart} className={`${btnPrimary} w-full mt-4 py-3.5 text-xs`}>

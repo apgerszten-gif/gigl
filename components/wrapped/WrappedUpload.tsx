@@ -7,8 +7,10 @@ import { ErrorNote, btnPrimary } from '@/components/ui'
 import type { PreparedImage } from '@/lib/wrapped/image'
 import { WrappedLoading } from './WrappedLoading'
 
-// Adding the screenshot: one picture of the Wrapped summary card, which has
-// Top Artists and Top Songs side by side. The artists come from both columns.
+// Adding a screenshot: Spotify's Wrapped summary card (Top Artists and Top
+// Songs side by side) is the best one, but a Spotify Top Artists or Top Songs
+// card, or an Apple Music Replay Top Artists, Top Songs or Top Albums screen,
+// reads too, even cropped or partial.
 
 export function WrappedUpload({ image, another = false, reading, error, onPick, onRead, onClose }: {
   image:   PreparedImage | null
@@ -36,7 +38,7 @@ export function WrappedUpload({ image, another = false, reading, error, onPick, 
       title={another ? 'Add another screenshot' : 'Add your Wrapped'}
       blurb={another
         ? "Got another one? Its artists get added to your list."
-        : 'Screenshot the card in your Wrapped that lists your Top Artists and Top Songs side by side.'}
+        : 'Screenshot your Spotify Wrapped or Apple Music Replay. Top artists, top songs or top albums all work.'}
       onClose={onClose}
     >
       <div className="space-y-4">
@@ -53,8 +55,10 @@ export function WrappedUpload({ image, another = false, reading, error, onPick, 
         />
 
         <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
-          <span className="font-semibold text-ink">Where to find it:</span> near the end of your Wrapped there&apos;s a summary card
-          with your top 5 artists, top 5 songs, minutes listened and top genre. Take a screenshot of that one.
+          <span className="font-semibold text-ink">Best one:</span> Spotify&apos;s summary card near the end of your Wrapped, with
+          your top 5 artists and top 5 songs side by side. Or any single Top Artists, Top Songs or Top Albums screen. It doesn&apos;t
+          have to be perfect.
+          <span className="mt-1.5 block font-semibold text-accent">Team Apple? Your Replay works too. We don&apos;t pick sides in the streaming wars.</span>
         </p>
 
         {image ? (
@@ -76,8 +80,8 @@ export function WrappedUpload({ image, another = false, reading, error, onPick, 
             className="w-full h-56 rounded-card border-1.5 border-dashed border-accent bg-accent/5 flex flex-col items-center justify-center gap-2 px-6 text-center text-[13px] font-semibold"
           >
             <ImagePlus className="w-7 h-7 text-accent" strokeWidth={1.75} />
-            Add your Wrapped screenshot
-            <span className="text-[11px] font-normal text-ink-muted">The card with Top Artists on the left and Top Songs on the right</span>
+            Add your screenshot
+            <span className="text-[11px] font-normal text-ink-muted">Spotify Wrapped or Apple Music Replay</span>
           </button>
         )}
 

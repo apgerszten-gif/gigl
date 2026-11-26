@@ -26,7 +26,8 @@ const MODEL = 'claude-opus-5-5'
 // One picture, resized on the phone to well under this.
 const MAX_IMAGES = 1
 const MAX_IMAGE_CHARS = 3_000_000
-const MAX_NAMES = 10
+// Apple Music's lists run longer than Spotify's five.
+const MAX_NAMES = 25
 
 // Per address, in this instance's memory. Instances come and go, so this is
 // a speed bump against a script, not an exact quota.
@@ -43,12 +44,21 @@ function allowRead(address: string): boolean {
   return true
 }
 
-const INSTRUCTIONS = `This is a screenshot of someone's Spotify Wrapped, the yearly listening recap. Its summary card has a Top Artists column and a Top Songs column side by side.
+const INSTRUCTIONS = `This is a screenshot from someone's year-end music recap: Spotify Wrapped or Apple Music Replay. It may be any of:
+- Spotify's summary card, with a Top Artists column and a Top Songs column side by side;
+- a Spotify Top Artists or Top Songs card on its own;
+- an Apple Music Replay Top Artists, Top Songs or Top Albums screen.
+It may be cropped, partial, scrolled, or show more or fewer than five rows. Read whatever is visible, and don't make up rows that aren't there.
 
-Top Artists column: list the artists in the order shown, most played first. A name ending in "..." was cut off to fit; give the full name if you know who it is, otherwise what is printed without the dots.
-Top Songs column: it lists song titles only, not who made them. Give each title exactly as printed, in order, and the artist you believe made it, or null if you aren't sure. A title may be printed without spaces or cut off with "...".
+top_artists: every artist ranked on an artists list, in the order shown, most played first. A name ending in "..." was cut off to fit; give the full name if you know who it is, otherwise what is printed without the dots.
 
-Copy artist names as they are properly written, with capitals, accents and punctuation. Leave out numbers, minutes, genres and anything that isn't an artist. Set is_wrapped to false only if the picture isn't a Spotify Wrapped card, and then leave both lists empty.`
+songs: every song AND every album ranked on a songs or albums list, in order. For each one give:
+- kind: "song" or "album";
+- title exactly as printed (a title may be printed without spaces or cut off with "...");
+- artists_printed: the artist or artists printed next to or under that title, if any. Split collaborators into separate entries ("Rhye & Adam Ten" is two artists, "Simon & Garfunkel" is one). Empty when no artist is shown, which is the case on Spotify's summary card;
+- artist_guess: when none is printed, the artist you believe made it, or null if you aren't sure.
+
+Write artist names as they are properly written, with capitals, accents and punctuation. Leave out numbers, minutes, genres, play counts and anything that isn't an artist or a song or album title. Set is_wrapped to false only if the picture isn't a Spotify Wrapped or Apple Music Replay screen at all, and then leave every list empty.`
 
 const OUTPUT_SCHEMA = {
   type: 'object',
@@ -60,10 +70,12 @@ const OUTPUT_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          title:        { type: 'string' },
-          artist_guess: { type: ['string', 'null'] },
+          kind:             { type: 'string', enum: ['song', 'album'] },
+          title:            { type: 'string' },
+          artists_printed:  { type: 'array', items: { type: 'string' } },
+          artist_guess:     { type: ['string', 'null'] },
         },
-        required: ['title', 'artist_guess'],
+        required: ['kind', 'title', 'artists_printed', 'artist_guess'],
         additionalProperties: false,
       },
     },
@@ -169,18 +181,21 @@ export async function POST(req: NextRequest) {
   const artists = cleanNames(parsed.top_artists)
 
   // The Top Songs column names songs, not artists: look each one up
-  // (lib/wrapped/songs.ts). At most five titles are on the card, and
-  // MusicBrainz allows one request a second, so this takes a few seconds.
+  // (lib/wrapped/songs.ts) unless the card prints the artist, in which case
+  // there's nothing to look up. MusicBrainz allows one request a second, so
+  // titles with no printed artist take a few seconds each.
   const songs: SongRead[] = (Array.isArray(parsed.songs) ? parsed.songs : [])
-    .map((s: { title?: unknown; artist_guess?: unknown }) => ({
-      title: typeof s?.title === 'string' ? s.title.trim().slice(0, 120) : '',
-      guess: typeof s?.artist_guess === 'string' && s.artist_guess.trim() ? s.artist_guess.trim().slice(0, 120) : null,
+    .map((s: { kind?: unknown; title?: unknown; artists_printed?: unknown; artist_guess?: unknown }): SongRead => ({
+      kind:    s?.kind === 'album' ? 'album' : 'song',
+      title:   typeof s?.title === 'string' ? s.title.trim().slice(0, 120) : '',
+      printed: cleanNames(s?.artists_printed),
+      guess:   typeof s?.artist_guess === 'string' && s.artist_guess.trim() ? s.artist_guess.trim().slice(0, 120) : null,
     }))
     .filter((s: SongRead) => s.title)
-    .slice(0, 8)
+    .slice(0, 25)
   const fromSongs = songs.length > 0 ? await resolveSongs(songs, artists).catch(err => {
     console.error('[wrapped/read] song lookup failed:', err)
-    return songs.flatMap(s => (s.guess ? [s.guess] : []))
+    return songs.flatMap(s => (s.printed.length > 0 ? s.printed : s.guess ? [s.guess] : []))
   }) : []
 
   const result: ReadResult = {
