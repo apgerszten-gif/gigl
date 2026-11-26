@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchArtists, showsForArtists, type ArtistMatch } from '@/lib/shows/repository'
 import { closestMatch, nameKey } from '@/lib/nameKey'
+import { TOP_ARTISTS } from '@/lib/shows/topArtists'
 import { windowEndIso } from '@/lib/dates'
 import type { Show } from '@/lib/ticketmaster'
 import type { MatchResult, WrappedArtist, WrappedCard, WrappedName, WrappedShow } from '@/lib/wrapped/types'
@@ -59,7 +60,9 @@ async function resolve(read: string): Promise<{ name: string; corrected: boolean
   const looseExact = candidates.find(c => nameKey(c.name) === key)
   if (looseExact) return { name: looseExact.name, corrected: false, imageUrl: looseExact.imageUrl }
 
-  const closest = closestMatch(read, candidates.map(c => c.name))
+  // The built-in top-1000 list is a candidate too, so a misread of an artist
+  // with nothing on sale ("Bonn Iver") still lands on the right name.
+  const closest = closestMatch(read, [...candidates.map(c => c.name), ...TOP_ARTISTS])
   if (!closest) return null
   const match = candidates.find(c => c.name === closest)
   return { name: closest, corrected: true, imageUrl: match?.imageUrl ?? null }
