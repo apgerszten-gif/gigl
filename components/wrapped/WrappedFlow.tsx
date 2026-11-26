@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { useArtistImages } from '@/lib/useArtistImages'
+import { nameKey } from '@/lib/nameKey'
+import type { NamedPlace } from '@/lib/geo'
 import type { Nearby } from '@/lib/useNearby'
 import { recordWrappedStep } from '@/lib/visitor'
 import { fetchSavedShowIds, saveShow, unsaveShow, type SavableShow } from '@/lib/savedShows'
@@ -48,7 +50,13 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
   const [error, setError] = useState<string | null>(null)
   const [names, setNames] = useState<WrappedName[]>([])
   const [match, setMatch] = useState<MatchResult | null>(null)
-  const [matchedNear, setMatchedNear] = useState(false)
+  // Where the distances in `match` were measured from, as originKey() below.
+  const [matchedFor, setMatchedFor] = useState('')
+  // A city typed in instead of the phone's location: the show may have been
+  // somewhere they aren't now.
+  const [city, setCity] = useState<NamedPlace | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [addNote, setAddNote] = useState<string | null>(null)
   const [ticked, setTicked] = useState<Set<string>>(new Set())
   const [tab, setTab] = useState<ResultsTab>('upcoming')
   const [place, setPlace] = useState<PlaceFilter>('near')
@@ -103,20 +111,73 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
     }
   }
 
-  const coords = nearby.coords
+  // Distances are measured from the city they picked, else their location.
+  const origin = city ? { lat: city.lat, lng: city.lng } : nearby.coords
+  const originKey = origin ? `${origin.lat.toFixed(2)},${origin.lng.toFixed(2)}` : ''
 
-  const lookUp = useCallback(async (list: WrappedName[], withCoords: boolean) => {
+  const postMatch = useCallback(async (list: WrappedName[], from: { lat: number; lng: number } | null): Promise<MatchResult> => {
     const res = await fetch('/api/wrapped/match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ names: list, ...(withCoords && coords ? { lat: coords.lat, lng: coords.lng } : {}) }),
+      body: JSON.stringify({ names: list, ...(from ? { lat: from.lat, lng: from.lng } : {}) }),
     })
     const body = await res.json().catch(() => null)
     if (!res.ok || !body?.artists) throw new Error(body?.error ?? "Couldn't look up those artists. Try again.")
-    setMatch(body as MatchResult)
-    setMatchedNear(withCoords && !!coords)
     return body as MatchResult
-  }, [coords])
+  }, [])
+
+  // New artists (another screenshot, or typed) join the list already made:
+  // their shows are added, nothing already there is looked up again.
+  function mergeMatch(prev: MatchResult, add: MatchResult): MatchResult {
+    const have = new Set(prev.artists.map(a => nameKey(a.name)))
+    const fresh = add.artists.filter(a => !have.has(nameKey(a.name))).map((a, i) => ({ ...a, rank: prev.artists.length + i + 1 }))
+    const merge = (a: WrappedShow[], b: WrappedShow[]) => {
+      const ids = new Set(a.map(s => s.id))
+      return [...a, ...b.filter(s => !ids.has(s.id))]
+    }
+    return {
+      artists:  [...prev.artists, ...fresh],
+      upcoming: merge(prev.upcoming, add.upcoming).sort((x, y) => (x.isoDate ?? '').localeCompare(y.isoDate ?? '') || x.id.localeCompare(y.id)),
+      past:     merge(prev.past, add.past).sort((x, y) => (y.isoDate ?? '').localeCompare(x.isoDate ?? '') || x.id.localeCompare(y.id)),
+    }
+  }
+
+  async function addNames(list: WrappedName[]) {
+    const known = new Set((match?.artists ?? []).map(a => nameKey(a.name)))
+    const fresh = list.filter(n => !known.has(nameKey(n.name)))
+    if (fresh.length === 0) return
+    const add = await postMatch(fresh, origin)
+    setMatch(prev => (prev ? mergeMatch(prev, add) : add))
+    setNames(prev => [...prev, ...fresh])
+    setTicked(prev => new Set([...Array.from(prev), ...add.artists.filter(a => a.matched).map(a => a.name)]))
+  }
+
+  // An artist the reading missed, typed in by the person.
+  async function addTyped(name: string) {
+    setAdding(true)
+    setAddNote(null)
+    try {
+      const add = await postMatch([{ name, from: 'typed' }], origin)
+      const found = add.artists[0]
+      if (!found?.matched) {
+        setAddNote(`Couldn't find "${name}" in Gigl. Check the spelling?`)
+        return
+      }
+      if ((match?.artists ?? []).some(a => nameKey(a.name) === nameKey(found.name))) {
+        setTicked(prev => new Set(prev).add(found.name))
+        setAddNote(`${found.name} is already on your list.`)
+        return
+      }
+      setMatch(prev => (prev ? mergeMatch(prev, add) : add))
+      setNames(prev => [...prev, { name, from: 'typed' }])
+      setTicked(prev => new Set(prev).add(found.name))
+      setAddNote(`Added ${found.name}${found.corrected ? ` (we read "${name}" as that)` : ''}.`)
+    } catch (err) {
+      setAddNote(err instanceof Error ? err.message : "Couldn't look that up. Try again.")
+    } finally {
+      setAdding(false)
+    }
+  }
 
   async function read() {
     if (!image) return
@@ -142,10 +203,19 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
       }
 
       recordWrappedStep('added')
-      const result = await lookUp(list, true)
+      if (match) {
+        // Another screenshot, added to the list already made.
+        await addNames(list)
+        setImage(null)
+        setStage('check')
+        return
+      }
+      const result = await postMatch(list, origin)
+      setMatch(result)
+      setMatchedFor(originKey)
       setNames(list)
       setTicked(new Set(result.artists.filter(a => a.matched).map(a => a.name)))
-      setPlace(coords ? 'near' : 'anywhere')
+      setPlace(origin ? 'near' : 'anywhere')
       setStage('check')
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't read those screenshots. Try again.")
@@ -154,16 +224,27 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
     }
   }
 
-  // Location turned up after the lists were made (the browser's prompt was
-  // still up): look again, so Near me has distances to go on.
+  // The place the distances are measured from has changed since the lists
+  // were made (a city picked, or the browser's location prompt answered):
+  // look again, so Near me has distances to go on.
   useEffect(() => {
-    if (!match || matchedNear || !coords || names.length === 0) return
-    lookUp(names, true).then(() => setPlace('near')).catch(() => { /* keep the lists we have */ })
-  }, [coords, match, matchedNear, names, lookUp])
+    if (!match || names.length === 0 || !origin || matchedFor === originKey) return
+    let live = true
+    postMatch(names, origin)
+      .then(result => {
+        if (!live) return
+        setMatch(result)
+        setMatchedFor(originKey)
+        setPlace('near')
+      })
+      .catch(() => { /* keep the lists we have */ })
+    return () => { live = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originKey, match, names, matchedFor])
 
   // ── What's shown ─────────────────────────────────────────────────────────
 
-  const canFilterNearby = matchedNear && !!coords
+  const canFilterNearby = !!origin && matchedFor === originKey
   const inPlace = useCallback((show: WrappedShow) => (
     place === 'anywhere' || !canFilterNearby
     || (show.distanceMiles != null && show.distanceMiles <= nearby.radiusMiles)
@@ -307,7 +388,19 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
   }
 
   if (stage === 'upload') {
-    return <WrappedUpload image={image} reading={reading} error={error} onPick={pick} onRead={read} onClose={close} />
+    // With a list already made, this is "add another screenshot": closing it
+    // goes back to the list rather than ending everything.
+    return (
+      <WrappedUpload
+        image={image}
+        another={!!match}
+        reading={reading}
+        error={error}
+        onPick={pick}
+        onRead={read}
+        onClose={match ? () => { setImage(null); setError(null); setStage('check') } : close}
+      />
+    )
   }
 
   if (stage === 'check' && match) {
@@ -329,6 +422,10 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
           photo={photo}
           nearby={canFilterNearby && place === 'near'}
           onToggle={toggleArtist}
+          onAddTyped={addTyped}
+          onAnother={() => { setImage(null); setError(null); setStage('upload') }}
+          adding={adding}
+          addNote={addNote}
         />
       </FlowScreen>
     )
@@ -356,12 +453,14 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
             tab={tab}
             onTab={setTab}
             place={place}
-            onPlace={next => {
-              if (next === 'near' && !nearby.active) nearby.enable()
-              setPlace(next)
-            }}
+            onPlace={setPlace}
             radiusMiles={nearby.radiusMiles}
             canFilterNearby={canFilterNearby}
+            city={city}
+            onPickCity={setCity}
+            // Back to the phone's own location, asking for it if it's off.
+            onClearCity={() => { setCity(null); if (!nearby.active) nearby.enable() }}
+            hasDeviceLocation={!!nearby.coords}
             artistCount={tickedArtists.length}
             upcoming={upcoming}
             past={past}

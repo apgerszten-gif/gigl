@@ -1,7 +1,10 @@
 'use client'
 
-import { Check, X } from 'lucide-react'
-import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars, btnPrimary, btnQuiet, btnSecondary, headerClass } from '@/components/ui'
+import { useState } from 'react'
+import { Check, ImagePlus, Loader2, Plus, X } from 'lucide-react'
+import { CityPicker, placeName } from '@/components/CityPicker'
+import type { NamedPlace } from '@/lib/geo'
+import { ArtistPhoto, Card, Chip, DateTag, EmptyState, Label, Place, Stars, btnPrimary, btnQuiet, btnSecondary, fieldInput, headerClass, inputBox } from '@/components/ui'
 import { UpcomingShowRows, type ListedShow, type RowText } from '@/components/ShowRows'
 import { computeShowScore } from '@/lib/rating'
 import type { GuestDraft } from '@/lib/pendingLogs'
@@ -49,17 +52,26 @@ function countLine(counts: ArtistCounts, nearby: boolean): string {
   return nearby ? 'Nothing near you right now' : 'No shows in Gigl right now'
 }
 
-export function CheckArtists({ artists, counts, ticked, photo, nearby, onToggle }: {
+export function CheckArtists({ artists, counts, ticked, photo, nearby, onToggle, onAddTyped, onAnother, adding, addNote }: {
   artists:  WrappedArtist[]
   counts:   Record<string, ArtistCounts>
   ticked:   Set<string>
   photo:    (name: string) => string | null
   nearby:   boolean
   onToggle: (name: string) => void
+  // Type in an artist the reading missed.
+  onAddTyped: (name: string) => Promise<void>
+  // Add another screenshot's artists to this list.
+  onAnother: () => void
+  adding:   boolean
+  // What happened to the last one typed ("Added Bon Iver", "Couldn't find...").
+  addNote:  string | null
 }) {
+  const [typed, setTyped] = useState('')
   const groups: { from: WrappedCard; label: string }[] = [
     { from: 'artists', label: 'From Top artists' },
     { from: 'songs',   label: 'From Top songs' },
+    { from: 'typed',   label: 'Added by you' },
   ]
 
   return (
@@ -121,6 +133,39 @@ export function CheckArtists({ artists, counts, ticked, photo, nearby, onToggle 
           </section>
         )
       })}
+
+      <section className="space-y-2">
+        <Label>Someone missing?</Label>
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            const name = typed.trim()
+            if (!name || adding) return
+            onAddTyped(name).then(() => setTyped(''))
+          }}
+          className="flex gap-2"
+        >
+          <label className={`${inputBox} flex-1 min-w-0 flex items-center px-3 py-2.5 focus-within:ring-2 focus-within:ring-accent/40`}>
+            <input
+              value={typed}
+              onChange={e => setTyped(e.target.value)}
+              placeholder="Type an artist"
+              enterKeyHint="done"
+              className={fieldInput}
+            />
+          </label>
+          <button type="submit" disabled={!typed.trim() || adding} className={`${btnSecondary} flex-shrink-0 gap-1 px-4 text-[11px]`}>
+            {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2.5} /> : <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />}
+            Add
+          </button>
+        </form>
+        {addNote && <p className="text-[12px] leading-snug text-ink-muted">{addNote}</p>}
+
+        <button type="button" onClick={onAnother} disabled={adding} className={`${btnQuiet} w-full py-3 text-[12px]`}>
+          <ImagePlus className="w-4 h-4" strokeWidth={1.75} />
+          Add another screenshot
+        </button>
+      </section>
     </>
   )
 }
@@ -128,10 +173,12 @@ export function CheckArtists({ artists, counts, ticked, photo, nearby, onToggle 
 // ── The two lists ────────────────────────────────────────────────────────────
 
 export type ResultsTab = 'upcoming' | 'past'
+// Where the lists are measured from: the phone's own location, or a city
+// they typed (the show may have been somewhere they aren't now), or nowhere.
 export type PlaceFilter = 'near' | 'anywhere'
 
 export function WrappedResults({
-  tab, onTab, place, onPlace, radiusMiles, canFilterNearby,
+  tab, onTab, place, onPlace, radiusMiles, canFilterNearby, city, onPickCity, onClearCity, hasDeviceLocation,
   artistCount, upcoming, past, rankOf, photo,
   savedIds, onToggleSave, logs, onLog,
   following, onFollowAll,
@@ -142,6 +189,11 @@ export function WrappedResults({
   onPlace:      (place: PlaceFilter) => void
   radiusMiles:  number
   canFilterNearby: boolean
+  // The city typed in instead of using the phone's location, if any.
+  city:         NamedPlace | null
+  onPickCity:   (city: NamedPlace) => void
+  onClearCity:  () => void
+  hasDeviceLocation: boolean
   artistCount:  number
   upcoming:     WrappedShow[]
   past:         WrappedShow[]
@@ -181,14 +233,16 @@ export function WrappedResults({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        <button type="button" onClick={() => onPlace('near')}>
-          <Chip active={place === 'near' && canFilterNearby}>Near me · {radiusMiles} mi</Chip>
-        </button>
-        <button type="button" onClick={() => onPlace('anywhere')}>
-          <Chip active={place === 'anywhere' || !canFilterNearby}>Anywhere</Chip>
-        </button>
-      </div>
+      <PlaceChips
+        place={place}
+        onPlace={onPlace}
+        radiusMiles={radiusMiles}
+        canFilterNearby={canFilterNearby}
+        city={city}
+        onPickCity={onPickCity}
+        onClearCity={onClearCity}
+        hasDeviceLocation={hasDeviceLocation}
+      />
 
       {tab === 'upcoming' ? (
         <>
@@ -268,6 +322,44 @@ export function WrappedResults({
         </>
       )}
     </>
+  )
+}
+
+function PlaceChips({ place, onPlace, radiusMiles, canFilterNearby, city, onPickCity, onClearCity, hasDeviceLocation }: {
+  place: PlaceFilter; onPlace: (place: PlaceFilter) => void; radiusMiles: number; canFilterNearby: boolean
+  city: NamedPlace | null; onPickCity: (city: NamedPlace) => void; onClearCity: () => void; hasDeviceLocation: boolean
+}) {
+  const [picking, setPicking] = useState(false)
+  const onCity = !!city && place === 'near' && canFilterNearby
+  const onMe = !city && place === 'near' && canFilterNearby
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5">
+        {(hasDeviceLocation || !city) && (
+          <button type="button" onClick={() => { onClearCity(); onPlace('near'); setPicking(false) }}>
+            <Chip active={onMe}>Near me · {radiusMiles} mi</Chip>
+          </button>
+        )}
+        {city && (
+          <button type="button" onClick={() => { onPlace('near'); setPicking(false) }}>
+            <Chip active={onCity}>{placeName(city)} · {radiusMiles} mi</Chip>
+          </button>
+        )}
+        <button type="button" onClick={() => setPicking(p => !p)}>
+          <Chip active={picking}>{city ? 'Change city' : 'Another city'}</Chip>
+        </button>
+        <button type="button" onClick={() => { onPlace('anywhere'); setPicking(false) }}>
+          <Chip active={place === 'anywhere' || !canFilterNearby}>Anywhere</Chip>
+        </button>
+      </div>
+      {picking && (
+        <CityPicker
+          onPick={picked => { onPickCity(picked); onPlace('near'); setPicking(false) }}
+          onClose={() => setPicking(false)}
+        />
+      )}
+    </div>
   )
 }
 
