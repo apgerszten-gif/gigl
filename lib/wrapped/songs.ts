@@ -98,6 +98,11 @@ export async function resolveSongs(songs: SongRead[], topArtists: string[]): Pro
   const have = new Set(top)
 
   for (const song of songs) {
+    // Claude says it's by someone already on the list: there's nobody new to
+    // find, and skipping the lookup keeps this fast (MusicBrainz allows one
+    // request a second).
+    if (song.guess && have.has(plain(song.guess))) continue
+
     let picked: string[] | null = null
     let candidates: Candidate[] = []
     try {
