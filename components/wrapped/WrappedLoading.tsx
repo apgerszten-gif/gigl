@@ -1,26 +1,55 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { AudioLines, Disc3, Drum, Guitar, Headphones, MicVocal, Music2, Radio } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Label } from '@/components/ui'
 
 // What shows while a Wrapped screenshot is being read and matched, which takes
-// ten seconds or more: a row of little icons dancing and a line that changes
-// every couple of seconds. The first line is always the same, the rest come
-// in a shuffled order each time, so a second try doesn't read the same.
+// ten seconds or more: stick figures dancing across a little stage and a line
+// that changes every couple of seconds. The first line is always the same,
+// the rest come in a shuffled order each time, so a second try doesn't read
+// the same.
 
 const LINES = [
-  'Checking your vibe',
+  'Quick vibe check',
   'Is this thing on?',
   'Damn… saucy',
   'Ok, edgelord',
-  "Wow, you're tastemaxxing right now",
+  'Tastemogger extraordinaire',
   'Certified crate digger',
   "It's time to start therapy, my friend",
   "Sir, this is a Wendy's",
 ]
 
-const DANCERS = [Guitar, Headphones, Disc3, MicVocal, Drum, Music2, Radio, AudioLines]
+// A stick figure, drawn in a 40x60 box: head, torso, two arms hinged at the
+// shoulders and two legs at the hips. The dance class (globals.css) says
+// which limbs move.
+type Dance = 'disco' | 'jacks' | 'twist'
+
+function StickFigure({ dance }: { dance: Dance }) {
+  return (
+    <svg viewBox="0 0 40 60" className={`stick-${dance} w-10 h-[60px] overflow-visible`} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <g className="stick-body">
+        <g className="stick-torso">
+          <circle cx="20" cy="9" r="5.5" />
+          <line x1="20" y1="15" x2="20" y2="34" />
+          <g className="stick-limb stick-armL"><polyline points="20,18 11,26 6,20" /></g>
+          <g className="stick-limb stick-armR"><polyline points="20,18 29,26 34,20" /></g>
+        </g>
+        <g className="stick-limb stick-legL"><polyline points="20,34 14,45 12,56" /></g>
+        <g className="stick-limb stick-legR"><polyline points="20,34 26,45 28,56" /></g>
+      </g>
+    </svg>
+  )
+}
+
+// Who's on stage: a dance, a colour, a direction, a speed, and where it
+// starts (negative delays put each one partway across from the first frame).
+const CAST: { dance: Dance; colour: string; toLeft: boolean; seconds: number; offset: number; at: string }[] = [
+  { dance: 'disco', colour: 'text-accent',    toLeft: false, seconds: 9,  offset: -2, at: '10%' },
+  { dance: 'jacks', colour: 'text-ink',       toLeft: true,  seconds: 11, offset: -6, at: '38%' },
+  { dance: 'twist', colour: 'text-terra',     toLeft: false, seconds: 13, offset: -9, at: '62%' },
+  { dance: 'disco', colour: 'text-ink-muted', toLeft: true,  seconds: 10, offset: -4, at: '84%' },
+]
 
 const LINE_MS = 2400
 
@@ -37,7 +66,6 @@ export function WrappedLoading() {
   // Shuffled after mount so the server's and the browser's first render match.
   const [order, setOrder] = useState<string[]>(LINES.slice(0, 1))
   const [step, setStep] = useState(0)
-  const dancers = useMemo(() => shuffled(DANCERS).slice(0, 5), [])
 
   useEffect(() => {
     setOrder([LINES[0], ...shuffled(LINES.slice(1))])
@@ -49,14 +77,20 @@ export function WrappedLoading() {
 
   return (
     <div className="py-6 text-center" role="status" aria-live="polite">
-      <div className="flex items-end justify-center gap-3.5 h-16" aria-hidden="true">
-        {dancers.map((Icon, i) => (
+      <div className="relative h-[72px] overflow-hidden border-b-1.5 border-ink/25" aria-hidden="true">
+        {CAST.map((f, i) => (
           <span
             key={i}
-            className="dance text-accent"
-            style={{ animationDelay: `${i * 0.17}s`, animationDuration: `${0.95 + (i % 3) * 0.15}s` }}
+            className={`stick-figure absolute bottom-0 -ml-5 ${f.colour}`}
+            style={{
+              left: f.at,
+              animation: `${f.toLeft ? 'stickTravelLeft' : 'stickTravelRight'} ${f.seconds}s linear ${f.offset}s infinite`,
+            }}
           >
-            <Icon className="w-8 h-8" strokeWidth={1.9} />
+            {/* Walking left means facing left. */}
+            <span className="block" style={f.toLeft ? { transform: 'scaleX(-1)' } : undefined}>
+              <StickFigure dance={f.dance} />
+            </span>
           </span>
         ))}
       </div>
