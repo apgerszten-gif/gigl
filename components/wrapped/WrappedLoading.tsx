@@ -5,17 +5,16 @@ import { Label } from '@/components/ui'
 
 // What shows while a Wrapped screenshot is being read and matched, which takes
 // ten seconds or more: stick figures dancing across a little stage and a line
-// that changes every couple of seconds. The first line is always the same,
-// the rest come in a shuffled order each time, so a second try doesn't read
-// the same.
+// that changes every couple of seconds, in a fixed order.
 
+// In the order they play, one after another, then round again.
 const LINES = [
   'Quick vibe check',
-  'Is this thing on?',
-  'Damn… saucy',
-  'Ok, edgelord',
-  'Tastemogger extraordinaire',
   'Certified crate digger',
+  'Is this thing on?',
+  'Ok, edgelord',
+  'Damn… saucy',
+  'Tastemogger extraordinaire',
   "It's time to start therapy, my friend",
   "Sir, this is a Wendy's",
 ]
@@ -53,27 +52,15 @@ const CAST: { dance: Dance; colour: string; toLeft: boolean; seconds: number; of
 
 const LINE_MS = 2400
 
-function shuffled<T>(items: T[]): T[] {
-  const copy = [...items]
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
-  }
-  return copy
-}
-
 export function WrappedLoading() {
-  // Shuffled after mount so the server's and the browser's first render match.
-  const [order, setOrder] = useState<string[]>(LINES.slice(0, 1))
   const [step, setStep] = useState(0)
 
   useEffect(() => {
-    setOrder([LINES[0], ...shuffled(LINES.slice(1))])
     const tick = setInterval(() => setStep(s => s + 1), LINE_MS)
     return () => clearInterval(tick)
   }, [])
 
-  const line = order[step % order.length]
+  const line = LINES[step % LINES.length]
 
   return (
     <div className="py-6 text-center" role="status" aria-live="polite">
