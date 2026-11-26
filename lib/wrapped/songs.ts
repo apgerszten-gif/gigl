@@ -45,10 +45,11 @@ interface Candidate { artists: string[] }
 async function musicBrainz(title: string): Promise<Candidate[]> {
   const escaped = title.replace(/(["\\])/g, '\\$1')
   const url = `https://musicbrainz.org/ws/2/recording?fmt=json&limit=40&query=${encodeURIComponent(`recording:"${escaped}"`)}`
-  // MusicBrainz answers 503 when it's being asked too fast (shared server
-  // addresses get it more than most), so wait and try again a couple of times.
+  // MusicBrainz answers 503 when it's being asked too fast, and shared server
+  // addresses (Vercel's) get it often. One retry, then the caller gives up on
+  // MusicBrainz for the rest of the request and leans on Deezer.
   let res: Response | null = null
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     await musicBrainzGate()
     res = await fetch(url, { headers: { 'User-Agent': MB_USER_AGENT }, signal: AbortSignal.timeout(8000) })
     if (res.status !== 503 && res.status !== 429) break
@@ -96,6 +97,7 @@ export async function resolveSongs(songs: SongRead[], topArtists: string[]): Pro
   const top = new Set(topArtists.map(plain))
   const found: string[] = []
   const have = new Set(top)
+  let musicBrainzRefused = false
 
   for (const song of songs) {
     // Claude says it's by someone already on the list: there's nobody new to
@@ -105,10 +107,13 @@ export async function resolveSongs(songs: SongRead[], topArtists: string[]): Pro
 
     let picked: string[] | null = null
     let candidates: Candidate[] = []
-    try {
-      candidates = await musicBrainz(song.title)
-    } catch (err) {
-      console.error(`[wrapped/songs] MusicBrainz failed for "${song.title}":`, err instanceof Error ? err.message : err)
+    if (!musicBrainzRefused) {
+      try {
+        candidates = await musicBrainz(song.title)
+      } catch (err) {
+        musicBrainzRefused = true
+        console.error(`[wrapped/songs] MusicBrainz failed for "${song.title}":`, err instanceof Error ? err.message : err)
+      }
     }
 
     const guess = song.guess ? plain(song.guess) : null
