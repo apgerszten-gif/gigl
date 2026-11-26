@@ -198,7 +198,7 @@ export function WrappedFlow({ nearby }: { nearby: Nearby }) {
       ]
       if (list.length === 0) {
         throw new Error(body.notWrapped
-          ? "That doesn't look like a Wrapped card. Screenshot the card that lists your Top Artists and Top Songs, then add it here."
+          ? "That doesn't look like a Spotify Wrapped or Apple Music Replay screen. Screenshot your top artists, songs or albums, then add it here."
           : "Couldn't find any artists' names in those. Try a clearer screenshot.")
       }
 

@@ -18,9 +18,14 @@
 // Self-contained (no app imports) so it can be run on its own to test.
 
 export interface SongRead {
-  title:  string
+  // An Apple Music Replay card also lists albums.
+  kind:    'song' | 'album'
+  title:   string
+  // The artists printed next to the title, when the card shows them (every
+  // card but Spotify's summary card). These are used as they are.
+  printed: string[]
   // Claude's own guess at the artist, or null when it wasn't sure.
-  guess:  string | null
+  guess:   string | null
 }
 
 const MB_GAP_MS = 1100
@@ -100,6 +105,22 @@ export async function resolveSongs(songs: SongRead[], topArtists: string[]): Pro
   let musicBrainzRefused = false
 
   for (const song of songs) {
+    // The card prints the artist: nothing to look up.
+    if (song.printed.length > 0) {
+      for (const name of song.printed) {
+        if (have.has(plain(name))) continue
+        have.add(plain(name))
+        found.push(name)
+      }
+      continue
+    }
+
+    // An album has no recording to search for: Claude's guess is all there is.
+    if (song.kind === 'album') {
+      if (song.guess && !have.has(plain(song.guess))) { have.add(plain(song.guess)); found.push(song.guess) }
+      continue
+    }
+
     // Claude says it's by someone already on the list: there's nobody new to
     // find, and skipping the lookup keeps this fast (MusicBrainz allows one
     // request a second).

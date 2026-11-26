@@ -26,7 +26,7 @@ import type { MatchResult, WrappedArtist, WrappedCard, WrappedName, WrappedShow 
 export const fetchCache = 'default-no-store'
 export const dynamic = 'force-dynamic'
 
-const MAX_NAMES = 16
+const MAX_NAMES = 30
 const CANDIDATES = 10
 
 function isName(value: unknown): value is WrappedName {
