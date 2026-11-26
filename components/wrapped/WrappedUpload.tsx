@@ -1,10 +1,11 @@
 'use client'
 
 import { useRef } from 'react'
-import { Check, ImagePlus, Loader2 } from 'lucide-react'
+import { Check, ImagePlus } from 'lucide-react'
 import { Sheet } from '@/components/Sheet'
 import { ErrorNote, btnPrimary } from '@/components/ui'
 import type { PreparedImage } from '@/lib/wrapped/image'
+import { WrappedLoading } from './WrappedLoading'
 
 // Adding the screenshot: one picture of the Wrapped summary card, which has
 // Top Artists and Top Songs side by side. The artists come from both columns.
@@ -18,6 +19,15 @@ export function WrappedUpload({ image, reading, error, onPick, onRead, onClose }
   onClose: () => void
 }) {
   const input = useRef<HTMLInputElement | null>(null)
+
+  // Reading and matching take a while: dancing icons and changing lines.
+  if (reading) {
+    return (
+      <Sheet title="Hang tight" onClose={onClose}>
+        <WrappedLoading />
+      </Sheet>
+    )
+  }
 
   return (
     <Sheet
@@ -46,7 +56,7 @@ export function WrappedUpload({ image, reading, error, onPick, onRead, onClose }
                 <Check className="w-4 h-4" strokeWidth={3} />
               </span>
             </div>
-            <button type="button" onClick={() => input.current?.click()} disabled={reading} className="w-full mt-2 text-[12px] text-ink-muted underline underline-offset-[3px]">
+            <button type="button" onClick={() => input.current?.click()} className="w-full mt-2 text-[12px] text-ink-muted underline underline-offset-[3px]">
               Use a different screenshot
             </button>
           </div>
@@ -64,20 +74,13 @@ export function WrappedUpload({ image, reading, error, onPick, onRead, onClose }
 
         {error && <ErrorNote>{error}</ErrorNote>}
 
-        {reading ? (
-          <button type="button" disabled className={`${btnPrimary} w-full py-4 text-xs`}>
-            <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} />
-            Reading your Wrapped…
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={image ? onRead : () => input.current?.click()}
-            className={`${btnPrimary} w-full py-4 text-xs`}
-          >
-            {image ? 'Find my shows' : 'Choose a screenshot'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={image ? onRead : () => input.current?.click()}
+          className={`${btnPrimary} w-full py-4 text-xs`}
+        >
+          {image ? 'Find my shows' : 'Choose a screenshot'}
+        </button>
 
         <p className="text-center text-[11px] leading-snug text-ink-faint">
           The screenshot is read once to find the artists&apos; names, then deleted. Nobody else sees it.
