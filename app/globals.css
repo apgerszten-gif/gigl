@@ -65,33 +65,32 @@ body {
 @keyframes stickTravelRight { from { left: -16%; } to { left: 104%; } }
 @keyframes stickTravelLeft  { from { left: 104%; } to { left: -16%; } }
 
-.stick-body, .stick-limb { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
 .stick-limb { transform-box: view-box; }
 .stick-armL { transform-origin: 20px 18px; }
 .stick-armR { transform-origin: 20px 18px; }
 .stick-legL { transform-origin: 20px 34px; }
 .stick-legR { transform-origin: 20px 34px; }
-.stick-torso { transform-origin: 20px 34px; transform-box: view-box; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.stick-torso { transform-origin: 20px 34px; transform-box: view-box; }
 
 /* Disco: one arm points at the ceiling while the other drops, feet step. */
-.stick-disco .stick-body { animation: stickBounce 0.6s; }
-.stick-disco .stick-armL { animation: stickArmUp 1.2s; }
-.stick-disco .stick-armR { animation: stickArmUpR 1.2s 0.6s; }
-.stick-disco .stick-legL { animation: stickLegL 1.2s; }
-.stick-disco .stick-legR { animation: stickLegR 1.2s; }
+.stick-disco .stick-body { animation: stickBounce 0.6s ease-in-out infinite; }
+.stick-disco .stick-armL { animation: stickArmUp 1.2s ease-in-out infinite; }
+.stick-disco .stick-armR { animation: stickArmUpR 1.2s ease-in-out 0.6s infinite; }
+.stick-disco .stick-legL { animation: stickLegL 1.2s ease-in-out infinite; }
+.stick-disco .stick-legR { animation: stickLegR 1.2s ease-in-out infinite; }
 /* Jumping jacks: arms and legs open and close together. */
-.stick-jacks .stick-body { animation: stickBounce 0.5s; }
-.stick-jacks .stick-armL { animation: stickArmUp 1s; }
-.stick-jacks .stick-armR { animation: stickArmUpR 1s; }
-.stick-jacks .stick-legL { animation: stickLegSplitL 1s; }
-.stick-jacks .stick-legR { animation: stickLegSplitR 1s; }
+.stick-jacks .stick-body { animation: stickBounce 0.5s ease-in-out infinite; }
+.stick-jacks .stick-armL { animation: stickArmUp 1s ease-in-out infinite; }
+.stick-jacks .stick-armR { animation: stickArmUpR 1s ease-in-out infinite; }
+.stick-jacks .stick-legL { animation: stickLegSplitL 1s ease-in-out infinite; }
+.stick-jacks .stick-legR { animation: stickLegSplitR 1s ease-in-out infinite; }
 /* Twist: the whole torso rocks, arms swinging against it. */
-.stick-twist .stick-body { animation: stickBounce 0.9s; }
-.stick-twist .stick-torso { animation: stickTwist 0.9s; }
-.stick-twist .stick-armL { animation: stickArmSwingL 0.9s; }
-.stick-twist .stick-armR { animation: stickArmSwingR 0.9s; }
-.stick-twist .stick-legL { animation: stickLegL 1.8s; }
-.stick-twist .stick-legR { animation: stickLegR 1.8s; }
+.stick-twist .stick-body { animation: stickBounce 0.9s ease-in-out infinite; }
+.stick-twist .stick-torso { animation: stickTwist 0.9s ease-in-out infinite; }
+.stick-twist .stick-armL { animation: stickArmSwingL 0.9s ease-in-out infinite; }
+.stick-twist .stick-armR { animation: stickArmSwingR 0.9s ease-in-out infinite; }
+.stick-twist .stick-legL { animation: stickLegL 1.8s ease-in-out infinite; }
+.stick-twist .stick-legR { animation: stickLegR 1.8s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   .stick-body, .stick-limb, .stick-torso, .stick-figure { animation: none !important; }
