@@ -248,7 +248,7 @@ export function NameMatchSections({ artists, venues }: { artists: ArtistMatch[];
 function ShowCount({ count }: { count: number }) {
   return (
     <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-label text-ink-faint">
-      {count} {count === 1 ? 'show' : 'shows'}
+      {count === 0 ? 'See their shows' : `${count} ${count === 1 ? 'show' : 'shows'}`}
     </p>
   )
 }
