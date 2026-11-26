@@ -47,15 +47,52 @@ body {
 }
 .score-pop { animation: scorePop 0.4s ease forwards; }
 
-/* The Wrapped loading screen's dancing icons (components/wrapped/WrappedLoading).
-   Each icon bobs and sways on its own beat; the delays are set inline. */
-@keyframes danceBob {
-  0%, 100% { transform: translateY(0) rotate(-8deg) scale(1); }
-  25%      { transform: translateY(-14px) rotate(6deg) scale(1.08); }
-  50%      { transform: translateY(0) rotate(8deg) scale(0.96); }
-  75%      { transform: translateY(-9px) rotate(-6deg) scale(1.05); }
-}
-.dance { animation: danceBob 1.1s ease-in-out infinite; transform-origin: 50% 90%; }
+/* The Wrapped loading screen's stick figures (components/wrapped/WrappedLoading).
+   Limbs are SVG groups rotating about their joints (transform-origin is in the
+   figure's own 40x60 coordinates); each dance is a class that sets which
+   limbs move and how. Figures also wander across the stage, in both
+   directions. */
+@keyframes stickBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes stickArmUp  { 0%, 100% { transform: rotate(-20deg); } 50% { transform: rotate(150deg); } }
+@keyframes stickArmUpR { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(-150deg); } }
+@keyframes stickArmSwingL { 0%, 100% { transform: rotate(-50deg); } 50% { transform: rotate(60deg); } }
+@keyframes stickArmSwingR { 0%, 100% { transform: rotate(50deg); } 50% { transform: rotate(-60deg); } }
+@keyframes stickLegL { 0%, 100% { transform: rotate(8deg); } 50% { transform: rotate(-28deg); } }
+@keyframes stickLegR { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(28deg); } }
+@keyframes stickLegSplitL { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(32deg); } }
+@keyframes stickLegSplitR { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(-32deg); } }
+@keyframes stickTwist { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+@keyframes stickTravelRight { from { left: -16%; } to { left: 104%; } }
+@keyframes stickTravelLeft  { from { left: 104%; } to { left: -16%; } }
+
+.stick-body, .stick-limb { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.stick-limb { transform-box: view-box; }
+.stick-armL { transform-origin: 20px 18px; }
+.stick-armR { transform-origin: 20px 18px; }
+.stick-legL { transform-origin: 20px 34px; }
+.stick-legR { transform-origin: 20px 34px; }
+.stick-torso { transform-origin: 20px 34px; transform-box: view-box; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+
+/* Disco: one arm points at the ceiling while the other drops, feet step. */
+.stick-disco .stick-body { animation: stickBounce 0.6s; }
+.stick-disco .stick-armL { animation: stickArmUp 1.2s; }
+.stick-disco .stick-armR { animation: stickArmUpR 1.2s 0.6s; }
+.stick-disco .stick-legL { animation: stickLegL 1.2s; }
+.stick-disco .stick-legR { animation: stickLegR 1.2s; }
+/* Jumping jacks: arms and legs open and close together. */
+.stick-jacks .stick-body { animation: stickBounce 0.5s; }
+.stick-jacks .stick-armL { animation: stickArmUp 1s; }
+.stick-jacks .stick-armR { animation: stickArmUpR 1s; }
+.stick-jacks .stick-legL { animation: stickLegSplitL 1s; }
+.stick-jacks .stick-legR { animation: stickLegSplitR 1s; }
+/* Twist: the whole torso rocks, arms swinging against it. */
+.stick-twist .stick-body { animation: stickBounce 0.9s; }
+.stick-twist .stick-torso { animation: stickTwist 0.9s; }
+.stick-twist .stick-armL { animation: stickArmSwingL 0.9s; }
+.stick-twist .stick-armR { animation: stickArmSwingR 0.9s; }
+.stick-twist .stick-legL { animation: stickLegL 1.8s; }
+.stick-twist .stick-legR { animation: stickLegR 1.8s; }
+
 @media (prefers-reduced-motion: reduce) {
-  .dance { animation: none; }
+  .stick-body, .stick-limb, .stick-torso, .stick-figure { animation: none !important; }
 }
