@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { nameKey } from '@/lib/nameKey'
+import { resolveSongs, type SongRead } from '@/lib/wrapped/songs'
 import type { ReadResult, WrappedImage } from '@/lib/wrapped/types'
 
 // POST /api/wrapped/read - reads the artists off someone's Spotify Wrapped
@@ -45,7 +46,7 @@ function allowRead(address: string): boolean {
 const INSTRUCTIONS = `This is a screenshot of someone's Spotify Wrapped, the yearly listening recap. Its summary card has a Top Artists column and a Top Songs column side by side.
 
 Top Artists column: list the artists in the order shown, most played first. A name ending in "..." was cut off to fit; give the full name if you know who it is, otherwise what is printed without the dots.
-Top Songs column: it lists song titles only, not who made them. Give the artist of each song, in song order, when you are confident who it is. Skip a song if you aren't sure, and don't repeat anyone.
+Top Songs column: it lists song titles only, not who made them. Give each title exactly as printed, in order, and the artist you believe made it, or null if you aren't sure. A title may be printed without spaces or cut off with "...".
 
 Copy artist names as they are properly written, with capitals, accents and punctuation. Leave out numbers, minutes, genres and anything that isn't an artist. Set is_wrapped to false only if the picture isn't a Spotify Wrapped card, and then leave both lists empty.`
 
@@ -54,9 +55,20 @@ const OUTPUT_SCHEMA = {
   properties: {
     is_wrapped:   { type: 'boolean' },
     top_artists:  { type: 'array', items: { type: 'string' } },
-    song_artists: { type: 'array', items: { type: 'string' } },
+    songs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title:        { type: 'string' },
+          artist_guess: { type: ['string', 'null'] },
+        },
+        required: ['title', 'artist_guess'],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ['is_wrapped', 'top_artists', 'song_artists'],
+  required: ['is_wrapped', 'top_artists', 'songs'],
   additionalProperties: false,
 }
 
@@ -143,7 +155,7 @@ export async function POST(req: NextRequest) {
   }
 
   const text = response.content.find((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')?.text
-  let parsed: { is_wrapped?: unknown; top_artists?: unknown; song_artists?: unknown } | null = null
+  let parsed: { is_wrapped?: unknown; top_artists?: unknown; songs?: unknown } | null = null
   try {
     parsed = text ? JSON.parse(text) : null
   } catch {
@@ -155,9 +167,25 @@ export async function POST(req: NextRequest) {
   }
 
   const artists = cleanNames(parsed.top_artists)
+
+  // The Top Songs column names songs, not artists: look each one up
+  // (lib/wrapped/songs.ts). At most five titles are on the card, and
+  // MusicBrainz allows one request a second, so this takes a few seconds.
+  const songs: SongRead[] = (Array.isArray(parsed.songs) ? parsed.songs : [])
+    .map((s: { title?: unknown; artist_guess?: unknown }) => ({
+      title: typeof s?.title === 'string' ? s.title.trim().slice(0, 120) : '',
+      guess: typeof s?.artist_guess === 'string' && s.artist_guess.trim() ? s.artist_guess.trim().slice(0, 120) : null,
+    }))
+    .filter((s: SongRead) => s.title)
+    .slice(0, 8)
+  const fromSongs = songs.length > 0 ? await resolveSongs(songs, artists).catch(err => {
+    console.error('[wrapped/read] song lookup failed:', err)
+    return songs.flatMap(s => (s.guess ? [s.guess] : []))
+  }) : []
+
   const result: ReadResult = {
     artists,
-    songArtists: cleanNames(parsed.song_artists, new Set(artists.map(nameKey))),
+    songArtists: cleanNames(fromSongs, new Set(artists.map(nameKey))),
     notWrapped:  parsed.is_wrapped === false,
   }
   return NextResponse.json(result)
