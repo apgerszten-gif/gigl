@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchArtists, showsForArtists, type ArtistMatch } from '@/lib/shows/repository'
-import { closestMatch, nameKey } from '@/lib/nameKey'
+import { editDistance, nameKey } from '@/lib/nameKey'
 import { KNOWN_ARTISTS } from '@/lib/shows/knownArtists'
 import { windowEndIso } from '@/lib/dates'
 import type { Show } from '@/lib/ticketmaster'
@@ -46,7 +46,16 @@ function searchWord(name: string): string | null {
   return word.slice(0, Math.max(4, Math.ceil(word.length / 2)))
 }
 
-async function resolve(read: string): Promise<{ name: string; corrected: boolean; imageUrl: string | null } | null> {
+// Letters and digits only, so "Fontaines DC" and "Fontaines D.C." are one name.
+const bare = (name: string) => nameKey(name).replace(/[^a-z0-9]/g, '')
+
+// `fuzzy` is for names read off the Top Artists column, where a screenshot
+// can be misread by a letter. Names that came from a song lookup
+// (MusicBrainz or Deezer) are already spelled correctly, and correcting them
+// does harm: "Adam Ten" is two letters from the start of "Adam Beyer", and
+// "Rhye" one from "RAYE". Even when fuzzy, only a name one letter off the
+// whole of a longer name is corrected (a short name is too easy to confuse).
+async function resolve(read: string, fuzzy: boolean): Promise<{ name: string; corrected: boolean; imageUrl: string | null } | null> {
   // A failed search throws, so the whole lookup fails rather than reporting
   // every artist as "not in Gigl yet".
   const key = nameKey(read)
@@ -60,12 +69,19 @@ async function resolve(read: string): Promise<{ name: string; corrected: boolean
   const looseExact = candidates.find(c => nameKey(c.name) === key)
   if (looseExact) return { name: looseExact.name, corrected: false, imageUrl: looseExact.imageUrl }
 
-  // The built-in artist list is a candidate too, so a misread of an artist
-  // with nothing on sale ("Bonn Iver") still lands on the right name.
-  const closest = closestMatch(read, [...candidates.map(c => c.name), ...KNOWN_ARTISTS])
-  if (!closest) return null
-  const match = candidates.find(c => c.name === closest)
-  return { name: closest, corrected: true, imageUrl: match?.imageUrl ?? null }
+  // Same name, different punctuation ("Fontaines DC" / "Fontaines D.C.").
+  const target = bare(read)
+  const samePunctuation = candidates.find(c => bare(c.name) === target)
+  if (samePunctuation) return { name: samePunctuation.name, corrected: true, imageUrl: samePunctuation.imageUrl }
+  const samePunctuationKnown = KNOWN_ARTISTS.find(n => bare(n) === target)
+  if (samePunctuationKnown) return { name: samePunctuationKnown, corrected: true, imageUrl: null }
+
+  if (!fuzzy || target.length < 7) return null
+  const near = (name: string) => editDistance(target, bare(name)) <= (target.length >= 12 ? 2 : 1)
+  const byCatalogue = candidates.find(c => near(c.name))
+  if (byCatalogue) return { name: byCatalogue.name, corrected: true, imageUrl: byCatalogue.imageUrl }
+  const byList = KNOWN_ARTISTS.find(near)
+  return byList ? { name: byList, corrected: true, imageUrl: null } : null
 }
 
 function toWrappedShow(show: Show, wrappedArtist: string): WrappedShow {
@@ -93,7 +109,7 @@ export async function POST(req: NextRequest) {
   const from = lat != null && lng != null ? { lat, lng } : null
 
   try {
-    const resolved = await Promise.all(names.map(entry => resolve(entry.name.trim())))
+    const resolved = await Promise.all(names.map(entry => resolve(entry.name.trim(), entry.from === 'artists')))
 
     // Two reads can land on one Gigl artist (the same act on both cards, or
     // two spellings of it). The first, higher-ranked one keeps it and the
