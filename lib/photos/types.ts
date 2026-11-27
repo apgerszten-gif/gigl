@@ -25,6 +25,8 @@ export interface PhotoShow {
   // Index of the cluster it was matched to (position in the request).
   cluster:  number
   distanceMiles: number
+  // From setlist.fm rather than Gigl's catalogue: the screen credits it.
+  viaSetlistFm?: boolean
 }
 
 export interface PhotoMatchResult {

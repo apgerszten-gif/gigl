@@ -6,7 +6,8 @@
 // JPEG, and HEIC (the iPhone's own format), carry it; screenshots don't.
 
 export interface PhotoMeta {
-  // YYYY-MM-DD, as the camera's clock saw it.
+  // YYYY-MM-DD, as the camera's clock saw it, the night before for a photo
+  // taken before 5am.
   takenOn: string | null
   lat:     number | null
   lng:     number | null
@@ -95,8 +96,13 @@ function parseTiff(view: DataView, start: number): PhotoMeta {
   const taken = exifPointer ? entries(u32(exifPointer + 8)).get(0x9003) : undefined
   const modified = root.get(0x0132)
   const stamp = taken ? ascii(taken) : modified ? ascii(modified) : ''
-  const date = /^(\d{4}):(\d{2}):(\d{2})/.exec(stamp)
-  if (date && date[1] !== '0000') meta.takenOn = `${date[1]}-${date[2]}-${date[3]}`
+  const date = /^(\d{4}):(\d{2}):(\d{2})(?: (\d{2}))?/.exec(stamp)
+  if (date && date[1] !== '0000') {
+    // A photo from the small hours is the end of the night before: the
+    // show is dated the evening it started.
+    const day = new Date(Date.UTC(Number(date[1]), Number(date[2]) - 1, Number(date[3]) - (Number(date[4] ?? 12) < 5 ? 1 : 0)))
+    if (!Number.isNaN(day.getTime())) meta.takenOn = day.toISOString().slice(0, 10)
+  }
 
   const gpsPointer = root.get(0x8825)
   if (gpsPointer) {

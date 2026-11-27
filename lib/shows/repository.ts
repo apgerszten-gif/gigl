@@ -857,3 +857,45 @@ export async function insertUserShow(input: UserShowInput): Promise<Show> {
   if (error) throw new Error(`user show insert failed: ${error.message}`)
   return toShow(data as ShowRow)
 }
+
+// The cities the catalogue knows within `miles` of a point, nearest first:
+// there's no geocoder, so this is how a photo's coordinates become "Pasadena,
+// CA" for the setlist.fm lookup in /api/photos/match. Any row counts, past or
+// upcoming, since a venue's city doesn't change.
+export async function placesNear(centre: Coords, miles: number, limit = 3): Promise<{ city: string; state: string; distanceMiles: number }[]> {
+  const box = boundingBox(centre, miles)
+  const { data, error } = await supabase
+    .from('shows')
+    .select('city, state, lat, lng')
+    .gte('lat', box.minLat).lte('lat', box.maxLat)
+    .gte('lng', box.minLng).lte('lng', box.maxLng)
+    .limit(1000)
+  if (error) throw new Error(`places-near lookup failed: ${error.message}`)
+
+  const nearest = new Map<string, { city: string; state: string; distanceMiles: number }>()
+  for (const row of data ?? []) {
+    if (row.lat == null || row.lng == null || !row.city) continue
+    const distanceMiles = distanceInMiles(centre, { lat: row.lat, lng: row.lng })
+    if (distanceMiles > miles) continue
+    const key = `${nameKey(row.city)}|${row.state}`
+    const have = nearest.get(key)
+    if (!have || distanceMiles < have.distanceMiles) nearest.set(key, { city: row.city, state: row.state, distanceMiles })
+  }
+  return Array.from(nearest.values()).sort((a, b) => a.distanceMiles - b.distanceMiles).slice(0, limit)
+}
+
+// Where a venue is, from any catalogue row at that room (they all carry the
+// venue's coordinates), or null when the catalogue has never seen it.
+export async function venueCoords(venue: string, city: string, state: string): Promise<Coords | null> {
+  if (!venue.trim() || !city.trim()) return null
+  const { data } = await supabase
+    .from('shows')
+    .select('lat, lng')
+    .ilike('venue', exactPattern(venue))
+    .ilike('city', exactPattern(city))
+    .eq('state', state)
+    .not('lat', 'is', null)
+    .limit(1)
+  const row = data?.[0]
+  return row && row.lat != null && row.lng != null ? { lat: row.lat, lng: row.lng } : null
+}
