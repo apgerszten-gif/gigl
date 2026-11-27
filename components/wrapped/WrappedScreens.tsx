@@ -81,7 +81,7 @@ export function CheckArtists({ artists, counts, ticked, photo, nearby, onToggle,
           We found {artists.length} artist{artists.length === 1 ? '' : 's'}<span className="text-accent">.</span>
         </h2>
         <p className="mt-1 text-[13px] leading-snug text-ink-muted">
-          Untick anyone who isn&apos;t right. Each row says what Gigl has for them{nearby ? ' near you' : ''}.
+          We&apos;ll let you know about upcoming and past shows for everyone below.
         </p>
       </div>
 
