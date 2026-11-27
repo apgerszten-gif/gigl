@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { CalendarDays, Plus, Search, X } from 'lucide-react'
+import { CalendarDays, ImagePlus, Plus, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatLongDate, localTodayIso } from '@/lib/dates'
 import { useNearby } from '@/lib/useNearby'
@@ -317,6 +317,16 @@ export default function SelectShowPage() {
             onChange={changeView}
           />
         </div>
+
+        {view === 'past' && <Link href="/photos" className="mb-2.5 flex items-center gap-3 rounded-card border-1.5 border-accent bg-accent/5 px-3.5 py-3">
+          <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
+            <ImagePlus className="w-4 h-4" strokeWidth={2} />
+          </span>
+          <div className="min-w-0">
+            <p className="font-display text-[15px] font-bold leading-tight">Find shows in your photos</p>
+            <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Matched by where and when</p>
+          </div>
+        </Link>}
 
         <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5`}>
           <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />

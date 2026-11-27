@@ -12,6 +12,7 @@ import { formatShowDate, retainStartIso, upcomingEndIso, windowEndIso, windowSta
 import { nameKey } from '../nameKey'
 import { boundingBox, distanceInMiles, type Coords, type NamedPlace } from '../geo'
 import { SYNC_CITIES } from './cities'
+import { KNOWN_ARTISTS } from './knownArtists'
 import type { Show, SyncShow } from '../ticketmaster'
 
 // Matches the `shows` table's columns; the API layer maps this to the `Show`
@@ -350,8 +351,19 @@ export async function searchArtists(keyword: string, limit: number): Promise<Art
   for (const row of catalogue.data ?? []) add(row.artist, row.id, row.image_url)
   for (const row of logged.data ?? []) add(row.artist_name, row.artist_id, null)
 
-  return Array.from(found.values())
-    .map(artist => ({ name: artist.name, shows: artist.ids.size, imageUrl: artist.imageUrl, rank: matchRank(artist.name, keyword) }))
+  // The most-streamed artists and the big festivals' lineups are always an option, touring or not (see
+  // knownArtists.ts). One already found keeps its show count; one with nothing
+  // in the catalogue comes back with none.
+  const wanted = nameKey(trimmed)
+  const known = new Set(Array.from(found.keys()))
+  const listed = KNOWN_ARTISTS
+    .filter(name => !known.has(nameKey(name)) && nameKey(name).includes(wanted))
+    .map(name => ({ name, shows: 0, imageUrl: null as string | null, rank: matchRank(name, keyword) }))
+
+  return [
+    ...Array.from(found.values()).map(artist => ({ name: artist.name, shows: artist.ids.size, imageUrl: artist.imageUrl, rank: matchRank(artist.name, keyword) })),
+    ...listed,
+  ]
     .sort((a, b) => a.rank - b.rank || b.shows - a.shows || a.name.length - b.name.length)
     .slice(0, limit)
     .map(({ rank: _rank, ...artist }) => artist)
@@ -394,6 +406,18 @@ export async function searchVenues(keyword: string, limit: number): Promise<Venu
 // on the bill as support. The name match is exact (ignoring case), because
 // "Turnstile" and "Turnstile Tribute Band" are different pages.
 export async function showsByArtist(name: string): Promise<Show[]> {
+  return (await artistShowRows(name)).map(row => toShow(row))
+}
+
+// The same, for each of several artists at once: the Wrapped flow's lists
+// (app/api/wrapped/match). Keyed by the name as given. With `from`, each show
+// carries its distance from there, for the flow's Near me filter.
+export async function showsForArtists(names: string[], from?: Coords | null): Promise<Map<string, Show[]>> {
+  const found = await Promise.all(names.map(name => artistShowRows(name)))
+  return new Map(names.map((name, i) => [name, found[i].map(row => toShow(row, from ?? undefined))]))
+}
+
+async function artistShowRows(name: string): Promise<ShowRow[]> {
   const exact = exactPattern(name)
   if (!exact) return []
 
@@ -416,7 +440,6 @@ export async function showsByArtist(name: string): Promise<Show[]> {
   for (const row of [...(headlining.data ?? []), ...(supporting.data ?? [])]) byId.set(row.id, row)
   return Array.from(byId.values())
     .sort((a, b) => (a.show_date ?? '').localeCompare(b.show_date ?? ''))
-    .map(row => toShow(row))
 }
 
 // Every show the catalogue has at one venue, soonest first. `city` and
@@ -778,15 +801,15 @@ export async function suggestValues(field: SuggestField, keyword: string, limit 
 // Every show already on a given date, for duplicate detection at submit time.
 // The date is exact where names are not, so it is the cheap way to narrow
 // before comparing artist and venue in JS.
-export async function showsOnDate(isoDate: string): Promise<Show[]> {
+export async function showsOnDate(isoDate: string, from?: Coords | null): Promise<Show[]> {
   const { data, error } = await supabase
     .from('shows')
     .select(SHOW_COLUMNS)
     .eq('show_date', isoDate)
-    .limit(500)
+    .limit(1000)
 
   if (error) throw new Error(`shows-on-date lookup failed: ${error.message}`)
-  return (data ?? []).map(row => toShow(row))
+  return (data ?? []).map(row => toShow(row, from ?? undefined))
 }
 
 export interface UserShowInput {

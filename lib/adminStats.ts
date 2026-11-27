@@ -58,4 +58,18 @@ export interface AdminStats {
   latestLogs: AdminLog[]
   latestSignups: AdminSignup[]
   venueSync: VenueSyncSummary
+  wrapped: WrappedSummary
+}
+
+// The Wrapped popup's switch (lib/wrapped/settings.ts) and how far people get
+// through it since it was switched on: distinct phones per step.
+export interface WrappedSummary {
+  on: boolean
+  since: string | null
+  // The last moment it runs (the end of that December 31), as an ISO time.
+  endsAt: string | null
+  seen: number
+  added: number
+  logged: number
+  signedUp: number
 }
