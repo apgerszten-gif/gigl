@@ -237,7 +237,7 @@ export function PhotoFinder() {
                       ) : (
                         <span className="mt-1 flex items-center gap-1.5">
                           {pics.map(src => <img key={src} src={src} alt="" className="w-7 h-7 rounded object-cover border border-ink/20" />)}
-                          <span className="text-[11px] text-ink-faint truncate">{m.photos} photo{m.photos === 1 ? '' : 's'}</span>
+                          <span className="text-[11px] text-ink-faint truncate">{m.photos} photo{m.photos === 1 ? '' : 's'}{show.viaSetlistFm ? ' · via setlist.fm' : ''}</span>
                         </span>
                       )}
                     </div>
@@ -272,6 +272,12 @@ export function PhotoFinder() {
           {grouped.dateOnly + grouped.bare > 0 && grouped.located > 0 && (
             <p className="text-[12px] leading-snug text-ink-faint">
               {grouped.dateOnly + grouped.bare} photo{grouped.dateOnly + grouped.bare === 1 ? '' : 's'} had no location, so they weren&apos;t used. {LOCATION_HINT}
+            </p>
+          )}
+
+          {matches.some(m => m.show.viaSetlistFm) && (
+            <p className="text-[11px] leading-snug text-ink-faint">
+              Some shows come from <a href="https://www.setlist.fm" target="_blank" rel="noopener noreferrer" className="underline underline-offset-[3px]">setlist.fm</a>.
             </p>
           )}
 

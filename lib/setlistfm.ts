@@ -324,6 +324,58 @@ export async function searchPastShows(query: string, options: PastShowSearch = {
   return { shows, next }
 }
 
+// ── Shows on a night in a city ───────────────────────────────────────────────
+//
+// For the photo finder (/api/photos/match): the catalogue only reaches back
+// a year and only holds what it captured while a show was upcoming, so a
+// night it can't place - Oasis at the Rose Bowl last August, a small room
+// whose listing it never saw - asks setlist.fm what played in that city that
+// day. One request per page of 20; a city-night is rarely more than a page.
+// Empty on a missing key or anything setlist.fm says no to.
+export async function showsOnDateInCity(isoDate: string, city: string, state: string): Promise<Show[]> {
+  const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
+  if (!date || !city.trim()) return []
+  const country = /^(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT)$/.test(state) ? 'CA' : 'US'
+
+  const found: Setlist[] = []
+  for (let page = 1; page <= 2; page++) {
+    const body = await call<{ setlist?: Setlist[] }>('/search/setlists', {
+      date: `${date[3]}-${date[2]}-${date[1]}`,
+      cityName: city,
+      stateCode: state,
+      countryCode: country,
+      p: String(page),
+    })
+    if (body === null || body === 'empty') break
+    const setlists = body.setlist ?? []
+    found.push(...setlists)
+    if (setlists.length < 20) break
+  }
+
+  const seen = new Set<string>()
+  const shows: Show[] = []
+  for (const s of found) {
+    if (isoFromSetlistDate(s.eventDate) !== isoDate) continue
+    // Same city name in another state is another place.
+    if ((s.venue.city.stateCode ?? '') !== state) continue
+    const id = showId(s, isoDate)
+    if (seen.has(id)) continue
+    seen.add(id)
+    shows.push({
+      id,
+      artist:   s.artist.name,
+      venue:    s.venue.name,
+      city:     s.venue.city.name,
+      state:    s.venue.city.stateCode ?? '',
+      date:     formatShowDate(isoDate),
+      isoDate,
+      emoji:    EMOJI,
+      imageUrl: null,
+    })
+  }
+  return shows
+}
+
 // ── One show's setlist ───────────────────────────────────────────────────────
 //
 // The songs a logged show's artist played, for the Setlist panel on a show's
