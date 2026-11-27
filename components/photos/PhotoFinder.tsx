@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Check, ImagePlus, Loader2 } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { useArtistImages } from '@/lib/useArtistImages'
@@ -14,7 +14,7 @@ import type { WrappedShow } from '@/lib/wrapped/types'
 import { readPhotoMeta } from '@/lib/photos/exif'
 import type { PhotoMatchResult, PhotoShow } from '@/lib/photos/types'
 import { WrappedLogSheet } from '@/components/wrapped/WrappedLogSheet'
-import { ArtistPhoto, BackHeader, DateTag, EmptyState, ErrorNote, Place, Stars, btnPrimary, btnQuiet, btnSecondary } from '@/components/ui'
+import { ArtistPhoto, BackHeader, DateTag, EmptyState, ErrorNote, Label, Place, Stars, btnPrimary, btnQuiet, btnSecondary } from '@/components/ui'
 import { groupPhotos, type Cluster, type Grouped, type PhotoFile } from './cluster'
 
 // Find the shows you've been to from where and when your photos were taken.
@@ -313,7 +313,7 @@ export function PhotoFinder() {
         <div>
           <h2 className="font-display text-[24px] font-bold tracking-tight leading-tight">Add your photos<span className="text-accent">.</span></h2>
           <p className="mt-1 text-[13px] leading-snug text-ink-muted">
-            Pick as many as you like. We use when and where each one was taken to find the shows you went to. Your photos never leave your phone.
+            Your photos never leave your phone. We only use when and where they were taken.
           </p>
         </div>
 
@@ -326,18 +326,25 @@ export function PhotoFinder() {
           onChange={e => { void start(e.target.files); e.target.value = '' }}
         />
 
-        <button
-          type="button"
-          onClick={() => input.current?.click()}
-          className="w-full h-52 rounded-card border-1.5 border-dashed border-accent bg-accent/5 flex flex-col items-center justify-center gap-2 px-6 text-center text-[13px] font-semibold"
-        >
-          <ImagePlus className="w-7 h-7 text-accent" strokeWidth={1.75} />
-          Choose photos
-          <span className="text-[11px] font-normal text-ink-muted">Try your last few months of nights out</span>
-        </button>
+        <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso p-3.5">
+          <Label tone="accent">Quickest way</Label>
+          <ol className="mt-2.5 space-y-2">
+            {[
+              <>Tap <b>Choose photos</b></>,
+              <>Search <span className="rounded-full border-1.5 border-ink bg-paper px-2 py-px text-[12px] font-bold">concert</span> in the picker</>,
+              <>Select all, then tap <b>Add</b></>,
+            ].map((step, i) => (
+              <li key={i} className="flex items-center gap-2.5 text-[13px]">
+                <span className="w-5 h-5 flex-shrink-0 rounded-full bg-accent text-cream text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
 
         <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
-          {LOCATION_HINT}
+          <b className="text-ink">iPhone:</b> tap Options, then turn Location on.<br />
+          <b className="text-ink">Android:</b> choose Browse or Files.
         </p>
 
         {error && <ErrorNote>{error}</ErrorNote>}
