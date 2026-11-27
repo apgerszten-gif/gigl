@@ -514,7 +514,7 @@ export default function SelectShowPage() {
           </span>
           <div className="min-w-0">
             <p className="font-display text-[15px] font-bold leading-tight">Find shows in your photos</p>
-            <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Tickets, emails, posters</p>
+            <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Matched by where and when</p>
           </div>
         </Link>}
 

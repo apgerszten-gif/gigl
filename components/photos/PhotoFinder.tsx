@@ -3,38 +3,42 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Check, ImagePlus, Loader2, X } from 'lucide-react'
+import { Check, ImagePlus, Loader2 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { useArtistImages } from '@/lib/useArtistImages'
 import { flushPendingLogs, type GuestDraft } from '@/lib/pendingLogs'
 import { computeShowScore } from '@/lib/rating'
-import { prepareScreenshot } from '@/lib/wrapped/image'
 import { markStashDone, queueLog, readStash, stashLog } from '@/lib/wrapped/stash'
 import type { WrappedShow } from '@/lib/wrapped/types'
-import { readPhotoMeta, type PhotoMeta } from '@/lib/photos/exif'
-import type { PhotoInput, PhotoResult, PhotoShow } from '@/lib/photos/types'
+import { readPhotoMeta } from '@/lib/photos/exif'
+import type { PhotoMatchResult, PhotoShow } from '@/lib/photos/types'
 import { WrappedLogSheet } from '@/components/wrapped/WrappedLogSheet'
-import { ArtistPhoto, BackHeader, DateTag, EmptyState, ErrorNote, Label, Place, Stars, btnPrimary, btnQuiet, btnSecondary } from '@/components/ui'
+import { ArtistPhoto, BackHeader, DateTag, EmptyState, ErrorNote, Place, Stars, btnPrimary, btnQuiet, btnSecondary } from '@/components/ui'
+import { groupPhotos, type Cluster, type Grouped, type PhotoFile } from './cluster'
 
-// Find the shows you've been to from your photos: tickets, confirmation
-// emails, posters, a story with the artist tagged, or just photos from the
-// night. /api/photos/read reads what's in them and matches Gigl's shows, and
-// each one is logged right here with the same sheet the Wrapped flow uses, so
-// it works without an account too (what's logged waits on the phone until
-// sign-up, lib/wrapped/stash.ts).
+// Find the shows you've been to from where and when your photos were taken.
+//
+// Pick as many photos as you like (dozens at once is the point). Each one's
+// date and location are read on the phone from its EXIF, grouped into nights
+// (components/photos/cluster.ts), and only those groups go to
+// /api/photos/match, which finds the shows on at that place on that date. No
+// picture leaves the phone. Each match is logged right here with the Wrapped
+// log sheet, so it works without an account too (what's logged waits on the
+// phone until sign-up, lib/wrapped/stash.ts).
 
-const MAX_PHOTOS = 6
-const LONG_EDGE = 1280
-
-interface Picked {
-  id:      string
-  preview: string
-  data:    string
-  meta:    PhotoMeta
-}
+const MAX_CLUSTERS = 80
+const THUMBS = 3
+const READ_AT_ONCE = 6
 
 type Stage = 'pick' | 'reading' | 'results'
+
+interface Match {
+  show:     PhotoShow
+  // Every cluster that landed on this show, nearest first.
+  clusters: Cluster[]
+  photos:   number
+}
 
 export function PhotoFinder() {
   const router = useRouter()
@@ -43,58 +47,59 @@ export function PhotoFinder() {
   const input = useRef<HTMLInputElement | null>(null)
 
   const [stage, setStage] = useState<Stage>('pick')
-  const [picked, setPicked] = useState<Picked[]>([])
-  const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<PhotoResult | null>(null)
+  const [grouped, setGrouped] = useState<Grouped | null>(null)
+  const [matches, setMatches] = useState<Match[]>([])
   const [logs, setLogs] = useState<Record<string, GuestDraft>>({})
   const [logging, setLogging] = useState<WrappedShow | null>(null)
 
-  // Only the pictures still on the page need their previews kept.
-  useEffect(() => () => { picked.forEach(p => URL.revokeObjectURL(p.preview)) }, [picked])
-
-  async function add(files: FileList | null) {
+  async function start(files: FileList | null) {
     if (!files || files.length === 0) return
+    const list = Array.from(files)
     setError(null)
-    setBusy(true)
-    try {
-      const room = MAX_PHOTOS - picked.length
-      const next: Picked[] = []
-      for (const file of Array.from(files).slice(0, Math.max(0, room))) {
-        // EXIF first: resizing on a canvas drops it.
-        const meta = await readPhotoMeta(file)
-        try {
-          const prepared = await prepareScreenshot(file, LONG_EDGE)
-          next.push({ id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 7)}`, preview: prepared.preview, data: prepared.data, meta })
-        } catch {
-          setError("Couldn't open one of those pictures. Photos saved as JPEG or PNG work best.")
-        }
-      }
-      setPicked(prev => [...prev, ...next])
-      if (files.length > room) setError(`Up to ${MAX_PHOTOS} photos at a time.`)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  function remove(id: string) {
-    setPicked(prev => prev.filter(p => p.id !== id))
-  }
-
-  async function find() {
-    if (picked.length === 0) return
     setStage('reading')
-    setError(null)
+    setProgress({ done: 0, total: list.length })
+
     try {
-      const photos: PhotoInput[] = picked.map(p => ({ data: p.data, takenOn: p.meta.takenOn, lat: p.meta.lat, lng: p.meta.lng }))
-      const res = await fetch('/api/photos/read', {
+      // A few at a time: each read is a slice of the file, not the whole picture.
+      const photos: PhotoFile[] = new Array(list.length)
+      let done = 0
+      for (let i = 0; i < list.length; i += READ_AT_ONCE) {
+        await Promise.all(list.slice(i, i + READ_AT_ONCE).map(async (file, j) => {
+          photos[i + j] = { file, meta: await readPhotoMeta(file) }
+          done += 1
+        }))
+        setProgress({ done, total: list.length })
+      }
+
+      const groups = groupPhotos(photos)
+      setGrouped(groups)
+      if (groups.clusters.length === 0) { setMatches([]); setStage('results'); return }
+
+      const sent = groups.clusters.slice(0, MAX_CLUSTERS)
+      const res = await fetch('/api/photos/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photos }),
+        body: JSON.stringify({ clusters: sent.map(c => ({ date: c.date, lat: Math.round(c.lat * 100) / 100, lng: Math.round(c.lng * 100) / 100, count: c.photos.length })) }),
       })
-      const body = await res.json().catch(() => null) as (PhotoResult & { error?: string }) | null
-      if (!res.ok || !body?.shows) throw new Error(body?.error ?? "Couldn't read those photos. Try again.")
-      setResult(body)
+      const body = await res.json().catch(() => null) as (PhotoMatchResult & { error?: string }) | null
+      if (!res.ok || !body?.shows) throw new Error(body?.error ?? "Couldn't look those up. Try again.")
+
+      // One show can be matched by more than one cluster (a festival's photos
+      // from two stages): it appears once, with all of its photos.
+      const byShow = new Map<string, Match>()
+      for (const show of body.shows) {
+        const cluster = sent[show.cluster]
+        if (!cluster) continue
+        const have = byShow.get(show.id)
+        if (have) {
+          if (!have.clusters.includes(cluster)) { have.clusters.push(cluster); have.photos += cluster.photos.length }
+        } else {
+          byShow.set(show.id, { show, clusters: [cluster], photos: cluster.photos.length })
+        }
+      }
+      setMatches(Array.from(byShow.values()).sort((a, b) => (b.show.isoDate ?? '').localeCompare(a.show.isoDate ?? '') || a.show.distanceMiles - b.show.distanceMiles))
       setStage('results')
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't read those photos. Try again.")
@@ -105,13 +110,13 @@ export function PhotoFinder() {
   // ── Results: what's already logged ───────────────────────────────────────
 
   useEffect(() => {
-    if (stage !== 'results' || !result) return
+    if (stage !== 'results') return
     if (!user) {
       const stash = readStash()
       setLogs(Object.fromEntries(stash.logs.map(l => [l.artist_id, l])))
       return
     }
-    const ids = result.shows.map(s => s.id)
+    const ids = matches.map(m => m.show.id)
     if (ids.length === 0) return
     createClient()
       .from('logged_shows')
@@ -134,9 +139,20 @@ export function PhotoFinder() {
           return next
         })
       })
-  }, [stage, result, user])
+  }, [stage, matches, user])
 
-  const photo = useArtistImages(useMemo(() => (result?.shows ?? []).map(s => s.artist), [result]))
+  // A few of the person's own photos beside each show they match.
+  const thumbs = useMemo(() => {
+    const out = new Map<string, string[]>()
+    for (const m of matches) {
+      const files = m.clusters.flatMap(c => c.photos).slice(0, THUMBS)
+      out.set(m.show.id, files.map(p => URL.createObjectURL(p.file)))
+    }
+    return out
+  }, [matches])
+  useEffect(() => () => { thumbs.forEach(urls => urls.forEach(u => URL.revokeObjectURL(u))) }, [thumbs])
+
+  const photo = useArtistImages(useMemo(() => matches.map(m => m.show.artist), [matches]))
 
   function saveLog(draft: GuestDraft) {
     setLogs(prev => ({ ...prev, [draft.artist_id]: draft }))
@@ -167,36 +183,44 @@ export function PhotoFinder() {
         <BackHeader title="Find shows in your photos" />
         <div className="px-5 py-16 text-center" role="status" aria-live="polite">
           <Loader2 className="w-8 h-8 mx-auto text-accent animate-spin" strokeWidth={2} />
-          <p className="mt-4 font-display text-[17px] font-bold">Reading your photos</p>
-          <p className="mt-1 text-[13px] text-ink-muted">Looking for tickets, names and dates. This takes a few seconds.</p>
+          <p className="mt-4 font-display text-[17px] font-bold">Checking where you were</p>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            {progress.done < progress.total
+              ? `Reading ${progress.done} of ${progress.total} photos`
+              : 'Finding the shows'}
+          </p>
         </div>
       </div>
     )
   }
 
-  if (stage === 'results' && result) {
-    const shows = result.shows
-    const loggedCount = shows.filter(s => logs[s.id]).length
-    const unread = result.reads.filter(r => r.artists.length === 0 && !r.venue && !r.date).length
+  if (stage === 'results' && grouped) {
+    const loggedCount = matches.filter(m => logs[m.show.id]).length
+    const matchedClusters = new Set(matches.flatMap(m => m.clusters)).size
+    const unmatched = Math.min(grouped.clusters.length, MAX_CLUSTERS) - matchedClusters
+    const total = grouped.located + grouped.dateOnly + grouped.bare
+
     return (
       <div className="min-h-screen bg-paper text-ink pb-32">
         <BackHeader title="Find shows in your photos" onBack={() => setStage('pick')} />
         <main className="px-5 pt-4 space-y-4">
           <div>
             <h2 className="font-display text-[24px] font-bold tracking-tight leading-tight">
-              {shows.length > 0 ? 'Were you there' : 'No shows yet'}<span className="text-accent">{shows.length > 0 ? '?' : '.'}</span>
+              {matches.length > 0 ? 'Were you there' : 'No shows found'}<span className="text-accent">{matches.length > 0 ? '?' : '.'}</span>
             </h2>
-            {shows.length > 0 && (
-              <p className="mt-1 text-[13px] leading-snug text-ink-muted">
-                {shows.length} show{shows.length === 1 ? '' : 's'} that match your photos.
-              </p>
-            )}
+            <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+              {matches.length > 0
+                ? `${matches.length} show${matches.length === 1 ? '' : 's'} on where and when your photos were taken.`
+                : `We looked at ${total} photo${total === 1 ? '' : 's'}.`}
+            </p>
           </div>
 
-          {shows.length > 0 ? (
+          {matches.length > 0 ? (
             <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
-              {shows.map((show, i) => {
+              {matches.map((m, i) => {
+                const { show } = m
                 const log = logs[show.id]
+                const pics = thumbs.get(show.id) ?? []
                 return (
                   <div key={show.id} className={`flex items-center gap-3 px-3 py-2.5 ${i % 2 ? 'bg-cream-alt' : ''} ${i > 0 ? 'border-t border-ink/10' : ''}`}>
                     <ArtistPhoto name={show.artist} src={show.imageUrl ?? photo(show.artist)} className="w-14 h-14" iconSize={18}>
@@ -211,9 +235,10 @@ export function PhotoFinder() {
                           <span className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Yours</span>
                         </span>
                       ) : (
-                        <p className="mt-0.5 text-[11px] text-ink-faint truncate">
-                          {show.why === 'date and place' ? 'Matched where and when you took a photo' : `Photo ${show.photos.map(p => p + 1).join(', ')}`}
-                        </p>
+                        <span className="mt-1 flex items-center gap-1.5">
+                          {pics.map(src => <img key={src} src={src} alt="" className="w-7 h-7 rounded object-cover border border-ink/20" />)}
+                          <span className="text-[11px] text-ink-faint truncate">{m.photos} photo{m.photos === 1 ? '' : 's'}</span>
+                        </span>
                       )}
                     </div>
                     {log ? (
@@ -229,15 +254,24 @@ export function PhotoFinder() {
                 )
               })}
             </div>
+          ) : grouped.located === 0 ? (
+            <EmptyState>
+              None of those photos had a location. Phones usually remove it when a website opens a photo. {LOCATION_HINT}
+            </EmptyState>
           ) : (
             <EmptyState>
-              Nothing in Gigl matched those photos. A ticket or a confirmation email works best, since they name the artist and the date.
+              Your photos were taken in {grouped.clusters.length} place{grouped.clusters.length === 1 ? '' : 's'}, but Gigl has no show at any of them on those dates.
             </EmptyState>
           )}
 
-          {unread > 0 && shows.length > 0 && (
+          {matches.length > 0 && unmatched > 0 && (
             <p className="text-[12px] leading-snug text-ink-faint">
-              {unread} photo{unread === 1 ? '' : 's'} had nothing we could read.
+              {unmatched} other night{unmatched === 1 ? '' : 's'} of photos didn&apos;t match a show in Gigl.
+            </p>
+          )}
+          {grouped.dateOnly + grouped.bare > 0 && grouped.located > 0 && (
+            <p className="text-[12px] leading-snug text-ink-faint">
+              {grouped.dateOnly + grouped.bare} photo{grouped.dateOnly + grouped.bare === 1 ? '' : 's'} had no location, so they weren&apos;t used. {LOCATION_HINT}
             </p>
           )}
 
@@ -251,7 +285,7 @@ export function PhotoFinder() {
             <button type="button" onClick={done} className={`${btnPrimary} w-full py-4 text-xs`}>
               {loggedCount === 0 ? 'Skip' : 'Done'}
             </button>
-            <button type="button" onClick={() => setStage('pick')} className="w-full mt-2 py-1 text-[12px] font-semibold text-ink-muted">Add more photos</button>
+            <button type="button" onClick={() => setStage('pick')} className="w-full mt-2 py-1 text-[12px] font-semibold text-ink-muted">Try other photos</button>
             {!signedIn && loggedCount > 0 && (
               <p className="text-center text-[11px] text-ink-faint">Next, your phone number, to keep your logs.</p>
             )}
@@ -279,7 +313,7 @@ export function PhotoFinder() {
         <div>
           <h2 className="font-display text-[24px] font-bold tracking-tight leading-tight">Add your photos<span className="text-accent">.</span></h2>
           <p className="mt-1 text-[13px] leading-snug text-ink-muted">
-            Tickets, confirmation emails, posters, or photos from the night. We&apos;ll find the shows.
+            Pick as many as you like. We use when and where each one was taken to find the shows you went to. Your photos never leave your phone.
           </p>
         </div>
 
@@ -289,56 +323,36 @@ export function PhotoFinder() {
           accept="image/*"
           multiple
           className="hidden"
-          onChange={e => { void add(e.target.files); e.target.value = '' }}
+          onChange={e => { void start(e.target.files); e.target.value = '' }}
         />
 
-        {picked.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
-            {picked.map(p => (
-              <div key={p.id} className="relative aspect-square rounded-card border-1.5 border-ink overflow-hidden bg-cream">
-                <img src={p.preview} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => remove(p.id)}
-                  aria-label="Remove photo"
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-ink text-cream flex items-center justify-center"
-                >
-                  <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          className="w-full h-52 rounded-card border-1.5 border-dashed border-accent bg-accent/5 flex flex-col items-center justify-center gap-2 px-6 text-center text-[13px] font-semibold"
+        >
+          <ImagePlus className="w-7 h-7 text-accent" strokeWidth={1.75} />
+          Choose photos
+          <span className="text-[11px] font-normal text-ink-muted">Try your last few months of nights out</span>
+        </button>
 
-        {picked.length < MAX_PHOTOS && (
-          <button
-            type="button"
-            onClick={() => input.current?.click()}
-            disabled={busy}
-            className={`w-full ${picked.length === 0 ? 'h-52' : 'h-20'} rounded-card border-1.5 border-dashed border-accent bg-accent/5 flex flex-col items-center justify-center gap-2 px-6 text-center text-[13px] font-semibold`}
-          >
-            {busy ? <Loader2 className="w-6 h-6 text-accent animate-spin" strokeWidth={2} /> : <ImagePlus className="w-6 h-6 text-accent" strokeWidth={1.75} />}
-            {picked.length === 0 ? 'Choose photos' : 'Add more'}
-            {picked.length === 0 && <span className="text-[11px] font-normal text-ink-muted">Up to {MAX_PHOTOS} at a time</span>}
-          </button>
-        )}
+        <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
+          {LOCATION_HINT}
+        </p>
 
         {error && <ErrorNote>{error}</ErrorNote>}
-        <Label>Works best with a ticket or a confirmation email</Label>
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-20 px-5 pt-5 pb-[calc(16px+env(safe-area-inset-bottom))] bg-gradient-to-t from-paper via-paper to-transparent">
         <div className="max-w-md mx-auto">
-          <button
-            type="button"
-            onClick={picked.length > 0 ? find : () => input.current?.click()}
-            disabled={busy}
-            className={`${btnPrimary} w-full py-4 text-xs`}
-          >
-            {picked.length > 0 ? 'Find my shows' : 'Choose photos'}
+          <button type="button" onClick={() => input.current?.click()} className={`${btnPrimary} w-full py-4 text-xs`}>
+            Choose photos
           </button>
         </div>
       </div>
     </div>
   )
 }
+
+// Browsers hand over a photo without its location unless the person allows it.
+const LOCATION_HINT = 'On iPhone, tap Options in the photo picker and turn Location on. On Android, choose Browse or Files instead of the photo picker.'
