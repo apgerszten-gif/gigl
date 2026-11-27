@@ -318,6 +318,16 @@ export default function SelectShowPage() {
           />
         </div>
 
+        {view === 'past' && <Link href="/photos" className="mb-2.5 flex items-center gap-3 rounded-card border-1.5 border-accent bg-accent/5 px-3.5 py-3">
+          <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
+            <ImagePlus className="w-4 h-4" strokeWidth={2} />
+          </span>
+          <div className="min-w-0">
+            <p className="font-display text-[15px] font-bold leading-tight">Find shows in your photos</p>
+            <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Matched by where and when</p>
+          </div>
+        </Link>}
+
         <label className={`${inputBox} shadow-riso flex items-center gap-2 px-3 py-2.5`}>
           <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
           <input
@@ -508,16 +518,6 @@ export default function SelectShowPage() {
 
         {/* The catalogue stops at ticketed rooms, so this is the only route
             a house show or a local bill has into Gigl at all. */}
-        {view === 'past' && <Link href="/photos" className="flex items-center gap-3 rounded-card border-1.5 border-dashed border-ink/30 px-3.5 py-3 hover:border-accent/50">
-          <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
-            <ImagePlus className="w-4 h-4" strokeWidth={2} />
-          </span>
-          <div className="min-w-0">
-            <p className="font-display text-[15px] font-bold leading-tight">Find shows in your photos</p>
-            <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Matched by where and when</p>
-          </div>
-        </Link>}
-
         {view === 'past' && <Link href="/add-show" className="flex items-center gap-3 rounded-card border-1.5 border-dashed border-ink/30 px-3.5 py-3 hover:border-accent/50">
           <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
             <Plus className="w-4 h-4" strokeWidth={2} />
