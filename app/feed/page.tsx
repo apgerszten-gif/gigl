@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, Share2 } from 'lucide-react'
+import { ImagePlus, Plus, Share2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { computeShowScore } from '@/lib/rating'
 import { resolveMediaUrls } from '@/lib/media'
@@ -356,6 +356,18 @@ function FeedInner() {
         )}
 
         <ReviewReminders />
+
+        {/* The same way in as the Log screen's Been to list, for someone who
+            can't say which shows they've been to. */}
+        <Link href="/photos" className="flex items-center gap-3 rounded-card border-1.5 border-accent bg-accent/5 px-3.5 py-3">
+          <span className="w-9 h-9 flex-shrink-0 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center justify-center">
+            <ImagePlus className="w-4 h-4" strokeWidth={2} />
+          </span>
+          <div className="min-w-0">
+            <p className="font-display text-[15px] font-bold leading-tight">Find shows in your photos</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-ink-muted">In case you don&apos;t exactly remember which shows you&apos;ve been to</p>
+          </div>
+        </Link>
 
         {/* The filter bar, then the search under it, the same order as
             Rankings. Picking a filter mid-search brings the stream back,
