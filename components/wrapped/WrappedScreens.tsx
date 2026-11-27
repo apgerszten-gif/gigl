@@ -226,11 +226,11 @@ export function WrappedResults({
         <h2 className="mt-1 font-display text-[24px] font-bold tracking-tight leading-tight">
           {tab === 'upcoming' ? 'Coming up' : 'Were you there?'}<span className="text-accent">.</span>
         </h2>
-        <p className="mt-1 text-[13px] leading-snug text-ink-muted">
-          {tab === 'upcoming'
-            ? `${upcoming.length} upcoming show${upcoming.length === 1 ? '' : 's'} by your ${artistCount} artists. Save the ones you want to go to. Next, you'll rate the shows you've already been to.`
-            : `${past.length} show${past.length === 1 ? '' : 's'} by your artists from the past year. Tap I was there on any you went to, and rate it.`}
-        </p>
+        {tab === 'upcoming' && (
+          <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+            {`${upcoming.length} upcoming show${upcoming.length === 1 ? '' : 's'} by your ${artistCount} artists. Save the ones you want to go to.`}
+          </p>
+        )}
       </div>
 
       <PlaceChips
@@ -256,7 +256,7 @@ export function WrappedResults({
           ) : (
             <EmptyState>
               {place === 'near' && canFilterNearby
-                ? 'None of your artists have a show near you in the next year. Try Anywhere, or follow them below to hear about new dates.'
+                ? 'None of your artists have a show near you in the next year. Try Anywhere, Another city, or follow them below to hear about new dates.'
                 : 'None of your artists have a show coming up in Gigl yet. Follow them below to hear about new dates.'}
             </EmptyState>
           )}

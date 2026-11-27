@@ -55,10 +55,8 @@ export function WrappedUpload({ image, another = false, reading, error, onPick, 
         />
 
         <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
-          <span className="font-semibold text-ink">Best one:</span> Spotify&apos;s summary card near the end of your Wrapped, with
-          your top 5 artists and top 5 songs side by side. Or any single Top Artists, Top Songs or Top Albums screen. It doesn&apos;t
-          have to be perfect.
-          <span className="mt-1.5 block font-semibold text-accent">Team Apple? Your Replay works too. We don&apos;t pick sides in the streaming wars.</span>
+          Best option is adding your summary card with top artists and top songs.
+          <span className="mt-1.5 block font-semibold text-accent">Team Apple? Your Replay works too.</span>
         </p>
 
         {image ? (
@@ -94,10 +92,6 @@ export function WrappedUpload({ image, another = false, reading, error, onPick, 
         >
           {image ? 'Find my shows' : 'Choose a screenshot'}
         </button>
-
-        <p className="text-center text-[11px] leading-snug text-ink-faint">
-          The screenshot is read once to find the artists&apos; names, then deleted. Nobody else sees it.
-        </p>
       </div>
     </Sheet>
   )
