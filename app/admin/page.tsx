@@ -6,6 +6,7 @@ import { ExternalLink, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { AdminLog, AdminStats } from '@/lib/adminStats'
 import type { VenueSyncMode } from '@/lib/venues/report'
+import { applyTheme, type Theme } from '@/lib/theme-setting'
 import { AdminReports } from '@/components/AdminReports'
 import {
   BackHeader, Card, Chip, EmptyState, ErrorNote, Label, LoadingLabel, Place, Segmented, Stars, Stat,
@@ -48,6 +49,7 @@ export default function AdminPage() {
   const [now, setNow]               = useState(() => Date.now())
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving]         = useState(false)
+  const [themeSaving, setThemeSaving] = useState(false)
   const [removing, setRemoving]     = useState<string | null>(null)
   const [venueSaving, setVenueSaving] = useState(false)
   const [venueRunning, setVenueRunning] = useState(false)
@@ -111,6 +113,22 @@ export default function AdminPage() {
     if (!res.ok) { setError(data.error ?? "Couldn't save the switch."); return }
     setError(null)
     setStats(s => s && { ...s, signupMethod: data.signupMethod })
+  }
+
+  async function switchTheme(next: Theme) {
+    if (!stats || themeSaving || next === stats.theme) return
+    if (!window.confirm(next === 'dark'
+      ? 'Switch the whole app to the dark look? Everyone sees it on their next visit.'
+      : 'Switch the whole app to the light look? Everyone sees it on their next visit.')) return
+
+    setThemeSaving(true)
+    const res = await call('/api/admin/settings', { method: 'POST', body: JSON.stringify({ theme: next }) })
+    const data = await res.json().catch(() => ({}))
+    setThemeSaving(false)
+    if (!res.ok) { setError(data.error ?? "Couldn't save the switch."); return }
+    setError(null)
+    setStats(s => s && { ...s, theme: data.theme })
+    applyTheme(data.theme)
   }
 
   async function switchWrapped(next: 'off' | 'on') {
@@ -300,6 +318,21 @@ export default function AdminPage() {
               <Stat value={stats.wrapped.signedUp} label="Signed up" />
             </div>
           )}
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <Label>Look of the app</Label>
+          <Segmented<Theme>
+            options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]}
+            value={stats.theme}
+            onChange={switchTheme}
+          />
+          <p className="text-[12px] leading-snug text-ink-muted">
+            {themeSaving ? 'Saving…' : stats.theme === 'light'
+              ? 'Everyone sees the light, tan look. Dark is the same design in a brown-black palette.'
+              : 'Everyone sees the dark, brown-black look. Switch back to Light any time.'}
+            {' '}It takes effect on each person&apos;s next visit, with no deploy.
+          </p>
         </Card>
 
         <Card className="p-4 space-y-3">

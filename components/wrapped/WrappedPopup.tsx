@@ -19,7 +19,7 @@ export function WrappedPopup({ signedIn, onStart, onDismiss }: {
 
   return (
     <div className="fixed inset-0 z-[105] flex items-center justify-center px-5">
-      <button type="button" aria-label="Close" onClick={onDismiss} className="absolute inset-0 bg-ink/55" />
+      <button type="button" aria-label="Close" onClick={onDismiss} className="absolute inset-0 bg-scrim" />
       <div
         role="dialog"
         aria-modal="true"

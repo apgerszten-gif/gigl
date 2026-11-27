@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 
 // The bottom-sheet pattern from DESIGN.md (the sign-up sheet's look): a paper
-// sheet over a bg-ink/55 scrim, a text-2xl display title with the accent full
+// sheet over a bg-scrim scrim, a text-2xl display title with the accent full
 // stop, a one-line reason, and a close button. Closes on the scrim and Escape.
 export function Sheet({ title, blurb, onClose, children }: {
   // Rendered with the accent full stop, so pass it without one.
@@ -27,7 +27,7 @@ export function Sheet({ title, blurb, onClose, children }: {
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className={`absolute inset-0 bg-ink/55 transition-opacity duration-[280ms] ${shown ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-scrim transition-opacity duration-[280ms] ${shown ? 'opacity-100' : 'opacity-0'}`}
       />
       <div
         role="dialog"

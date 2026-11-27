@@ -55,6 +55,8 @@ export interface AdminStats {
   }
   // null when app_settings doesn't exist yet.
   signupMethod: 'phone' | 'email' | null
+  // The app's look, from the `theme` row; light until it's been switched.
+  theme: 'light' | 'dark'
   latestLogs: AdminLog[]
   latestSignups: AdminSignup[]
   venueSync: VenueSyncSummary

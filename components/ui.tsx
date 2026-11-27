@@ -1,4 +1,4 @@
-// Shared building blocks for the Warm Riso Zine design system (DESIGN.md).
+// Shared building blocks for the Mojave Night design system (DESIGN.md).
 // No hooks here, so server and client components can both render these;
 // anything that needs routing or auth lives in AppHeader / BottomNav.
 
@@ -9,28 +9,31 @@ import { festivalNameOf } from '@/lib/festivals'
 
 // ── Class recipes ────────────────────────────────────────────────────────────
 
+// Buttons are pills in sentence case. Amber with dark text (cream is the
+// dark card colour) for the one main action; outlined bone for the rest.
 export const btnPrimary =
-  'inline-flex items-center justify-center gap-2 rounded-card bg-accent text-cream border-1.5 border-ink shadow-riso ' +
-  'font-display font-bold uppercase tracking-label hover:bg-accent-hover disabled:opacity-45 disabled:cursor-not-allowed'
+  'inline-flex items-center justify-center gap-2 rounded-full bg-accent text-cream ' +
+  'font-sans font-bold hover:bg-accent-hover disabled:opacity-45 disabled:cursor-not-allowed'
 
 // Button recipes leave font size (and padding) to the caller.
 export const btnSecondary =
-  'inline-flex items-center justify-center gap-1.5 rounded-card border-1.5 border-ink bg-cream text-ink ' +
-  'font-bold uppercase tracking-label disabled:opacity-50'
+  'inline-flex items-center justify-center gap-1.5 rounded-full border border-ink/30 bg-transparent text-ink ' +
+  'font-bold disabled:opacity-50'
 
 export const btnQuiet =
-  'inline-flex items-center justify-center gap-1.5 rounded-card border-1.5 border-ink/15 bg-cream text-ink-muted ' +
+  'inline-flex items-center justify-center gap-1.5 rounded-full border border-ink bg-cream text-ink-muted ' +
   'font-semibold disabled:opacity-50'
 
 // For a step that can't be undone (delete an account, block someone), in the
-// same red as ErrorNote and the profile's Delete button.
+// same red as ErrorNote and the profile's Delete button: a lighter red than
+// the light theme's, so it still reads on the dark page.
 export const btnDanger =
-  'inline-flex items-center justify-center gap-1.5 rounded-card border-1.5 border-[#B03030]/30 bg-[#B03030]/10 text-[#B03030] ' +
+  'inline-flex items-center justify-center gap-1.5 rounded-full border border-danger/40 bg-danger/10 text-danger ' +
   'font-bold disabled:opacity-50'
 
-export const iconBtn = 'p-2 rounded-card border-1.5 border-ink bg-cream shadow-riso'
+export const iconBtn = 'p-2 rounded-full border border-ink/30 bg-cream'
 
-export const inputBox = 'rounded-card border-1.5 border-ink bg-cream'
+export const inputBox = 'rounded-card border border-ink bg-cream'
 
 // ── Surfaces & type ──────────────────────────────────────────────────────────
 
@@ -38,46 +41,58 @@ export function Card({ children, className = '', flat = false }: {
   children: React.ReactNode; className?: string; flat?: boolean
 }) {
   return (
-    <div className={`bg-cream border-1.5 border-ink rounded-card ${flat ? '' : 'shadow-riso'} ${className}`}>
+    <div className={`bg-cream border border-ink rounded-card ${flat ? '' : 'shadow-riso'} ${className}`}>
       {children}
     </div>
   )
 }
 
 // `tone` sets the colour; don't pass a text colour through className, since
-// it would compete with the default rather than replace it.
-const LABEL_TONES = { muted: 'text-ink-muted', ink: 'text-ink', accent: 'text-accent' }
+// it would compete with the default rather than replace it. Labels are typed
+// in Courier, like the marker tabs and the tape dates.
+const LABEL_TONES = { muted: 'text-ink-muted', ink: 'text-ink', accent: 'text-accent-light' }
 
 export function Label({ children, className = '', tone = 'muted' }: {
   children: React.ReactNode; className?: string; tone?: keyof typeof LABEL_TONES
 }) {
   return (
-    <p className={`text-[10px] font-semibold uppercase tracking-label ${LABEL_TONES[tone]} ${className}`}>
+    <p className={`font-mono text-[12px] font-bold uppercase ${LABEL_TONES[tone]} ${className}`}>
       {children}
     </p>
   )
 }
 
-export function Chip({ children, active = false, compact = false }: {
-  children: React.ReactNode; active?: boolean; compact?: boolean
+// Pill toggles in sentence case. Amber when on, or dusty rose (`tone="place"`)
+// for the place chips: Near me, a typed city and the radius.
+const CHIP_ACTIVE = {
+  accent: 'bg-accent/15 border-accent text-accent-light',
+  place:  'bg-terra/15 border-terra text-terra-light',
+}
+
+export function Chip({ children, active = false, compact = false, tone = 'accent' }: {
+  children: React.ReactNode; active?: boolean; compact?: boolean; tone?: keyof typeof CHIP_ACTIVE
 }) {
   return (
-    <span className={`inline-block rounded font-semibold uppercase tracking-label border-1.5 whitespace-nowrap ${
-      compact ? 'px-1.5 py-0 text-[8.5px]' : 'px-2 py-0.5 text-[10px]'
+    <span className={`inline-flex items-center gap-1 rounded-full font-semibold border whitespace-nowrap ${
+      compact ? 'px-2 py-0 text-[10.5px]' : 'px-2.5 py-1 text-[12px]'
     } ${
-      active ? 'bg-accent/10 border-accent/30 text-accent' : 'border-ink/15 text-ink-muted'
+      active ? CHIP_ACTIVE[tone] : 'border-ink/25 text-ink-muted'
     }`}>
       {children}
     </span>
   )
 }
 
+// A review, in Fraunces italic behind a hanging amber quote mark.
 export function PullQuote({ children, className = '', compact = false }: {
   children: React.ReactNode; className?: string; compact?: boolean
 }) {
   return (
-    <blockquote className={`border-l-2 border-accent ${compact ? 'pl-2.5 text-[12.75px]' : 'pl-3 text-[15px]'} font-display leading-snug ${className}`}>
-      &ldquo;{children}&rdquo;
+    <blockquote className={`relative ${compact ? 'pl-4 text-[13.5px]' : 'pl-5 text-[16px]'} font-display italic leading-snug ${className}`}>
+      <span aria-hidden="true" className={`absolute left-0 ${compact ? '-top-0.5 text-[24px]' : '-top-1 text-[30px]'} not-italic font-bold leading-none text-accent`}>
+        &ldquo;
+      </span>
+      {children}
     </blockquote>
   )
 }
@@ -101,8 +116,8 @@ export function LoadingLabel({ children = 'Loading…' }: { children?: React.Rea
 export function Stat({ value, label, after }: { value: React.ReactNode; label: string; after?: React.ReactNode }) {
   return (
     <div className="flex-1 flex flex-col items-center text-center">
-      <div className="font-display text-lg font-bold leading-none min-h-[18px] flex items-center">{value}</div>
-      <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted inline-flex items-center gap-0.5">{label}{after}</p>
+      <div className="font-slab text-[22px] leading-none min-h-[22px] flex items-center">{value}</div>
+      <p className="mt-1.5 font-mono text-[11px] font-bold uppercase text-ink-muted inline-flex items-center gap-0.5">{label}{after}</p>
     </div>
   )
 }
@@ -153,7 +168,7 @@ export function DjDecks({ size = 20, strokeWidth = 1.75 }: IconProps) {
   )
 }
 
-// Square artist photo with a riso border, or the halftone placeholder when
+// Square artist photo in its own colours, or the halftone placeholder when
 // there's no photo. `children` (e.g. a DateTag) sits outside the clipped
 // frame so it can overhang the corner.
 //
@@ -166,7 +181,7 @@ export function ArtistPhoto({ name, src, className, iconSize = 20, icon: Icon = 
 }) {
   return (
     <div className={`relative flex-shrink-0 ${className}`}>
-      <div className={`w-full h-full rounded-card border-1.5 border-ink overflow-hidden ${src ? 'bg-paper' : tintFor(name)}`}>
+      <div className={`w-full h-full rounded-[10px] overflow-hidden ${src ? 'bg-paper' : tintFor(name)}`}>
         {src ? (
           // Lazy: a festival day can be dozens of photos and a few MB, and on
           // festival signal the ones below the fold shouldn't hold up the
@@ -196,7 +211,7 @@ export function PersonPhoto({ name, src, className }: { name: string; src?: stri
   )
 }
 
-// A place (venue and city, a stage, or just a city) behind a small sienna pin.
+// A place (venue and city, a stage, or just a city) behind a small dusty-rose pin.
 // `compact` is the feed's density: every size in a review tile is 15% down
 // on the default so more of them fit on screen. It's a prop rather than a
 // smaller default because the same component sets the place line on
@@ -206,7 +221,7 @@ export function Place({ children, className = '', compact = false }: {
 }) {
   return (
     <p className={`flex items-center gap-1 ${compact ? 'text-[10.2px]' : 'text-[12px]'} text-ink-muted min-w-0 ${className}`}>
-      <MapPin className={`${compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} flex-shrink-0 text-accent`} strokeWidth={2.25} />
+      <MapPin className={`${compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} flex-shrink-0 text-terra`} strokeWidth={2.25} />
       <span className="truncate">{children}</span>
     </p>
   )
@@ -240,43 +255,44 @@ export function dateParts(isoDate: string | null | undefined): { month: string; 
   }
 }
 
-// Show date stuck onto the corner of an ArtistPhoto like a sticker, with the
-// year in smaller type underneath when it isn't this year's. `withYear`
-// prints it this year too, where a list mixes years (the Log screen's past
-// shows, which reach back five).
+// Show date on a strip of tan tape across the bottom-left corner of an
+// ArtistPhoto, typed in Courier ("NOV 21"), with the year after it when it
+// isn't this year's ("NOV 21 '25"). `withYear` prints it this year too, where
+// a list mixes years (the Log screen's past shows, which reach back five).
 export function DateTag({ isoDate, withYear = false }: { isoDate: string | null | undefined; withYear?: boolean }) {
   const parsed = dateParts(isoDate)
   if (!parsed) return null
   const parts = withYear && !parsed.year ? { ...parsed, year: (isoDate ?? '').slice(0, 4) } : parsed
   return (
-    <span className="absolute -bottom-1.5 -right-1.5 -rotate-3 min-w-[28px] rounded bg-cream border-1.5 border-ink shadow-riso px-1 py-0.5 text-center leading-none">
-      <span className="block text-[8px] font-bold uppercase tracking-label text-ink-muted">{parts.month}</span>
-      <span className="block font-display text-[13px] font-bold text-ink">{parts.day}</span>
-      {parts.year && <span className="block mt-px text-[6.5px] font-bold tracking-label text-ink-muted">{parts.year}</span>}
+    <span className="tape-edge absolute -bottom-1.5 -left-2 -rotate-6 bg-tape px-1.5 py-0.5 font-mono text-[10px] font-bold leading-tight text-tape-ink whitespace-nowrap">
+      {parts.month.toUpperCase()} {parts.day}{parts.year && ` '${parts.year.slice(2)}`}
     </span>
   )
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
 
-// Ink-bordered toggle: the active option is filled with ink.
+// Marker tabs: the options typed in Courier on one hairline, the chosen one
+// struck through underneath with an amber highlighter.
 export function Segmented<V extends string>({ options, value, onChange }: {
   options: { value: V; label: string }[]; value: V; onChange: (value: V) => void
 }) {
   return (
-    <div className="flex border-2 border-ink rounded-card overflow-hidden">
-      {options.map((option, i) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          className={`flex-1 py-1.5 px-1 text-[10px] font-bold uppercase tracking-label ${i > 0 ? 'border-l-2 border-ink' : ''} ${
-            value === option.value ? 'bg-ink text-cream' : 'bg-cream text-ink'
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
+    <div className="flex border-b border-ink/30">
+      {options.map(option => {
+        const on = value === option.value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(option.value)}
+            className={`flex-1 h-10 px-1 font-mono text-[13px] font-bold uppercase ${on ? 'text-ink' : 'text-ink-muted'}`}
+          >
+            <span className={on ? 'px-1 shadow-marker' : ''}>{option.label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -285,7 +301,7 @@ export function Segmented<V extends string>({ options, value, onChange }: {
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className={`${inputBox} block px-4 py-3 focus-within:ring-2 focus-within:ring-accent/40`}>
-      <span className="block mb-1.5 text-[10px] font-bold uppercase tracking-label text-ink-muted">
+      <span className="block mb-1.5 font-mono text-[11.5px] font-bold uppercase text-ink-muted">
         {label}
         {hint && <span className="ml-1 normal-case tracking-normal font-medium text-ink-faint">{hint}</span>}
       </span>
@@ -298,7 +314,7 @@ export const fieldInput = 'w-full bg-transparent text-base text-ink placeholder:
 
 export function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-card border border-[#B03030]/20 bg-[#B03030]/10 px-3.5 py-2.5 text-xs leading-normal text-[#B03030]">
+    <div className="rounded-card border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-xs leading-normal text-danger">
       {children}
     </div>
   )
@@ -323,7 +339,7 @@ export function TopBar({ children, right }: { children: React.ReactNode; right?:
 
 // The header's profile photo.
 export function HeaderPhoto({ name, src }: { name: string; src?: string | null }) {
-  return <PersonPhoto name={name} src={src} className="w-9 h-9 text-sm border-1.5 border-ink shadow-riso" />
+  return <PersonPhoto name={name} src={src} className="w-9 h-9 text-sm border border-ink/30" />
 }
 
 // Header for pages you arrive at from somewhere (artist, profile, lists,

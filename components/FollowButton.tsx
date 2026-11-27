@@ -56,7 +56,7 @@ export function FollowButton({ targetUserId }: { targetUserId: string }) {
       className={`flex-shrink-0 px-3 py-1.5 text-[10px] ${
         isFollowing
           ? `inline-flex items-center rounded-card border-1.5 bg-cream font-bold uppercase tracking-label disabled:opacity-50 ${
-              hovering ? 'border-[#B03030]/40 text-[#B03030]' : 'border-ink text-ink'
+              hovering ? 'border-danger/40 text-danger' : 'border-ink text-ink'
             }`
           : btnPrimary
       }`}

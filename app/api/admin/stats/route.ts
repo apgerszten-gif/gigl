@@ -119,6 +119,15 @@ async function signupMethod(): Promise<'phone' | 'email' | null> {
   return data?.value === 'email' ? 'email' : 'phone'
 }
 
+async function themeSetting(): Promise<'light' | 'dark'> {
+  const { data } = await supabaseAdmin()
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'theme')
+    .maybeSingle()
+  return data?.value === 'dark' ? 'dark' : 'light'
+}
+
 // The Wrapped popup's switch and its funnel since it was last switched on:
 // distinct phones that saw it, added screenshots, logged a show and signed
 // up from it (site_events kind 'wrapped', app/api/wrapped/event).
@@ -162,7 +171,7 @@ export async function GET(req: NextRequest) {
   const today = dayOf(new Date())
 
   try {
-    const [users, events, logsToday, logsTotal, logs, method, venueMode, venueReport, wrapped] = await Promise.all([
+    const [users, events, logsToday, logsTotal, logs, method, venueMode, venueReport, wrapped, theme] = await Promise.all([
       allUsers(),
       eventsSince(since),
       countLogs(since),
@@ -172,6 +181,7 @@ export async function GET(req: NextRequest) {
       readVenueSyncMode(),
       readVenueSyncReport(),
       wrappedSummary(),
+      themeSetting(),
     ])
 
     // A phone account exists from the moment its code is requested; it only
@@ -226,6 +236,7 @@ export async function GET(req: NextRequest) {
         preludeEurAtLeast: (users.filter(u => !!u.phone).length + returningPhoneSignIns.length) * PRELUDE_EUR_PER_CODE,
       },
       signupMethod: method,
+      theme,
       latestLogs: logs,
       latestSignups,
       // The totals only; /admin/venues asks for the per-venue list.

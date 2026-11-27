@@ -163,7 +163,7 @@ export function SetlistPanel({ artist, isoDate, venue, city }: Props) {
             type="button"
             aria-label="Close"
             onClick={close}
-            className={`absolute inset-0 bg-ink/55 transition-opacity duration-[280ms] ${shown ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 bg-scrim transition-opacity duration-[280ms] ${shown ? 'opacity-100' : 'opacity-0'}`}
           />
           <div
             role="dialog"
