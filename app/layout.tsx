@@ -5,7 +5,8 @@ import { AuthProvider } from '@/components/AuthProvider'
 import { PendingLogsSync } from '@/components/PendingLogsSync'
 import { VisitTracker } from '@/components/VisitTracker'
 import { WrappedStashSync } from '@/components/wrapped/WrappedStashSync'
-import { spaceGrotesk, inter } from '@/lib/fonts'
+import { ThemeSync } from '@/components/ThemeSync'
+import { alfaSlab, courierPrime, fraunces, instrumentSans } from '@/lib/fonts'
 
 export const metadata: Metadata = {
   // Link previews (shared invites and reviews) need absolute image URLs.
@@ -25,17 +26,25 @@ export const viewport: Viewport = {
   maximumScale: 1,
 }
 
+const THEME_SCRIPT = `try{var t=localStorage.getItem('gigl-theme');if(t==='dark'||t==='light'){var d=document.documentElement;d.dataset.theme=t;document.querySelector('meta[name="theme-color"]').setAttribute('content',t==='dark'?'#1B1612':'#EDE3D0');document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').setAttribute('content',t==='dark'?'black':'default')}}catch(e){}`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    // data-theme is changed before paint by the script below, so it differs
+    // from the server's HTML on purpose.
+    <html lang="en" data-theme="light" suppressHydrationWarning className={`${fraunces.variable} ${instrumentSans.variable} ${alfaSlab.variable} ${courierPrime.variable}`}>
       <head>
         <meta name="theme-color" content="#EDE3D0" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* The look this phone last saw, applied before first paint
+            (lib/theme-setting.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="bg-paper min-h-screen font-sans antialiased">
         <AuthProvider>
           <FestivalThemeProvider>
+            <ThemeSync />
             <PendingLogsSync />
             <WrappedStashSync />
             <VisitTracker />

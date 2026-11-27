@@ -4,23 +4,105 @@
 
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
+/* The two looks. Every colour in the app comes from these (tailwind.config.js
+   reads them), so <html data-theme="light|dark"> is the whole switch: the
+   admin page sets it for everyone (lib/theme-setting.ts). Triplets are
+   space-separated RGB so Tailwind's opacity modifiers work. */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --c-paper: 237 227 208;
+  --c-cream: 250 243 226;
+  --c-cream-alt: 245 237 216;
+  --c-ink: 74 53 40;
+  --c-ink-muted: 139 117 96;
+  --c-ink-faint: 160 143 126;
+  --c-accent: 184 88 39;
+  --c-accent-hover: 156 75 33;
+  --c-accent-light: 184 88 39;
+  --c-terra: 168 104 90;
+  --c-terra-light: 168 104 90;
+  --c-tape: 203 176 132;
+  --c-tape-ink: 74 53 40;
+  --c-danger: 176 48 48;
+  --border-ink: rgba(74, 53, 40, 0.22);
+  --scrim: rgba(43, 29, 20, 0.5);
+  --shadow-riso: 0 1px 0 rgba(74, 53, 40, 0.1);
+  --shadow-riso-lg: 0 10px 28px rgba(74, 53, 40, 0.18);
+  --shadow-marker: inset 0 -8px 0 rgba(184, 88, 39, 0.4);
+  --halftone: rgba(74, 53, 40, 0.2);
+  --shimmer-a: #EDE3D0;
+  --shimmer-b: #FAF3E2;
+  --grain: url('/grain-light.svg');
+  --grain-opacity: 0.07;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-paper: 27 22 18;
+  --c-cream: 37 30 24;
+  --c-cream-alt: 33 26 21;
+  --c-ink: 237 228 209;
+  --c-ink-muted: 169 157 137;
+  --c-ink-faint: 144 133 115;
+  --c-accent: 191 115 74;
+  --c-accent-hover: 203 129 88;
+  --c-accent-light: 211 145 106;
+  --c-terra: 192 139 126;
+  --c-terra-light: 212 163 150;
+  --c-tape: 203 176 132;
+  --c-tape-ink: 27 22 18;
+  --c-danger: 224 120 107;
+  --border-ink: rgba(237, 228, 209, 0.16);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shadow-riso: 0 1px 0 rgba(0, 0, 0, 0.35);
+  --shadow-riso-lg: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --shadow-marker: inset 0 -8px 0 rgba(191, 115, 74, 0.6);
+  --halftone: rgba(237, 228, 209, 0.18);
+  --shimmer-a: #211A15;
+  --shimmer-b: #2E261F;
+  --grain: url('/grain.svg');
+  --grain-opacity: var(--grain-opacity);
+}
+
+
 body {
-  background: #EDE3D0;
-  color: #4A3528;
-  font-family: var(--font-inter), sans-serif;
+  background: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
+  font-family: var(--font-instrument), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Fraunces' soft, wonky cut: rounded terminals and the old-style italic
+   shapes that make it read as seventies print. Every headline gets it. */
+.font-display { font-variation-settings: 'SOFT' 100, 'WONK' 1; }
+
+/* Film grain over everything, the one texture Mojave Night keeps from the
+   riso zine. Fixed and click-through, so it never moves or catches a tap. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  opacity: 0.06;
+}
+
+/* The torn ends of the tan tape date tags (DateTag). */
+.tape-edge { clip-path: polygon(4% 0, 96% 6%, 100% 48%, 97% 100%, 3% 94%, 0 52%); }
+
 /* The dock's bottom padding: the home-indicator safe area less 20px. The
-   whole inset (about 34px on an iPhone) left a band of empty cream under the
+   whole inset (about 34px on an iPhone) left a band of empty space under the
    tab labels; this keeps them just clear of the indicator line instead. */
 .safe-bottom { padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - 20px)); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Riso halftone dots - the placeholder texture for missing photos (DESIGN.md). */
+/* Halftone dots - the placeholder texture for missing photos (DESIGN.md). */
 .halftone {
-  background-image: radial-gradient(rgba(74, 53, 40, 0.22) 1px, transparent 1.3px);
+  background-image: radial-gradient(var(--halftone) 1px, transparent 1.3px);
   background-size: 5px 5px;
 }
 
@@ -29,7 +111,7 @@ body {
   100% { background-position:  200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, #EDE3D0 25%, #FAF3E2 50%, #EDE3D0 75%);
+  background: linear-gradient(90deg, var(--shimmer-a) 25%, var(--shimmer-b) 50%, var(--shimmer-a) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

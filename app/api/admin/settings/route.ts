@@ -13,6 +13,8 @@ import { parseWrappedPopup } from '@/lib/wrapped/popup'
 //                                        takes effect without a deploy
 //   { venueSyncMode: 'dry' | 'live' }    whether the nightly venue sync
 //                                        writes (lib/venues/settings.ts)
+//   { theme: 'light' | 'dark' }          the look of the whole app, applied on
+//                                        each load (lib/theme-setting.ts)
 //   { wrappedPopup: true | false }       the Wrapped popup on the Feed
 //                                        (lib/wrapped/popup.ts)
 
@@ -43,6 +45,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Couldn't save the switch." }, { status: 500 })
     }
     return NextResponse.json({ wrappedPopup: value })
+  }
+
+  if (body?.theme !== undefined) {
+    if (body.theme !== 'light' && body.theme !== 'dark') {
+      return NextResponse.json({ error: "theme must be 'light' or 'dark'." }, { status: 400 })
+    }
+    const { error } = await supabaseAdmin()
+      .from('app_settings')
+      .upsert({ key: 'theme', value: body.theme, updated_at: new Date().toISOString() })
+    if (error) {
+      console.error('[admin/settings] saving the theme failed:', error)
+      return NextResponse.json({ error: "Couldn't save the switch." }, { status: 500 })
+    }
+    return NextResponse.json({ theme: body.theme })
   }
 
   if (body?.venueSyncMode !== undefined) {

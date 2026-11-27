@@ -29,7 +29,7 @@ export default function AuthCallbackPage() {
     <div className="min-h-screen bg-paper text-ink p-6 flex items-center justify-center">
       {error ? (
         <div className="text-center">
-          <p className="mb-3 text-[13px] text-[#B03030]">{error}</p>
+          <p className="mb-3 text-[13px] text-danger">{error}</p>
           <Link href="/auth" className="text-[13px] text-accent underline underline-offset-[3px]">Back to sign in</Link>
         </div>
       ) : (

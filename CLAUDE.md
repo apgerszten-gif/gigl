@@ -53,7 +53,9 @@ A Letterboxd-style app for live music. People log shows they've been to (a festi
 
 ## Design system
 
-`DESIGN.md` is the source of truth for Gigl's visual language, **Warm Riso Zine**: paper and cream surfaces, dark-brown ink, a burnt-sienna accent, 1.5px ink borders with hard offset shadows, and Space Grotesk + Inter. **Read `DESIGN.md` before creating or changing any UI.** `/design` (`app/design/DesignPreview.tsx`) renders every pattern with sample data. It only exists in local dev and preview deployments.
+**Mojave design, in two palettes.** Every colour is a CSS variable (`app/globals.css`, read by `tailwind.config.js`), with a light palette (the tan paper and burnt sienna the app launched with) and a dark one (brown-black, bone text, earthy clay), and `<html data-theme="light|dark">` is the whole switch. The shapes are the same in both: Fraunces headlines, Instrument Sans body, Alfa Slab big numbers, Courier Prime labels; pill buttons and chips in sentence case; marker-tab `Segmented`; tan-tape `DateTag`; soft shadows instead of hard offset ones; hairline borders; film grain. **The admin page's "Look of the app" switch** sets the `theme` row in `app_settings` (`light` or `dark`; light when missing) for everyone, no deploy: `ThemeSync` reads it on each load (`lib/theme-setting.ts`), and an inline script in `app/layout.tsx` applies the one this phone last saw from localStorage before first paint. **Never hard-code a colour in a component**: use the tokens (`paper`, `cream`, `ink`, `accent`, `terra`, `danger`, `tape`, `scrim`), or it will be wrong in one of the two palettes. The text on an accent button is `text-cream`, and an overlay on a photo is `bg-black/70` with `text-white`. `DESIGN.md` still describes the older riso look; the tokens and recipes in `components/ui.tsx` are the truth.
+
+`DESIGN.md` is the older Warm Riso Zine description. **Read it before creating or changing any UI**, then check `components/ui.tsx` for the current recipes. `/design` (`app/design/DesignPreview.tsx`) renders every pattern with sample data. It only exists in local dev and preview deployments.
 
 How to apply it:
 
@@ -62,8 +64,8 @@ How to apply it:
   - `components/AppHeader.tsx` for the main tabs' header, `components/BottomNav.tsx` for the dock, and `components/Logo.tsx`
   - `DESIGN.md` section 4 maps each pattern to its component.
 - When you need raw classes, use the Tailwind tokens:
-  - colours: `paper`, `cream`, `cream-alt`, `ink`, `ink-muted`, `ink-faint`, `accent`, `accent-hover`, `terra`, `star`
-  - `font-display` / `font-sans`, `border-1.5`, `rounded-card`, `shadow-riso` / `shadow-riso-lg`, `tracking-label`
+  - colours: `paper`, `cream`, `cream-alt`, `ink`, `ink-muted`, `ink-faint`, `accent`, `accent-hover`, `accent-light`, `terra`, `terra-light`, `star`, `tape`, `tape-ink`, `danger`, `scrim`
+  - `font-display` / `font-sans` / `font-slab` / `font-mono`, `rounded-card`, `shadow-riso` / `shadow-riso-lg`
   - Use opacity modifiers for tints (`bg-accent/10`, `border-ink/15`) rather than new hex values.
   - **Don't pass a conflicting class to a component that already sets it** (for example a text colour to `Label`, or a font size to `Logo`). Tailwind doesn't let the later class win reliably. Use the component's prop instead (`tone`, `size`), or add one.
 - Icons come from `lucide-react`.

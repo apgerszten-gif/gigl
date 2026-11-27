@@ -78,7 +78,7 @@ export function DockBar({
 
   return (
     <nav className={`${contained ? 'absolute' : 'fixed'} bottom-0 inset-x-0 z-40`}>
-      <div className="max-w-md mx-auto bg-cream border-t-1.5 border-ink flex safe-bottom">
+      <div className="max-w-md mx-auto bg-paper border-t border-ink flex safe-bottom">
         {TABS.map(({ id, label, href, Icon, nudge }) => {
           const isActive = active === id
           // 10px rather than 11 with five tabs, so "Upcoming" and "Rankings"
@@ -95,7 +95,7 @@ export function DockBar({
                       the circle or the icon size does. */}
                   <span
                     style={logButtonStyle}
-                    className="relative -mt-[22px] w-14 h-14 rounded-full bg-accent text-cream border-1.5 border-ink shadow-riso flex items-center justify-center"
+                    className="relative -mt-[22px] w-14 h-14 rounded-full bg-accent text-cream shadow-[0_0_0_4px_rgb(var(--c-paper)),0_0_0_5px_var(--border-ink)] flex items-center justify-center"
                   >
                     <Icon className="w-7 h-7" strokeWidth={2.5} />
                     {logExtras}
@@ -111,7 +111,7 @@ export function DockBar({
               <span className="relative">
                 <Icon className={`w-6 h-6 ${isActive ? 'text-accent' : 'text-ink-faint'}`} strokeWidth={1.75} />
                 {id === 'profile' && profileBadge > 0 && (
-                  <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-cream border-1.5 border-ink text-[10px] font-bold leading-none flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-cream border-2 border-paper text-[10px] font-bold leading-none flex items-center justify-center">
                     {profileBadge > 9 ? '9+' : profileBadge}
                     <span className="sr-only"> new notifications</span>
                   </span>
@@ -143,7 +143,7 @@ function Tab({ mode, onSelect, id, href, className, children }: {
 export function LogTip({ onDismiss, style }: { onDismiss?: () => void; style?: React.CSSProperties }) {
   return (
     <div style={style} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-7 w-[min(300px,calc(100vw-32px))] z-10">
-      <div className="relative rounded-card border-1.5 border-ink bg-cream shadow-riso pl-4 pr-9 py-3.5">
+      <div className="relative rounded-card border border-ink/30 bg-cream shadow-riso-lg pl-4 pr-9 py-3.5">
         <p className="text-[15px] leading-snug">
           <strong className="font-display">Welcome to Gigl.</strong> Log and rate your first show here.
         </p>
@@ -152,7 +152,7 @@ export function LogTip({ onDismiss, style }: { onDismiss?: () => void; style?: R
             <X className="w-4 h-4" />
           </button>
         )}
-        <span className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-cream border-r-1.5 border-b-1.5 border-ink" />
+        <span className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-cream border-r border-b border-ink/30" />
       </div>
     </div>
   )

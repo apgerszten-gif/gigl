@@ -30,7 +30,7 @@ export function FirstShowCelebration({ username, onShareReview }: { username: st
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-ink/55 flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[100] bg-scrim flex items-center justify-center p-6">
       <Card className="w-full max-w-[360px] px-6 py-7 text-center">
         <span className="mx-auto mb-3 w-12 h-12 rounded-full bg-accent/10 border-1.5 border-accent/30 text-accent flex items-center justify-center">
           <PartyPopper className="w-6 h-6" strokeWidth={1.75} />

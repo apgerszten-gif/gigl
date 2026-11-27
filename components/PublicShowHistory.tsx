@@ -61,7 +61,7 @@ export function PublicShowHistory({ logs, artistImages }: {
                       </div>
                     )}
                     <Link href={`/artist/${encodeURIComponent(show.artist_id)}`} className="p-3 flex items-center gap-3">
-                      <span className="font-display text-2xl font-bold leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
+                      <span className="font-slab text-2xl leading-none w-7 flex-shrink-0 text-center text-accent">{i + 1}</span>
                       <ArtistPhoto name={show.artist_name} src={artistImage(show.artist_name)} className="w-12 h-12" iconSize={16}>
                         <DateTag isoDate={show.show_date} />
                       </ArtistPhoto>

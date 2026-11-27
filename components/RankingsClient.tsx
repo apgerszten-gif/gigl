@@ -373,7 +373,7 @@ function RowLink({ href, children }: { href: string; children: React.ReactNode }
 
 function RankNumber({ rank }: { rank: number }) {
   return (
-    <span className={`font-display font-bold leading-none w-7 flex-shrink-0 text-center text-accent ${rank > 99 ? 'text-xl' : 'text-3xl'}`}>
+    <span className={`font-slab leading-none w-7 flex-shrink-0 text-center text-accent ${rank > 99 ? 'text-xl' : 'text-3xl'}`}>
       {rank}
     </span>
   )
