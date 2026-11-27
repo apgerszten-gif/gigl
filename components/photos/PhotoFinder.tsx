@@ -320,7 +320,7 @@ export function PhotoFinder() {
         <input
           ref={input}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/heic,image/heif"
           multiple
           className="hidden"
           onChange={e => { void start(e.target.files); e.target.value = '' }}

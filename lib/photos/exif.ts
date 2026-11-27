@@ -16,8 +16,8 @@ const EMPTY: PhotoMeta = { takenOn: null, lat: null, lng: null }
 
 export async function readPhotoMeta(file: File): Promise<PhotoMeta> {
   try {
-    // EXIF sits near the start of a JPEG; a HEIC can keep it a little further in.
-    const buffer = await file.slice(0, 1024 * 1024).arrayBuffer()
+    // EXIF sits near the start of a JPEG; a HEIC can keep it a little further in, so a bigger slice is read.
+    const buffer = await file.slice(0, 3 * 1024 * 1024).arrayBuffer()
     const view = new DataView(buffer)
     if (view.byteLength > 12 && view.getUint16(0) === 0xffd8) return parseJpeg(view)
     return parseContainer(view)
