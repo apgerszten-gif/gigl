@@ -6,6 +6,7 @@ import { PendingLogsSync } from '@/components/PendingLogsSync'
 import { VisitTracker } from '@/components/VisitTracker'
 import { WrappedStashSync } from '@/components/wrapped/WrappedStashSync'
 import { ThemeSync } from '@/components/ThemeSync'
+import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister'
 import { alfaSlab, courierPrime, fraunces, instrumentSans } from '@/lib/fonts'
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <FestivalThemeProvider>
             <ThemeSync />
+            <ServiceWorkerRegister />
             <PendingLogsSync />
             <WrappedStashSync />
             <VisitTracker />

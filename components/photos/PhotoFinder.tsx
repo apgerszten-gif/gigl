@@ -12,6 +12,7 @@ import { computeShowScore } from '@/lib/rating'
 import { markStashDone, queueLog, readStash, stashLog } from '@/lib/wrapped/stash'
 import type { WrappedShow } from '@/lib/wrapped/types'
 import { readPhotoMeta } from '@/lib/photos/exif'
+import { takeSharedPhotos, toFileList } from '@/lib/photos/sharedPhotos'
 import type { PhotoMatchResult, PhotoShow } from '@/lib/photos/types'
 import { WrappedLogSheet } from '@/components/wrapped/WrappedLogSheet'
 import { ArtistPhoto, BackHeader, DateTag, EmptyState, ErrorNote, Label, Place, Stars, btnPrimary, btnQuiet, btnSecondary } from '@/components/ui'
@@ -53,6 +54,8 @@ export function PhotoFinder() {
   const [matches, setMatches] = useState<Match[]>([])
   const [logs, setLogs] = useState<Record<string, GuestDraft>>({})
   const [logging, setLogging] = useState<WrappedShow | null>(null)
+  // These photos came from another app's Share, not the picker.
+  const [viaShare, setViaShare] = useState(false)
 
   async function start(files: FileList | null) {
     if (!files || files.length === 0) return
@@ -106,6 +109,38 @@ export function PhotoFinder() {
       setStage('pick')
     }
   }
+
+  // ── Photos shared to Gigl ─────────────────────────────────────────────────
+  // On Android, with Gigl installed, someone can search their photos in
+  // Google Photos, select, Share, and pick Gigl. public/sw.js catches that
+  // share on the phone and sends them here as /photos?shared=<n>, and they
+  // go through the same reading and matching as photos chosen in the picker.
+  // `shared=0` means the share arrived but couldn't be kept (the worker wasn't
+  // ready yet, or nothing came with it).
+  const sharedHandled = useRef(false)
+  useEffect(() => {
+    if (sharedHandled.current) return
+    const params = new URLSearchParams(window.location.search)
+    const shared = params.get('shared')
+    if (shared === null) return
+    sharedHandled.current = true
+    // Gone from the address, so a refresh doesn't try again.
+    params.delete('shared')
+    const rest = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''))
+
+    void (async () => {
+      const files = shared === '0' ? [] : await takeSharedPhotos()
+      const list = files.length > 0 ? toFileList(files) : null
+      if (!list) {
+        setError("Those photos didn't make it to Gigl. Open Gigl again and share them once more, or tap Choose photos.")
+        return
+      }
+      setViaShare(true)
+      void start(list)
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Results: what's already logged ───────────────────────────────────────
 
@@ -256,7 +291,9 @@ export function PhotoFinder() {
             </div>
           ) : grouped.located === 0 ? (
             <EmptyState>
-              None of those photos had a location. Phones usually remove it when a website opens a photo. {LOCATION_HINT}
+              {viaShare
+                ? 'None of the photos you shared had a location. Some apps remove it when they share a photo. Try choosing them with Choose photos, then Browse or Files.'
+                : <>None of those photos had a location. Phones usually remove it when a website opens a photo. {LOCATION_HINT}</>}
             </EmptyState>
           ) : (
             <EmptyState>
@@ -353,6 +390,10 @@ export function PhotoFinder() {
         <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
           <b className="text-ink">iPhone:</b> tap Options, then turn Location on.<br />
           <b className="text-ink">Android:</b> choose Browse or Files.
+        </p>
+
+        <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
+          <b className="text-ink">Android, with Gigl installed:</b> in Google Photos, search <b>concert</b>, select the photos, tap Share and choose Gigl. To install, open Chrome&apos;s menu and tap Install app.
         </p>
 
         {error && <ErrorNote>{error}</ErrorNote>}
