@@ -15,7 +15,9 @@ export interface PreparedImage {
   preview: string
 }
 
-export async function prepareScreenshot(file: File): Promise<PreparedImage> {
+// `longEdge` is smaller for a batch of photos (lib/photos), where several
+// share one request.
+export async function prepareScreenshot(file: File, longEdge = LONG_EDGE): Promise<PreparedImage> {
   const url = URL.createObjectURL(file)
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -25,7 +27,7 @@ export async function prepareScreenshot(file: File): Promise<PreparedImage> {
       el.src = url
     })
 
-    const scale = Math.min(1, LONG_EDGE / Math.max(img.naturalWidth, img.naturalHeight))
+    const scale = Math.min(1, longEdge /Math.max(img.naturalWidth, img.naturalHeight))
     const canvas = document.createElement('canvas')
     canvas.width = Math.round(img.naturalWidth * scale)
     canvas.height = Math.round(img.naturalHeight * scale)

@@ -801,15 +801,15 @@ export async function suggestValues(field: SuggestField, keyword: string, limit 
 // Every show already on a given date, for duplicate detection at submit time.
 // The date is exact where names are not, so it is the cheap way to narrow
 // before comparing artist and venue in JS.
-export async function showsOnDate(isoDate: string): Promise<Show[]> {
+export async function showsOnDate(isoDate: string, from?: Coords | null): Promise<Show[]> {
   const { data, error } = await supabase
     .from('shows')
     .select(SHOW_COLUMNS)
     .eq('show_date', isoDate)
-    .limit(500)
+    .limit(1000)
 
   if (error) throw new Error(`shows-on-date lookup failed: ${error.message}`)
-  return (data ?? []).map(row => toShow(row))
+  return (data ?? []).map(row => toShow(row, from ?? undefined))
 }
 
 export interface UserShowInput {
