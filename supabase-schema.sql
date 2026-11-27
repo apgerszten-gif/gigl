@@ -1089,3 +1089,38 @@ alter table public.site_events drop constraint if exists site_events_kind_check;
 alter table public.site_events add constraint site_events_kind_check
   check (kind in ('scan', 'visit', 'wrapped'));
 create index if not exists site_events_wrapped_idx on public.site_events (created_at) where kind = 'wrapped';
+
+-- Support-act search (lib/shows/repository.ts searchStoredShows; docs/show-coverage-audit.md, gap 9).
+--
+-- The Log screen's search matched only a show's headliner and venue, so a
+-- name further down the bill (a support act, or any festival act but the
+-- first) found nothing even though the show was stored. `support` is a
+-- text[], which a trigram index can't search, so this keeps a plain-text copy
+-- of it, maintained by a trigger because array_to_string isn't immutable
+-- enough for a generated column.
+--
+-- Until this has run, the app works exactly as before: the support query
+-- fails once per server instance, is logged, and the search carries on
+-- without it. Safe to re-run. The backfill touches every row that has a
+-- support list once, and the index build can take a little while on a large
+-- table; run it outside peak hours.
+alter table public.shows add column if not exists support_text text;
+
+create or replace function public.shows_set_support_text() returns trigger
+language plpgsql as $$
+begin
+  new.support_text := array_to_string(new.support, ' | ');
+  return new;
+end;
+$$;
+
+drop trigger if exists shows_support_text on public.shows;
+create trigger shows_support_text
+  before insert or update of support on public.shows
+  for each row execute function public.shows_set_support_text();
+
+update public.shows
+   set support_text = array_to_string(support, ' | ')
+ where support is not null and support_text is null;
+
+create index if not exists shows_support_text_trgm_idx on public.shows using gin (support_text gin_trgm_ops);

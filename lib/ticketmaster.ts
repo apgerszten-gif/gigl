@@ -54,7 +54,7 @@ interface TMVenue {
 interface TMEvent {
   id: string
   name: string
-  dates?: { start?: { localDate?: string } }
+  dates?: { start?: { localDate?: string }; status?: { code?: string } }
   classifications?: TMClassification[]
   images?: TMImage[]
   _embedded?: {
@@ -177,6 +177,10 @@ export interface SyncShow extends Show {
   // never falls back to the event's image, since that may not show the
   // artist, and it's null when the event lists no attraction at all.
   artistImage: string | null
+  // Ticketmaster's own word that the event is off (dates.status.code
+  // "cancelled", spelled "canceled" in some responses). The syncs don't
+  // store these and delete the row if an earlier night did.
+  cancelled: boolean
 }
 
 // Ticketmaster caps `size` at 200 and refuses to page beyond 1000 results
@@ -203,6 +207,7 @@ function toSyncShow(event: TMEvent, city: SyncCity): SyncShow {
     lng: Number.isFinite(lng) ? lng : city.lng,
     metro: `${city.city}, ${city.stateCode}`,
     artistImage: pickImage(event._embedded?.attractions?.[0]?.images),
+    cancelled: /^cancell?ed$/i.test(event.dates?.status?.code ?? ''),
   }
 }
 
@@ -233,6 +238,19 @@ export class TicketmasterError extends Error {
     this.status = status
   }
 }
+
+// Worth another attempt: the rate limiter (429), Ticketmaster's own faults
+// (5xx) and a request that never completed (status 0: network error or the
+// timeout below). Anything else (a bad query, a revoked key) fails the same
+// way again. Used by both nightly syncs; before this only 429 was retried,
+// so one 502 dropped the rest of its probe for the night.
+export const isRetryable = (err: unknown) =>
+  err instanceof TicketmasterError && (err.status === 429 || err.status >= 500 || err.status === 0)
+
+// A request that hasn't answered by now is not going to. Without a limit one
+// hung connection could hold a worker until the function's own timeout, which
+// discards the whole night's collection.
+const REQUEST_TIMEOUT_MS = 20_000
 
 // An inclusive date window to scope a city query to. Absent means "everything
 // upcoming", which is what all but a handful of cities need.
@@ -345,17 +363,25 @@ export async function fetchCityShowsPage(city: SyncCity, page: number, options: 
     params.set('endDateTime',   `${window.to}T23:59:59Z`)
   }
 
-  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params}`, {
-    // Explicitly uncached: this runs once a night and exists precisely to
-    // observe what changed. A cache hit here would defeat the whole job.
-    cache: 'no-store',
-  })
+  const scopeLabel = radiusMiles ? `${city.city} r${radiusMiles}mi` : city.city
+  const whereLabel = window ? `${scopeLabel} ${window.from}..${window.to} p${page}` : `${scopeLabel} p${page}`
+
+  let res: Response
+  try {
+    res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params}`, {
+      // Explicitly uncached: this runs once a night and exists precisely to
+      // observe what changed. A cache hit here would defeat the whole job.
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+  } catch (err) {
+    // Status 0 = no answer at all; see isRetryable.
+    throw new TicketmasterError(`Ticketmaster city sync failed for ${whereLabel} (no response): ${err instanceof Error ? err.message : String(err)}`, 0)
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    const scope = radiusMiles ? `${city.city} r${radiusMiles}mi` : city.city
-    const where = window ? `${scope} ${window.from}..${window.to} p${page}` : `${scope} p${page}`
-    throw new TicketmasterError(`Ticketmaster city sync failed for ${where} (${res.status}): ${text}`, res.status)
+    throw new TicketmasterError(`Ticketmaster city sync failed for ${whereLabel} (${res.status}): ${text}`, res.status)
   }
 
   const data: TMEventSearchResponse = await res.json()

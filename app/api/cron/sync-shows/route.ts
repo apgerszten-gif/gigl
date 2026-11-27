@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SYNC_CITIES, type SyncCity } from '@/lib/shows/cities'
-import { fetchCityShowsPage, monthlyWindows, splitWindow, TicketmasterError, TM_RESULT_CAP, type DateWindow, type FetchOptions, type SyncShow } from '@/lib/ticketmaster'
-import { upsertShows, prunePastShows } from '@/lib/shows/repository'
+import { fetchCityShowsPage, isRetryable, monthlyWindows, splitWindow, TM_RESULT_CAP, type DateWindow, type FetchOptions, type SyncShow } from '@/lib/ticketmaster'
+import { upsertShows, prunePastShows, deleteShowsById } from '@/lib/shows/repository'
+import { recordSyncStart, recordSyncFinish } from '@/lib/shows/syncStatus'
 import { saveHeadlinerImages, fillLoggedArtistImages } from '@/lib/shows/artistImageSync'
 import { createRateGate, pool } from '@/lib/shows/pacing'
 
@@ -101,6 +102,9 @@ export async function GET(req: NextRequest) {
   }
 
   const startedAt = Date.now()
+  // Written before any work so a run killed at maxDuration leaves a
+  // startedAt with no finishedAt, which /api/health/sync reports.
+  await recordSyncStart('sync-shows', startedAt)
   const collected  = new Map<string, SyncShow>()
   const cityErrors: string[] = []
 
@@ -129,14 +133,14 @@ export async function GET(req: NextRequest) {
         for (const show of result.shows) collected.set(show.id, show)
         return result
       } catch (err) {
-        const status = err instanceof TicketmasterError ? err.status : 0
-
         // 429 means the limiter, not a broken query - the identical request
         // succeeds a moment later. Measured: one 429 across 259 requests at
         // 250ms spacing, and because a failed page aborts the rest of its
         // city, that single blip silently cost San Francisco 401 events.
-        // Everything else (a bad city name, a revoked key) will fail again.
-        if (status !== 429 || attempt >= MAX_RETRIES) throw err
+        // A 5xx or a request that never answered (isRetryable) is the same
+        // kind of blip. Everything else (a bad city name, a revoked key) will
+        // fail again.
+        if (!isRetryable(err) || attempt >= MAX_RETRIES) throw err
         await sleep(RETRY_BACKOFF_MS * (attempt + 1))
       }
     }
@@ -148,7 +152,14 @@ export async function GET(req: NextRequest) {
   // not a city, as the unit of work, so the two scopes share all the paging,
   // splitting and retry machinery.
   interface Probe { city: SyncCity; radiusMiles?: number }
-  const probes: Probe[] = SYNC_CITIES.flatMap(city => [
+  // The start of the list moves a little every night. If the deadline ever
+  // cuts a run short, the probes at the back of a fixed order (Canada, the
+  // small second-wave cities) would lose out every single night; rotated,
+  // the loss is shared. The offset is a whole number of cities so a city's
+  // name and radius probes stay adjacent.
+  const rotation = (Math.floor(startedAt / 86_400_000) * 7) % SYNC_CITIES.length
+  const rotated = [...SYNC_CITIES.slice(rotation), ...SYNC_CITIES.slice(0, rotation)]
+  const probes: Probe[] = rotated.flatMap(city => [
     { city },
     { city, radiusMiles: RADIUS_MILES },
   ])
@@ -159,6 +170,7 @@ export async function GET(req: NextRequest) {
   // whether this probe is being truncated - which is why the check costs no
   // request of its own.
   const firstPages = new Map<string, { totalPages: number; totalElements: number }>()
+  const emptyProbes: string[] = []
 
   const outOfTime = () => Date.now() - startedAt > FETCH_DEADLINE_MS
 
@@ -166,6 +178,13 @@ export async function GET(req: NextRequest) {
     try {
       const result = await fetchPage(probe.city, 0, { radiusMiles: probe.radiusMiles })
       firstPages.set(probeKey(probe), result)
+      // A name that doesn't match Ticketmaster's spelling returns nothing
+      // without an error (an accented city is the likely case). Zero for a
+      // whole metro is never right, so say so.
+      if (result.totalElements === 0) {
+        console.warn(`[sync-shows] ${probeKey(probe)} returned no events`)
+        emptyProbes.push(probeKey(probe))
+      }
     } catch (err) {
       recordError(probe.city, err)
     }
@@ -266,8 +285,23 @@ export async function GET(req: NextRequest) {
 
   // Array.from rather than spread: tsconfig targets below es2015, where
   // spreading a Map iterator needs --downlevelIteration.
-  const shows = Array.from(collected.values())
+  const fetchMs = Date.now() - startedAt
+  const everything = Array.from(collected.values())
+  // Ticketmaster saying an event is cancelled is an explicit signal (unlike an
+  // event simply not turning up, which can be a partial failure and is never
+  // treated as one). Those are not stored, and a row an earlier night stored
+  // before the cancellation is removed. A show that is only postponed or
+  // rescheduled is kept: it still happens, on a new date.
+  const cancelledIds = everything.filter(s => s.cancelled).map(s => s.id)
+  const shows = everything.filter(s => !s.cancelled)
   const { upserted, failed } = await upsertShows(shows)
+  const upsertMs = Date.now() - startedAt - fetchMs
+  let cancelledRemoved = 0
+  try {
+    cancelledRemoved = await deleteShowsById(cancelledIds, 'ticketmaster')
+  } catch (err) {
+    console.error('[sync-shows] removing cancelled shows failed:', err instanceof Error ? err.message : String(err))
+  }
 
   // Pruned after the upsert so a show whose date moved is refreshed before
   // the window is applied, rather than being deleted and re-added.
@@ -302,16 +336,25 @@ export async function GET(req: NextRequest) {
     // to watch.
     splitSlices,
     cappedSlices,
+    emptyProbes,
     fetched:     shows.length,
+    cancelled:   cancelledIds.length,
+    cancelledRemoved,
     upserted,
     failed,
     pruned,
     artistImagesSaved,
     artistImagesLookedUp: artistImageLookups.looked,
     artistImagesFound:    artistImageLookups.found,
+    // Where the time went. The 217s in the header comment is only the
+    // fetch; upsert, prune and image lookups run after it inside the same
+    // 300s, and these two numbers are how that margin gets checked.
+    fetchMs,
+    upsertMs,
     durationMs:  Date.now() - startedAt,
   }
   console.log('[sync-shows] complete', summary)
+  await recordSyncFinish('sync-shows', startedAt, summary)
 
   return NextResponse.json(summary)
 }

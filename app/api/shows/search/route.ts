@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
     const page = following
       ? { shows: await followedUpcoming({ ...readFollowed(req.nextUrl.searchParams), ...upcomingRange, nearby }), next: null }
       : upcoming ? await upcomingShows(q, { nearby, offset, limit: UPCOMING_LIMIT, ...upcomingRange }) : null
-    const shows = page ? page.shows : await searchStoredShows(q, { nearby, range: pastRange })
+    const shows = page ? page.shows : await searchStoredShows(q, { nearby, range: pastRange, today: req.nextUrl.searchParams.get('today') })
     const next = page ? { next: page.next } : {}
 
     // About one catalogue row in twelve came without a photo on its event.

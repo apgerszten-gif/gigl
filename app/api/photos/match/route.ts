@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { placesNear, showsOnDate, venueCoords } from '@/lib/shows/repository'
+import { placesNear, showsOnDateNear, venueCoords } from '@/lib/shows/repository'
 import { showsOnDateInCity } from '@/lib/setlistfm'
 import { distanceInMiles } from '@/lib/geo'
 import { nameKey } from '@/lib/nameKey'
@@ -15,8 +15,8 @@ import type { PhotoCluster, PhotoMatchResult, PhotoShow } from '@/lib/photos/typ
 // (components/photos/cluster.ts); only those groups arrive here, with the
 // place already rounded to 2 decimals. No picture is ever uploaded, nothing
 // is stored, and no account is needed. A show matches when it was on that
-// date (or the one before, since a late show's photos carry the next day's
-// date) within MATCH_MILES of where the photos were taken.
+// exact date within MATCH_MILES of where the photos were taken (the phone has
+// already moved a photo from before 5am onto the night before, lib/photos/exif.ts).
 
 // supabase-js reads go in the Data Cache without this - see the search route.
 export const fetchCache = 'default-no-store'
@@ -26,6 +26,9 @@ export const maxDuration = 60
 const MAX_CLUSTERS = 80
 const MATCH_MILES = 3
 const PER_CLUSTER = 5
+// Ceiling for acts tied with the last place on distance (a festival's
+// stages share one coordinate).
+const MAX_TIED = 12
 const AT_ONCE = 8
 
 // A catalogue show this close is taken to be the one; further than this, the
@@ -71,11 +74,17 @@ export async function POST(req: NextRequest) {
       const chunk = clusters.slice(start, start + AT_ONCE)
       const found = await Promise.all(chunk.map(async cluster => {
         const from = { lat: cluster.lat, lng: cluster.lng }
-        const night = await showsOnDate(cluster.date, from)
-        return night
+        const night = await showsOnDateNear(cluster.date, from, MATCH_MILES)
+        const nearest = night
           .filter(s => s.isoDate && s.isoDate <= today && s.distanceMiles != null && s.distanceMiles <= MATCH_MILES)
-          .sort((a, b) => a.distanceMiles! - b.distanceMiles! || a.id.localeCompare(b.id))
-          .slice(0, PER_CLUSTER)
+          .sort((a, b) => a.distanceMiles! - b.distanceMiles! || Number(!!b.imageUrl) - Number(!!a.imageUrl) || a.id.localeCompare(b.id))
+        // A festival's acts (and a venue with several rooms) share one set of
+        // coordinates, so they tie on distance and a plain slice would return
+        // whichever five sort first by id, not the one photographed. Keep
+        // everything level with the last place, up to a ceiling, and let the
+        // person pick.
+        const cutoff = nearest.length > PER_CLUSTER ? nearest[PER_CLUSTER - 1].distanceMiles! + 0.05 : Infinity
+        return nearest.filter((s, i) => i < PER_CLUSTER || (s.distanceMiles! <= cutoff && i < MAX_TIED)).slice(0, MAX_TIED)
       }))
       found.forEach((list, i) => {
         sure[start + i] = list.some(s => s.distanceMiles! <= SURE_MILES)

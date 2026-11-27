@@ -155,6 +155,8 @@ export default function SelectShowPage() {
       setError(false)
       try {
         const params = new URLSearchParams({ q: trimmed })
+        // The phone's date, so the evening's list ends tonight and not at UTC's tomorrow.
+        params.set('today', localTodayIso())
         if (view === 'upcoming') params.set('when', 'upcoming')
         else if (when.kind === 'year') params.set('year', when.year)
         else if (when.kind === 'date') params.set('date', when.date)
