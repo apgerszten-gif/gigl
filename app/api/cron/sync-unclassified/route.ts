@@ -40,6 +40,12 @@ const NOT_A_SHOW = /\b(comedy|comedian|stand[- ]?up|improv|screening|drive-in|mo
 // would too: measured, Hollywood Improv and Brea Improv were 140 of the 290
 // events LA and Denver kept before this rule.
 const NOT_A_ROOM = /\b(improv|comedy|laugh(s|ter)?|funny|punch ?line|stand ?up|playhouse|cinema|drive-in)\b/i
+// Playhouses are theatres, with one famous exception: Variety Playhouse in
+// Atlanta is a rock club, and it is one of the five rooms CLAUDE.md names as
+// the reason this sync exists. Add other music rooms here rather than
+// dropping the playhouse rule.
+const MUSIC_ROOM_EXCEPTIONS = /\bvariety playhouse\b/i
+const notARoom = (venue: string) => NOT_A_ROOM.test(venue) && !MUSIC_ROOM_EXCEPTIONS.test(venue)
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -94,7 +100,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[sync-unclassified] venue lookup failed:', err instanceof Error ? err.message : err)
   }
-  const kept = titled.filter(s => !NOT_A_ROOM.test(s.venue) && known.has(`${nameKey(s.venue)}|${nameKey(s.city)}|${s.state}`))
+  const kept = titled.filter(s => !notARoom(s.venue) && known.has(`${nameKey(s.venue)}|${nameKey(s.city)}|${s.state}`))
 
   const { upserted, failed } = await upsertShows(kept)
   let artistImagesSaved = 0

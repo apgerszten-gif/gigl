@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SYNC_CITIES, type SyncCity } from '@/lib/shows/cities'
-import { fetchCityShowsPage, monthlyWindows, TicketmasterError, TM_RESULT_CAP, type DateWindow, type FetchOptions, type SyncShow } from '@/lib/ticketmaster'
+import { fetchCityShowsPage, monthlyWindows, splitWindow, TicketmasterError, TM_RESULT_CAP, type DateWindow, type FetchOptions, type SyncShow } from '@/lib/ticketmaster'
 import { upsertShows, prunePastShows } from '@/lib/shows/repository'
 import { saveHeadlinerImages, fillLoggedArtistImages } from '@/lib/shows/artistImageSync'
 import { createRateGate, pool } from '@/lib/shows/pacing'
@@ -206,7 +206,50 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // A month slice can itself hold more than TM_RESULT_CAP (a radius probe
+  // around Las Vegas or New York in a busy month is the likely case), and
+  // Ticketmaster truncates that silently too - sorted by date, so it is the
+  // end of the month that disappears. Page 0 of every slice reports its own
+  // totalElements, so an over-cap slice is cut in half by days and each half
+  // asked again, down to a single day (which cannot be split further; that one
+  // is counted and logged so it shows in the summary rather than vanishing).
+  // Costs nothing for a slice under the cap, which is nearly all of them.
+  let splitSlices = 0
+  let cappedSlices = 0
+
+  async function walkWindow(city: SyncCity, radiusMiles: number | undefined, window: DateWindow): Promise<void> {
+    if (outOfTime()) return
+    let first: Awaited<ReturnType<typeof fetchPage>>
+    try {
+      first = await fetchPage(city, 0, { window, radiusMiles })
+    } catch (err) {
+      recordError(city, err)
+      return
+    }
+    if (first.totalElements > TM_RESULT_CAP) {
+      const halves = splitWindow(window)
+      if (halves) {
+        splitSlices += 1
+        console.log(`[sync-shows] ${label(city)}${radiusMiles ? ` r${radiusMiles}` : ''} ${window.from}..${window.to} has ${first.totalElements} events; splitting`)
+        for (const half of halves) await walkWindow(city, radiusMiles, half)
+        return
+      }
+      cappedSlices += 1
+      console.warn(`[sync-shows] ${label(city)} ${window.from} has ${first.totalElements} events in one day; only the first ${TM_RESULT_CAP} are reachable`)
+    }
+    for (let page = 1; page < Math.min(first.totalPages, MAX_PAGES_PER_CITY); page++) {
+      if (outOfTime()) return
+      try {
+        await fetchPage(city, page, { window, radiusMiles })
+      } catch (err) {
+        recordError(city, err)
+        return
+      }
+    }
+  }
+
   await pool(tasks, CONCURRENCY, async task => {
+    if (task.window) { await walkWindow(task.city, task.radiusMiles, task.window); return }
     for (const page of task.pages) {
       if (outOfTime()) return
       try {
@@ -254,6 +297,11 @@ export async function GET(req: NextRequest) {
     // outgrown its window and needs splitting across more than one cron.
     deadlineHit: Date.now() - startedAt > FETCH_DEADLINE_MS,
     cityErrors:  cityErrors.length,
+    // Month slices that were over the cap and re-asked in halves, and single
+    // days still over it (shows lost). A non-zero cappedSlices is the number
+    // to watch.
+    splitSlices,
+    cappedSlices,
     fetched:     shows.length,
     upserted,
     failed,

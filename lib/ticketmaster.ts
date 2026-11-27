@@ -273,6 +273,19 @@ export function monthlyWindows(months: number): DateWindow[] {
   return windows
 }
 
+// Cuts a window in two by days, or null for a single day. Used when a slice
+// reports more than TM_RESULT_CAP events, which Ticketmaster would otherwise
+// truncate without a word.
+export function splitWindow(window: DateWindow): [DateWindow, DateWindow] | null {
+  const day = 86_400_000
+  const from = Date.parse(`${window.from}T00:00:00Z`)
+  const to   = Date.parse(`${window.to}T00:00:00Z`)
+  if (!(to > from)) return null
+  const mid = from + Math.floor((to - from) / day / 2) * day
+  const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+  return [{ from: window.from, to: iso(mid) }, { from: iso(mid + day), to: window.to }]
+}
+
 export interface FetchOptions {
   window?: DateWindow
   // When set, the query becomes "within this many miles of the city's
