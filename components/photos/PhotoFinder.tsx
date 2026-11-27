@@ -331,8 +331,8 @@ export function PhotoFinder() {
           <ol className="mt-2.5 space-y-2">
             {[
               <>Tap <b>Choose photos</b></>,
-              <>Search <span className="rounded-full border-1.5 border-ink bg-paper px-2 py-px text-[12px] font-bold">concert</span> in the picker</>,
-              <>Select all, then tap <b>Add</b></>,
+              <>Tap the search button at the bottom right and type <span className="rounded-full border-1.5 border-ink bg-paper px-2 py-px text-[12px] font-bold">concert</span></>,
+              <>Select your photos, then tap <b>Add</b></>,
             ].map((step, i) => (
               <li key={i} className="flex items-center gap-2.5 text-[13px]">
                 <span className="w-5 h-5 flex-shrink-0 rounded-full bg-accent text-cream text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
@@ -341,6 +341,8 @@ export function PhotoFinder() {
             ))}
           </ol>
         </div>
+
+        <p className="text-[12px] leading-snug text-ink-muted">A few photos from each night is enough.</p>
 
         <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
           <b className="text-ink">iPhone:</b> tap Options, then turn Location on.<br />
