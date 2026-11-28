@@ -512,7 +512,7 @@ const SAMPLE_NOTIFICATIONS: Notification[] = [
   { kind: 'follow', key: 'follow', at: hoursAgo(20), unseen: true, actor: jo, followingBack: false },
   { kind: 'tag', key: 'tag', at: hoursAgo(50), unseen: false, actor: mo,
     log: { id: 'l2', artistId: 'a2', artistName: 'Rüfüs Du Sol' } },
-  // Older than 3 days: collapsed behind "2 older than 3 days".
+  // Older than 3 days: collapsed behind "2 notifications older than 3 days".
   { kind: 'follow', key: 'follow-old', at: hoursAgo(24 * 5), unseen: false, actor: mei, followingBack: true },
   { kind: 'like', key: 'like-old', at: hoursAgo(24 * 9), unseen: false, actors: [mo], total: 1,
     log: { id: 'l3', artistId: 'a3', artistName: 'Khruangbin' } },
