@@ -67,7 +67,7 @@ export function UserSearch({ trailing }: { trailing?: React.ReactNode }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
-        <label className={`${inputBox} flex flex-1 min-w-0 items-center gap-2 px-3 py-2`}>
+        <label className={`${inputBox} flex flex-1 min-w-0 items-center gap-2 ${trailing ? 'px-2.5' : 'px-3'} py-2`}>
           <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
           <input
             value={query}
