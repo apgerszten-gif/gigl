@@ -497,15 +497,9 @@ export function PhotoFinder() {
           </ol>
         </div>
 
-        <p className="text-[12px] leading-snug text-ink-muted">A few photos from each night is enough.</p>
-
         <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
           <b className="text-ink">iPhone:</b> tap Options, then turn Location on.<br />
           <b className="text-ink">Android:</b> choose Browse or Files.
-        </p>
-
-        <p className="rounded-card border-1.5 border-dashed border-ink/25 px-3 py-2.5 text-[12px] leading-snug text-ink-muted">
-          <b className="text-ink">Android, with Gigl installed:</b> in Google Photos, search <b>concert</b>, select the photos, tap Share and choose Gigl. To install, open Chrome&apos;s menu and tap Install app.
         </p>
 
         {error && <ErrorNote>{error}</ErrorNote>}
