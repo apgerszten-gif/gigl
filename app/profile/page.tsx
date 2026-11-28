@@ -360,10 +360,10 @@ export default function ProfilePage() {
             </div>
             {/* Your own numbers, to the right of the photo and name. */}
             <div className="flex flex-shrink-0 items-center">
-              <div className="flex px-1.5">
+              <div className="flex px-1">
                 <Stat value={shows.length} label="Gigs" />
               </div>
-              <div className="flex border-l border-ink/10 px-1.5">
+              <div className="flex w-[82px] flex-shrink-0 border-l border-ink/10 px-1.5">
                 <Stat
                   value={ratedShows.length > 0 ? <Stars score={avgScore} size={11} /> : <span className="text-accent">—</span>}
                   label="Avg rating"
@@ -377,10 +377,10 @@ export default function ProfilePage() {
           <UserSearch
             trailing={
               <div className="flex flex-shrink-0 items-center">
-                <Link href={profile ? `/u/${profile.username}/followers` : '#'} className="flex px-1.5">
+                <Link href={profile ? `/u/${profile.username}/followers` : '#'} className="flex px-1">
                   <Stat value={followerCount} label="Followers" />
                 </Link>
-                <Link href={profile ? `/u/${profile.username}/following` : '#'} className="flex border-l border-ink/10 px-1.5">
+                <Link href={profile ? `/u/${profile.username}/following` : '#'} className="flex w-[82px] flex-shrink-0 border-l border-ink/10 px-1.5">
                   <Stat value={followingCount} label="Following" />
                 </Link>
               </div>

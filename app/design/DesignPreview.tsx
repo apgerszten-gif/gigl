@@ -541,16 +541,16 @@ function ProfileScreen() {
               <Place className="mt-0.5">Los Angeles, CA</Place>
             </div>
             <div className="flex flex-shrink-0 items-center">
-              <div className="flex px-1.5">
+              <div className="flex px-1">
                 <Stat value="42" label="Gigs" />
               </div>
-              <div className="flex border-l border-ink/10 px-1.5">
+              <div className="flex w-[82px] flex-shrink-0 border-l border-ink/10 px-1.5">
                 <Stat value={<Stars score={4.4} size={11} />} label="Avg rating" />
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <label className={`${inputBox} flex flex-1 min-w-0 items-center gap-2 px-3 py-2`}>
+            <label className={`${inputBox} flex flex-1 min-w-0 items-center gap-2 px-2.5 py-2`}>
               <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
               <input
                 placeholder="Search users"
@@ -558,10 +558,10 @@ function ProfileScreen() {
               />
             </label>
             <div className="flex flex-shrink-0 items-center">
-              <div className="flex px-1.5">
+              <div className="flex px-1">
                 <Stat value="128" label="Followers" />
               </div>
-              <div className="flex border-l border-ink/10 px-1.5">
+              <div className="flex w-[82px] flex-shrink-0 border-l border-ink/10 px-1.5">
                 <Stat value="97" label="Following" />
               </div>
             </div>
