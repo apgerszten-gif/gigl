@@ -130,9 +130,7 @@ export function NotificationsView({ items, username, followed, onFollowBack, onO
         <p className="text-[13px] leading-snug text-ink-faint">
           Nothing yet. New followers, likes and comments on your logs, and reminders for shows you&apos;ve saved will show up here.
         </p>
-      ) : recent.length === 0 ? (
-        <p className="text-[13px] leading-snug text-ink-faint">Nothing in the last 3 days.</p>
-      ) : (
+      ) : recent.length > 0 && (
         <NotificationRows
           rows={shown}
           username={username}
@@ -160,7 +158,7 @@ export function NotificationsView({ items, username, followed, onFollowBack, onO
             aria-expanded={showOlder}
             className={`${btnSecondary} w-full py-2.5 text-[11px]`}
           >
-            {showOlder ? 'Hide older' : `${older.length} older than 3 days`}
+            {showOlder ? 'Hide older' : `${older.length} ${older.length === 1 ? 'notification' : 'notifications'} older than 3 days`}
           </button>
           {showOlder && (
             <NotificationRows
