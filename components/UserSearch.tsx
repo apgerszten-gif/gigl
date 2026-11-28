@@ -23,7 +23,10 @@ function cleanQuery(input: string): string {
 // where their ratings are, and can be followed from right here. Accounts that
 // haven't chosen a username yet are left out, since they're not anyone a
 // friend could recognise.
-export function UserSearch() {
+// `trailing` sits beside the search box (the profile card puts Followers and
+// Following there), so the box is only as wide as the row leaves it. Results
+// still open below at the full width of the card.
+export function UserSearch({ trailing }: { trailing?: React.ReactNode }) {
   const supabase = createClient()
   const { user } = useAuth()
 
@@ -63,16 +66,19 @@ export function UserSearch() {
 
   return (
     <div className="space-y-2">
-      <label className={`${inputBox} flex items-center gap-2 px-3 py-2`}>
-        <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search for other users"
-          aria-label="Search for other users"
-          className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
-        />
-      </label>
+      <div className="flex items-center gap-3">
+        <label className={`${inputBox} flex flex-1 min-w-0 items-center gap-2 px-3 py-2`}>
+          <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder={trailing ? 'Search' : 'Search for other users'}
+            aria-label="Search for other users"
+            className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
+          />
+        </label>
+        {trailing}
+      </div>
 
       {searching && results.length > 0 && (
         <div className="flex flex-col gap-2">

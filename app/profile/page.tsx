@@ -346,7 +346,7 @@ export default function ProfilePage() {
             </button>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={changeAvatar} />
             <div className="flex-1 min-w-0">
-              <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">{profile?.display_name}</h1>
+              <h1 className="font-display text-xl font-bold tracking-tight leading-tight line-clamp-2 break-words">{profile?.display_name}</h1>
               <p className="text-xs text-ink-muted">@{profile?.username}</p>
               {profile?.avatar_url ? (
                 <button type="button" onClick={clearAvatar} disabled={avatarBusy} className="mt-1 text-[11px] text-ink-faint underline underline-offset-[3px]">
@@ -358,32 +358,34 @@ export default function ProfilePage() {
                 </button>
               )}
             </div>
-          </div>
-
-          {avatarError && <ErrorNote>{avatarError}</ErrorNote>}
-
-          <UserSearch />
-
-          {/* Two pairs - your own numbers, then your social graph - split by a heavier rule. */}
-          <div className="flex border-t border-ink/10 pt-3">
-            <div className="flex-1 flex">
-              <Stat value={shows.length} label="Gigs" />
-              <div className="flex-1 flex border-l border-ink/10">
+            {/* Your own numbers, to the right of the photo and name. */}
+            <div className="flex flex-shrink-0 items-center">
+              <div className="flex px-1.5">
+                <Stat value={shows.length} label="Gigs" />
+              </div>
+              <div className="flex border-l border-ink/10 px-1.5">
                 <Stat
                   value={ratedShows.length > 0 ? <Stars score={avgScore} size={11} /> : <span className="text-accent">—</span>}
                   label="Avg rating"
                 />
               </div>
             </div>
-            <div className="flex-1 flex border-l-1.5 border-ink">
-              <Link href={profile ? `/u/${profile.username}/followers` : '#'} className="flex-1 flex">
-                <Stat value={followerCount} label="Followers" />
-              </Link>
-              <Link href={profile ? `/u/${profile.username}/following` : '#'} className="flex-1 flex border-l border-ink/10">
-                <Stat value={followingCount} label="Following" />
-              </Link>
-            </div>
           </div>
+
+          {avatarError && <ErrorNote>{avatarError}</ErrorNote>}
+
+          <UserSearch
+            trailing={
+              <div className="flex flex-shrink-0 items-center">
+                <Link href={profile ? `/u/${profile.username}/followers` : '#'} className="flex px-1.5">
+                  <Stat value={followerCount} label="Followers" />
+                </Link>
+                <Link href={profile ? `/u/${profile.username}/following` : '#'} className="flex border-l border-ink/10 px-1.5">
+                  <Stat value={followingCount} label="Following" />
+                </Link>
+              </div>
+            }
+          />
         </Card>
 
         <WrappedWelcome />

@@ -536,28 +536,32 @@ function ProfileScreen() {
           <div className="flex items-center gap-3">
             <PersonPhoto name={ME.name} className="w-16 h-16 text-2xl border-1.5 border-ink shadow-riso" />
             <div className="flex-1 min-w-0">
-              <h1 className="font-display text-xl font-bold tracking-tight leading-tight truncate">{ME.name}</h1>
+              <h1 className="font-display text-xl font-bold tracking-tight leading-tight line-clamp-2 break-words">{ME.name}</h1>
               <p className="text-xs text-ink-muted">@{ME.handle}</p>
               <Place className="mt-0.5">Los Angeles, CA</Place>
             </div>
-          </div>
-          <label className={`${inputBox} flex items-center gap-2 px-3 py-2`}>
-            <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
-            <input
-              placeholder="Search for other users"
-              className="flex-1 min-w-0 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none"
-            />
-          </label>
-          <div className="flex border-t border-ink/10 pt-3">
-            <div className="flex-1 flex">
-              <Stat value="42" label="Gigs" />
-              <div className="flex-1 flex border-l border-ink/10">
+            <div className="flex flex-shrink-0 items-center">
+              <div className="flex px-1.5">
+                <Stat value="42" label="Gigs" />
+              </div>
+              <div className="flex border-l border-ink/10 px-1.5">
                 <Stat value={<Stars score={4.4} size={11} />} label="Avg rating" />
               </div>
             </div>
-            <div className="flex-1 flex border-l-1.5 border-ink">
-              <Stat value="128" label="Followers" />
-              <div className="flex-1 flex border-l border-ink/10">
+          </div>
+          <div className="flex items-center gap-3">
+            <label className={`${inputBox} flex flex-1 min-w-0 items-center gap-2 px-3 py-2`}>
+              <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
+              <input
+                placeholder="Search"
+                className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
+              />
+            </label>
+            <div className="flex flex-shrink-0 items-center">
+              <div className="flex px-1.5">
+                <Stat value="128" label="Followers" />
+              </div>
+              <div className="flex border-l border-ink/10 px-1.5">
                 <Stat value="97" label="Following" />
               </div>
             </div>
