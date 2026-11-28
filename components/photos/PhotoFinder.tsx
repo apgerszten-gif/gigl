@@ -11,7 +11,8 @@ import { flushPendingLogs, type GuestDraft } from '@/lib/pendingLogs'
 import { computeShowScore } from '@/lib/rating'
 import { markStashDone, queueLog, readStash, stashLog } from '@/lib/wrapped/stash'
 import type { WrappedShow } from '@/lib/wrapped/types'
-import { readPhotoMeta } from '@/lib/photos/exif'
+import { readPhoto, type PhotoRead } from '@/lib/photos/exif'
+import { PhotoTimer, acceptFor, photoTimingOn, spread } from '@/lib/photos/timing'
 import { takeSharedPhotos, toFileList } from '@/lib/photos/sharedPhotos'
 import type { PhotoMatchResult, PhotoShow } from '@/lib/photos/types'
 import { WrappedLogSheet } from '@/components/wrapped/WrappedLogSheet'
@@ -30,7 +31,10 @@ import { groupPhotos, type Cluster, type Grouped, type PhotoFile } from './clust
 
 const MAX_CLUSTERS = 80
 const THUMBS = 3
-const READ_AT_ONCE = 6
+// Photos being read at once. Each read is a slice of the file and is waiting
+// on the phone's storage, not on the processor, so a handful in flight keeps
+// it busy without queueing hundreds of reads (or the memory they'd hold).
+const READ_AT_ONCE = 8
 
 type Stage = 'pick' | 'reading' | 'results'
 
@@ -56,37 +60,135 @@ export function PhotoFinder() {
   const [logging, setLogging] = useState<WrappedShow | null>(null)
   // These photos came from another app's Share, not the picker.
   const [viaShare, setViaShare] = useState(false)
+  // Photos that couldn't be read (or took too long), so the person is told
+  // rather than left wondering why a count is short.
+  const [unreadable, setUnreadable] = useState(0)
+  // The picker has handed the page back but no photos have arrived yet: the
+  // phone is still preparing them, which is its work, not ours.
+  const [waiting, setWaiting] = useState(false)
+  const pickerOpen = useRef(false)
+  const waitTimer = useRef<ReturnType<typeof setTimeout>>()
 
-  async function start(files: FileList | null) {
+  // ?timing=1: measurements for finding out where the time goes on a real
+  // phone (lib/photos/timing.ts). Read after mount so the server and the
+  // first client render agree.
+  const [timing, setTiming] = useState(false)
+  const [accept, setAccept] = useState(acceptFor(false))
+  const timer = useRef<PhotoTimer | null>(null)
+  useEffect(() => {
+    const on = photoTimingOn()
+    setTiming(on)
+    setAccept(acceptFor(on))
+    if (on) timer.current = new PhotoTimer()
+  }, [])
+
+  // Closing the picker without choosing raises `cancel` on the input (not
+  // every browser does; a React prop for it doesn't exist on inputs).
+  useEffect(() => {
+    const el = input.current
+    if (!el) return
+    const onCancel = () => { pickerOpen.current = false; clearTimeout(waitTimer.current); setWaiting(false); timer.current?.at('picker closed without photos') }
+    el.addEventListener('cancel', onCancel)
+    return () => el.removeEventListener('cancel', onCancel)
+  }, [stage])  // the input only exists on the pick screen, so re-attach when it comes back
+
+  // The picker is a separate screen: on Android the page is hidden while it is
+  // open, on iOS it is a sheet over the page. Either way the page hears
+  // nothing until the photos are ready, so these events (and the input's own
+  // cancel) are the only signs of what the phone is doing in between.
+  useEffect(() => {
+    function back(event: Event) {
+      timer.current?.at(event.type === 'visibilitychange' ? `page ${document.visibilityState}` : `page ${event.type}`)
+      // Back on the page but still no photos a moment later: the phone is
+      // preparing them. A moment, not at once, so a quick cancel never flashes it.
+      if (pickerOpen.current && (event.type === 'focus' || document.visibilityState === 'visible')) {
+        clearTimeout(waitTimer.current)
+        waitTimer.current = setTimeout(() => { if (pickerOpen.current) setWaiting(true) }, 1200)
+      }
+    }
+    window.addEventListener('focus', back)
+    window.addEventListener('blur', back)
+    document.addEventListener('visibilitychange', back)
+    return () => {
+      window.removeEventListener('focus', back)
+      window.removeEventListener('blur', back)
+      document.removeEventListener('visibilitychange', back)
+    }
+  }, [])
+
+  function openPicker() {
+    pickerOpen.current = true
+    timer.current?.start('tapped Choose photos')
+    input.current?.click()
+  }
+
+  // Runs inside the input's change event, so everything before the first
+  // await happens before the browser can do anything else: the file list is
+  // copied (the input is cleared right after) and the progress screen is
+  // asked for. Nothing heavy sits ahead of that.
+  async function start(files: FileList | null, handlerLagMs = 0) {
+    pickerOpen.current = false
+    clearTimeout(waitTimer.current)
+    setWaiting(false)
     if (!files || files.length === 0) return
     const list = Array.from(files)
     setError(null)
+    setUnreadable(0)
     setStage('reading')
     setProgress({ done: 0, total: list.length })
 
+    const t = timing ? timer.current : null
+    if (t) {
+      t.at('photos arrived', `${list.length} files; our handler ran ${Math.round(handlerLagMs)}ms after the browser raised the event`)
+      t.note(describeFiles(list))
+      requestAnimationFrame(() => requestAnimationFrame(() => t.at('progress screen painted')))
+    }
+
     try {
-      // A few at a time: each read is a slice of the file, not the whole picture.
-      const photos: PhotoFile[] = new Array(list.length)
+      // A moving window of reads, not batches of six that each wait for their
+      // slowest file. A read that stalls is cut off by readPhoto itself.
+      const reads: PhotoRead[] = new Array(list.length)
+      let next = 0
       let done = 0
-      for (let i = 0; i < list.length; i += READ_AT_ONCE) {
-        await Promise.all(list.slice(i, i + READ_AT_ONCE).map(async (file, j) => {
-          photos[i + j] = { file, meta: await readPhotoMeta(file) }
+      let lastPaint = 0
+      const worker = async () => {
+        while (next < list.length) {
+          const i = next++
+          reads[i] = await readPhoto(list[i])
           done += 1
-        }))
-        setProgress({ done, total: list.length })
+          // Painting is throttled: hundreds of state updates in a second is
+          // work the screen can't show anyway.
+          const now = performance.now()
+          if (done === list.length || now - lastPaint > 100) { lastPaint = now; setProgress({ done, total: list.length }) }
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(READ_AT_ONCE, list.length) }, worker))
+
+      const photos: PhotoFile[] = list.map((file, i) => ({ file, meta: reads[i].meta }))
+      const failed = reads.filter(r => r.failed).length
+      setUnreadable(failed)
+      if (t) {
+        const ms = spread(reads.map(r => r.ms))
+        const bytes = reads.reduce((sum, r) => sum + r.bytes, 0)
+        t.at('all photos read', `median ${ms.median}ms, 95th ${ms.p95}ms, slowest ${ms.max}ms; read ${(bytes / 1024 / 1024).toFixed(1)} MB in all; ${failed} unreadable (${reads.filter(r => r.timedOut).length} timed out)`)
+        const kinds = reads.reduce<Record<string, number>>((acc, r) => { acc[r.kind] = (acc[r.kind] ?? 0) + 1; return acc }, {})
+        t.note(`formats read: ${Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', ')}; with a date ${photos.filter(p => p.meta.takenOn).length}, with a place ${photos.filter(p => p.meta.lat != null).length}`)
       }
 
       const groups = groupPhotos(photos)
+      t?.at('grouped into nights', `${groups.clusters.length} nights`)
       setGrouped(groups)
       if (groups.clusters.length === 0) { setMatches([]); setStage('results'); return }
 
       const sent = groups.clusters.slice(0, MAX_CLUSTERS)
+      const sentAt = performance.now()
       const res = await fetch('/api/photos/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clusters: sent.map(c => ({ date: c.date, lat: Math.round(c.lat * 100) / 100, lng: Math.round(c.lng * 100) / 100, count: c.photos.length })) }),
       })
       const body = await res.json().catch(() => null) as (PhotoMatchResult & { error?: string }) | null
+      t?.at('server answered', `${Math.round(performance.now() - sentAt)}ms for ${sent.length} nights`)
       if (!res.ok || !body?.shows) throw new Error(body?.error ?? "Couldn't look those up. Try again.")
 
       // One show can be matched by more than one cluster (a festival's photos
@@ -145,6 +247,10 @@ export function PhotoFinder() {
   // ── Results: what's already logged ───────────────────────────────────────
 
   useEffect(() => {
+    if (stage === 'results') timer.current?.at('results shown')
+  }, [stage])
+
+  useEffect(() => {
     if (stage !== 'results') return
     if (!user) {
       const stash = readStash()
@@ -176,17 +282,6 @@ export function PhotoFinder() {
       })
   }, [stage, matches, user])
 
-  // A few of the person's own photos beside each show they match.
-  const thumbs = useMemo(() => {
-    const out = new Map<string, string[]>()
-    for (const m of matches) {
-      const files = m.clusters.flatMap(c => c.photos).slice(0, THUMBS)
-      out.set(m.show.id, files.map(p => URL.createObjectURL(p.file)))
-    }
-    return out
-  }, [matches])
-  useEffect(() => () => { thumbs.forEach(urls => urls.forEach(u => URL.revokeObjectURL(u))) }, [thumbs])
-
   const photo = useArtistImages(useMemo(() => matches.map(m => m.show.artist), [matches]))
 
   function saveLog(draft: GuestDraft) {
@@ -213,6 +308,7 @@ export function PhotoFinder() {
   // ── Screens ──────────────────────────────────────────────────────────────
 
   if (stage === 'reading') {
+    const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
     return (
       <div className="min-h-screen bg-paper text-ink">
         <BackHeader title="Find shows in your photos" />
@@ -224,7 +320,11 @@ export function PhotoFinder() {
               ? `Reading ${progress.done} of ${progress.total} photos`
               : 'Finding the shows'}
           </p>
+          <div className="mx-auto mt-4 h-1.5 w-48 overflow-hidden rounded-full bg-ink/10" aria-hidden>
+            <div className="h-full rounded-full bg-accent transition-[width] duration-150" style={{ width: `${progress.done < progress.total ? pct : 100}%` }} />
+          </div>
         </div>
+        {timing && <TimingPanel timer={timer.current} />}
       </div>
     )
   }
@@ -255,7 +355,7 @@ export function PhotoFinder() {
               {matches.map((m, i) => {
                 const { show } = m
                 const log = logs[show.id]
-                const pics = thumbs.get(show.id) ?? []
+                const pics = m.clusters.flatMap(c => c.photos).slice(0, THUMBS)
                 return (
                   <div key={show.id} className={`flex items-center gap-3 px-3 py-2.5 ${i % 2 ? 'bg-cream-alt' : ''} ${i > 0 ? 'border-t border-ink/10' : ''}`}>
                     <ArtistPhoto name={show.artist} src={show.imageUrl ?? photo(show.artist)} className="w-14 h-14" iconSize={18}>
@@ -271,7 +371,7 @@ export function PhotoFinder() {
                         </span>
                       ) : (
                         <span className="mt-1 flex items-center gap-1.5">
-                          {pics.map(src => <img key={src} src={src} alt="" className="w-7 h-7 rounded object-cover border border-ink/20" />)}
+                          {pics.map((p, k) => <Thumb key={k} file={p.file} />)}
                           <span className="text-[11px] text-ink-faint truncate">{m.photos} photo{m.photos === 1 ? '' : 's'}{show.viaSetlistFm ? ' · via setlist.fm' : ''}</span>
                         </span>
                       )}
@@ -306,6 +406,11 @@ export function PhotoFinder() {
               {unmatched} other night{unmatched === 1 ? '' : 's'} of photos didn&apos;t match a show in Gigl.
             </p>
           )}
+          {unreadable > 0 && (
+            <p className="text-[12px] leading-snug text-ink-faint">
+              {unreadable} photo{unreadable === 1 ? '' : 's'} couldn&apos;t be read, so {unreadable === 1 ? 'it was' : 'they were'} left out. Try choosing {unreadable === 1 ? 'it' : 'them'} again.
+            </p>
+          )}
           {grouped.dateOnly + grouped.bare > 0 && grouped.located > 0 && (
             <p className="text-[12px] leading-snug text-ink-faint">
               {grouped.dateOnly + grouped.bare} photo{grouped.dateOnly + grouped.bare === 1 ? '' : 's'} had no location, so they weren&apos;t used. {LOCATION_HINT}
@@ -321,6 +426,7 @@ export function PhotoFinder() {
           <Link href="/select-festival" className="block text-center text-[12px] font-semibold text-ink-muted underline underline-offset-[3px]">
             Not here? Search for the show
           </Link>
+          {timing && <TimingPanel timer={timer.current} />}
         </main>
 
         <div className="fixed inset-x-0 bottom-0 z-20 px-5 pt-5 pb-[calc(16px+env(safe-area-inset-bottom))] bg-gradient-to-t from-paper via-paper to-transparent">
@@ -363,10 +469,16 @@ export function PhotoFinder() {
         <input
           ref={input}
           type="file"
-          accept="image/jpeg,image/png,image/heic,image/heif"
+          accept={accept}
           multiple
           className="hidden"
-          onChange={e => { void start(e.target.files); e.target.value = '' }}
+          onChange={e => {
+            // timeStamp is when the browser raised the event; the gap to now is
+            // how long the page was too busy to hear it.
+            const lag = performance.now() - e.timeStamp
+            void start(e.target.files, lag)
+            e.target.value = ''
+          }}
         />
 
         <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso p-3.5">
@@ -397,17 +509,77 @@ export function PhotoFinder() {
         </p>
 
         {error && <ErrorNote>{error}</ErrorNote>}
+        {timing && <TimingPanel timer={timer.current} />}
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-20 px-5 pt-5 pb-[calc(16px+env(safe-area-inset-bottom))] bg-gradient-to-t from-paper via-paper to-transparent">
         <div className="max-w-md mx-auto">
-          <button type="button" onClick={() => input.current?.click()} className={`${btnPrimary} w-full py-4 text-xs`}>
+          <button type="button" onClick={openPicker} className={`${btnPrimary} w-full py-4 text-xs`}>
             Choose photos
           </button>
+          {waiting && (
+            <p className="mt-2 text-center text-[12px] leading-snug text-ink-muted" role="status">
+              Your phone is getting your photos ready. With a lot of them that can take a minute.
+            </p>
+          )}
         </div>
       </div>
     </div>
   )
+}
+
+// One of the person's own photos, small, beside a match. It is only decoded
+// once it scrolls near the screen (loading="lazy", decoding="async"): these are
+// full-size camera files shown at 28px, and decoding every one up front is
+// real work on a phone. The object URL belongs to this component, so it is
+// made and revoked with it. A browser that can't show the format (HEIC outside
+// Safari) just leaves the slot out.
+function Thumb({ file }: { file: File }) {
+  const [src, setSrc] = useState<string | null>(null)
+  const [broken, setBroken] = useState(false)
+  useEffect(() => {
+    const url = URL.createObjectURL(file)
+    setSrc(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+  if (!src || broken) return null
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} className="w-7 h-7 rounded object-cover border border-ink/20" />
+}
+
+// ?timing=1 only: the measurements, on the screen because a phone has no
+// console to read them in.
+function TimingPanel({ timer }: { timer: PhotoTimer | null }) {
+  const [lines, setLines] = useState<string[]>(() => timer?.snapshot() ?? [])
+  useEffect(() => {
+    if (!timer) return
+    setLines(timer.snapshot().slice())
+    return timer.subscribe(() => setLines(timer.snapshot().slice()))
+  }, [timer])
+  return (
+    <div className="mt-6 rounded-card border-1.5 border-dashed border-ink/25 bg-cream-alt p-3 text-left">
+      <p className="text-[10px] font-semibold uppercase tracking-label text-ink-faint">Timing (screenshot this)</p>
+      <pre className="mt-1.5 whitespace-pre-wrap break-words font-mono text-[10px] leading-snug text-ink-muted">
+        {lines.length > 0 ? lines.join('\n') : 'Tap Choose photos, pick some, and the times show here.'}
+      </pre>
+    </div>
+  )
+}
+
+// What the phone handed over: how many of each type, and how big. If photos
+// taken as HEIC arrive as JPEG, the phone converted them while preparing the
+// picker's answer, which is the likely cause of a long wait there.
+function describeFiles(files: File[]): string {
+  const types: Record<string, number> = {}
+  let bytes = 0
+  for (const f of files) {
+    const ext = /\.([a-z0-9]+)$/i.exec(f.name)?.[1]?.toLowerCase() ?? '?'
+    const key = `${f.type || 'no-type'} .${ext}`
+    types[key] = (types[key] ?? 0) + 1
+    bytes += f.size
+  }
+  const list = Object.entries(types).map(([k, n]) => `${k} x${n}`).join(', ')
+  return `${(bytes / 1024 / 1024).toFixed(0)} MB across ${files.length} files: ${list}`
 }
 
 // Browsers hand over a photo without its location unless the person allows it.
