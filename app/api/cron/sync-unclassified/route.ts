@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SYNC_CITIES, type SyncCity } from '@/lib/shows/cities'
-import { fetchCityShowsPage, TicketmasterError, type FetchOptions, type SyncShow } from '@/lib/ticketmaster'
-import { knownMusicVenues, upsertShows } from '@/lib/shows/repository'
+import { fetchCityShowsPage, isRetryable, type FetchOptions, type SyncShow } from '@/lib/ticketmaster'
+import { knownMusicVenues, upsertShows, deleteShowsById } from '@/lib/shows/repository'
+import { recordSyncStart, recordSyncFinish } from '@/lib/shows/syncStatus'
 import { saveHeadlinerImages } from '@/lib/shows/artistImageSync'
 import { createRateGate, pool } from '@/lib/shows/pacing'
 import { nameKey } from '@/lib/nameKey'
@@ -40,6 +41,12 @@ const NOT_A_SHOW = /\b(comedy|comedian|stand[- ]?up|improv|screening|drive-in|mo
 // would too: measured, Hollywood Improv and Brea Improv were 140 of the 290
 // events LA and Denver kept before this rule.
 const NOT_A_ROOM = /\b(improv|comedy|laugh(s|ter)?|funny|punch ?line|stand ?up|playhouse|cinema|drive-in)\b/i
+// Playhouses are theatres, with one famous exception: Variety Playhouse in
+// Atlanta is a rock club, and it is one of the five rooms CLAUDE.md names as
+// the reason this sync exists. Add other music rooms here rather than
+// dropping the playhouse rule.
+const MUSIC_ROOM_EXCEPTIONS = /\bvariety playhouse\b/i
+const notARoom = (venue: string) => NOT_A_ROOM.test(venue) && !MUSIC_ROOM_EXCEPTIONS.test(venue)
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -51,6 +58,7 @@ export async function GET(req: NextRequest) {
   }
 
   const startedAt = Date.now()
+  await recordSyncStart('sync-unclassified', startedAt)
   const outOfTime = () => Date.now() - startedAt > FETCH_DEADLINE_MS
   const gate = createRateGate(REQUEST_SPACING_MS)
   const collected = new Map<string, SyncShow>()
@@ -64,8 +72,7 @@ export async function GET(req: NextRequest) {
         for (const show of result.shows) collected.set(show.id, show)
         return result
       } catch (err) {
-        const status = err instanceof TicketmasterError ? err.status : 0
-        if (status !== 429 || attempt >= MAX_RETRIES) throw err
+        if (!isRetryable(err) || attempt >= MAX_RETRIES) throw err
         await sleep(RETRY_BACKOFF_MS * (attempt + 1))
       }
     }
@@ -86,7 +93,11 @@ export async function GET(req: NextRequest) {
     }
   }, outOfTime)
 
-  const candidates = Array.from(collected.values())
+  const all = Array.from(collected.values())
+  // As in sync-shows: an explicit cancellation is dropped, and removed if an
+  // earlier night stored it.
+  const cancelledIds = all.filter(s => s.cancelled).map(s => s.id)
+  const candidates = all.filter(s => !s.cancelled)
   const titled = candidates.filter(s => !NOT_A_SHOW.test(s.artist) && !!s.isoDate)
   let known = new Set<string>()
   try {
@@ -94,9 +105,15 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[sync-unclassified] venue lookup failed:', err instanceof Error ? err.message : err)
   }
-  const kept = titled.filter(s => !NOT_A_ROOM.test(s.venue) && known.has(`${nameKey(s.venue)}|${nameKey(s.city)}|${s.state}`))
+  const kept = titled.filter(s => !notARoom(s.venue) && known.has(`${nameKey(s.venue)}|${nameKey(s.city)}|${s.state}`))
 
   const { upserted, failed } = await upsertShows(kept)
+  let cancelledRemoved = 0
+  try {
+    cancelledRemoved = await deleteShowsById(cancelledIds, 'ticketmaster')
+  } catch (err) {
+    console.error('[sync-unclassified] removing cancelled shows failed:', err instanceof Error ? err.message : err)
+  }
   let artistImagesSaved = 0
   try {
     artistImagesSaved = await saveHeadlinerImages(kept)
@@ -109,6 +126,7 @@ export async function GET(req: NextRequest) {
     notAShow:     candidates.length - titled.length,
     notMusicRoom: titled.length - kept.length,
     kept:         kept.length,
+    cancelledRemoved,
     upserted,
     failed,
     artistImagesSaved,
@@ -117,5 +135,6 @@ export async function GET(req: NextRequest) {
     durationMs:   Date.now() - startedAt,
   }
   console.log('[sync-unclassified] complete', summary)
+  await recordSyncFinish('sync-unclassified', startedAt, summary)
   return NextResponse.json(summary)
 }

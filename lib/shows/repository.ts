@@ -88,6 +88,13 @@ export interface SearchOptions {
   // Inclusive ISO dates replacing the usual window: the Log screen's year
   // and date chips. The caller keeps them inside what the catalogue holds.
   range?:  { from: string; to: string } | null
+  // The phone's own date, for the browse list's upper bound. The server's
+  // "today" is UTC, which from about 5pm Pacific or 8pm Eastern is already
+  // tomorrow, and a list ordered newest first then opens with tomorrow's
+  // shows (that nobody has been to) and, at 20 rows, never reaches tonight's.
+  // Clamped to the day either side of UTC today so a client can't ask for the
+  // future. Ignored when `range` is set.
+  today?:  string | null
 }
 
 // Blank keyword -> browse mode: the past week's shows, most recent first,
@@ -104,50 +111,89 @@ export interface SearchOptions {
 // shows (RETAIN_DAYS), because someone typing a name is looking for one
 // particular show, however long ago. Browsing stays on the past week, where
 // "what happened around here recently" is still the right reading.
+// The phone's date if it is UTC today or the day before it, else UTC today.
+function clampLocalToday(local?: string | null): string {
+  const utcToday = windowEndIso()
+  if (!local || !/^\d{4}-\d{2}-\d{2}$/.test(local)) return utcToday
+  const yesterday = new Date(); yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+  const floor = yesterday.toISOString().slice(0, 10)
+  return local < floor || local > utcToday ? utcToday : local
+}
+
 export async function searchStoredShows(keyword: string, options: SearchOptions = {}): Promise<Show[]> {
-  const { limit = DEFAULT_LIMIT, nearby, range } = options
+  const { limit = DEFAULT_LIMIT, nearby, range, today } = options
   const trimmed = escapeForOrFilter(keyword)
+  const upper = range ? range.to : clampLocalToday(today)
 
-  let query = supabase
-    .from('shows')
-    .select(SHOW_COLUMNS)
-    // The upper bound matters as much as the lower one: a show that hasn't
-    // happened yet is not something anyone can have been to.
-    .gte('show_date', range ? range.from : trimmed ? retainStartIso() : windowStartIso())
-    .lte('show_date', range ? range.to : windowEndIso())
-    .order('show_date', { ascending: false })
-    .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
+  // Everything but the text match, so the support-act query below can reuse it.
+  const base = () => {
+    let query = supabase
+      .from('shows')
+      .select(SHOW_COLUMNS)
+      // The upper bound matters as much as the lower one: a show that hasn't
+      // happened yet is not something anyone can have been to.
+      .gte('show_date', range ? range.from : trimmed ? retainStartIso() : windowStartIso())
+      .lte('show_date', upper)
+      .order('show_date', { ascending: false })
+      // A tie-break, so rows sharing a date come back in a fixed order.
+      .order('id', { ascending: true })
+      .limit(nearby ? limit * NEARBY_OVERFETCH : limit)
 
-  if (nearby) {
-    // A box on two indexed columns, not PostGIS: see lib/geo.ts. These
-    // comparisons are never true for a NULL, which is exactly the wanted
-    // behaviour for a row with no coordinates.
-    //
-    // No antimeridian wraparound: a box spanning +/-180 would need to be
-    // split into two, and SYNC_CITIES is US and Canada only. Revisit if
-    // coverage ever crosses the Pacific.
-    const box = boundingBox(nearby.centre, nearby.radiusMiles)
-    query = query
-      .gte('lat', box.minLat).lte('lat', box.maxLat)
-      .gte('lng', box.minLng).lte('lng', box.maxLng)
+    if (nearby) {
+      // A box on two indexed columns, not PostGIS: see lib/geo.ts. These
+      // comparisons are never true for a NULL, which is exactly the wanted
+      // behaviour for a row with no coordinates.
+      //
+      // No antimeridian wraparound: a box spanning +/-180 would need to be
+      // split into two, and SYNC_CITIES is US and Canada only. Revisit if
+      // coverage ever crosses the Pacific.
+      const box = boundingBox(nearby.centre, nearby.radiusMiles)
+      query = query
+        .gte('lat', box.minLat).lte('lat', box.maxLat)
+        .gte('lng', box.minLng).lte('lng', box.maxLng)
+    }
+    return query
   }
 
-  if (trimmed) {
-    // Matches artist or venue - "bowery ballroom" is as plausible a search as
-    // an artist name, and the trigram indexes cover both columns.
-    query = query.or(`artist.ilike.%${trimmed}%,venue.ilike.%${trimmed}%`)
+  // Matches artist or venue - "bowery ballroom" is as plausible a search as
+  // an artist name, and the trigram indexes cover both columns.
+  const main = trimmed ? base().or(`artist.ilike.%${trimmed}%,venue.ilike.%${trimmed}%`) : base()
+
+  // And the support acts: Ticketmaster's attraction order isn't a billing
+  // order and a festival lists its first act as the "artist" and the rest as
+  // support, so a search for a name further down the bill found nothing even
+  // though the show was stored. `support_text` is a trigger-maintained copy of
+  // the support array at the end of supabase-schema.sql; until that has been
+  // run the column doesn't exist, the query errors, and the search carries on
+  // with the artist and venue matches alone.
+  const bySupport = trimmed.length >= 3 && supportSearchAvailable
+    ? base().ilike('support_text', `%${trimmed}%`)
+    : null
+
+  const [found, supportFound] = await Promise.all([main, bySupport ?? Promise.resolve(null)])
+  if (found.error) throw new Error(`shows search failed: ${found.error.message}`)
+  if (supportFound?.error) {
+    // Remember, so a missing column costs one failed request, not one per search.
+    supportSearchAvailable = false
+    console.warn('support-act search is off until support_text exists:', supportFound.error.message)
   }
 
-  const { data, error } = await query
-  if (error) throw new Error(`shows search failed: ${error.message}`)
+  const merged = new Map<string, ShowRow>()
+  for (const row of [...(found.data ?? []), ...(supportFound?.error ? [] : supportFound?.data ?? [])]) merged.set(row.id, row)
+  const ordered = Array.from(merged.values())
+    .sort((a, b) => (b.show_date ?? '').localeCompare(a.show_date ?? '') || a.id.localeCompare(b.id))
 
-  const rows = (data ?? []).map(row => toShow(row, nearby?.centre))
-  if (!nearby) return rows
+  const rows = ordered.map(row => toShow(row, nearby?.centre))
+  if (!nearby) return rows.slice(0, limit)
 
   return rows
     .filter(show => show.distanceMiles != null && show.distanceMiles <= nearby.radiusMiles)
     .slice(0, limit)
 }
+
+// Flipped off the first time the support_text column turns out not to exist
+// (per server instance; a redeploy or cold start tries once more).
+let supportSearchAvailable = true
 
 export interface UpcomingPage {
   shows: Show[]
@@ -689,18 +735,47 @@ export async function knownMusicVenues(venues: { venue: string; city: string; st
   const key = (v: { venue: string; city: string; state: string }) => `${nameKey(v.venue)}|${nameKey(v.city)}|${v.state}`
   const names = Array.from(new Set(venues.map(v => v.venue)))
   const known = new Set<string>()
-  // PostgREST puts `in` filters in the URL, so names go up in chunks.
-  for (let i = 0; i < names.length; i += 80) {
-    const { data, error } = await supabase
-      .from('shows')
-      .select('venue, city, state')
-      .eq('source', 'ticketmaster')
-      .in('venue', names.slice(i, i + 80))
-      .limit(1000)
-    if (error) throw new Error(`music venue lookup failed: ${error.message}`)
-    for (const row of data ?? []) known.add(key(row))
+  // PostgREST puts `in` filters in the URL, so names go up in chunks, and
+  // Supabase answers at most 1,000 rows a request. A room has dozens to
+  // hundreds of Ticketmaster rows, so the old 80 names per request returned
+  // thousands and silently kept an arbitrary 1,000: every room whose rows
+  // fell outside them was judged "not a music venue" and its uncategorised
+  // concerts dropped. Small chunks, each read page by page until a page comes
+  // back short, make the answer complete.
+  const PAGE = 1000
+  for (let i = 0; i < names.length; i += 10) {
+    const chunk = names.slice(i, i + 10)
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('shows')
+        .select('venue, city, state')
+        .eq('source', 'ticketmaster')
+        .in('venue', chunk)
+        .order('id')
+        .range(from, from + PAGE - 1)
+      if (error) throw new Error(`music venue lookup failed: ${error.message}`)
+      for (const row of data ?? []) known.add(key(row))
+      if ((data ?? []).length < PAGE) break
+    }
   }
   return known
+}
+
+// Removes rows by id, for the shows Ticketmaster has said are cancelled.
+// Limited to one source so an id can never reach a user's hand-added row, and
+// chunked because the ids travel in the URL. Returns how many were deleted.
+export async function deleteShowsById(ids: string[], source: 'ticketmaster'): Promise<number> {
+  let removed = 0
+  for (let i = 0; i < ids.length; i += 100) {
+    const { count, error } = await supabaseAdmin()
+      .from('shows')
+      .delete({ count: 'exact' })
+      .eq('source', source)
+      .in('id', ids.slice(i, i + 100))
+    if (error) throw new Error(`removing cancelled shows failed: ${error.message}`)
+    removed += count ?? 0
+  }
+  return removed
 }
 
 // Drops shows more than a year old - only those, and this is the
@@ -726,18 +801,60 @@ export async function knownMusicVenues(venues: { venue: string; city: string; st
 // filter, so they linger while staying invisible. Ticketmaster rarely omits
 // a date; worth its own sweep if user-submitted rows ever land without one.
 export async function prunePastShows(): Promise<number> {
-  const { count, error } = await supabaseAdmin()
+  const admin = supabaseAdmin()
+
+  // A row someone has logged is kept past the year, whatever its source.
+  // `logged_shows` carries its own artist, venue and date and never reads
+  // `shows` back, so this isn't needed for the log itself. It is needed for
+  // identity: once the row is gone, a late logger finds the same show again
+  // under a setlist.fm (or venue-site) id, and the two logs and their reviews
+  // end up on two different show pages. Those rows are few (only shows that
+  // somebody logged more than a year after they happened), so keeping them
+  // costs nothing; it also keeps the retention rule to "don't delete what a
+  // person has pointed at".
+  //
+  // Candidates are read first (a bounded batch per night; anything over it is
+  // simply picked up the next night), then checked against the logs in chunks,
+  // because the ids travel in the URL.
+  const BATCH = 2000
+  const { data: old, error: readError } = await admin
     .from('shows')
-    .delete({ count: 'exact' })
+    .select('id')
     .lt('show_date', retainStartIso())
     // Never a user submission. A Ticketmaster row can always be re-fetched
     // while it is still upcoming; a row somebody typed in by hand cannot be
     // recovered from anywhere, and it is very likely the only record of a gig
     // no aggregator carries. Keeping them is the entire point of having them.
     .neq('source', 'user')
+    .order('id')
+    .limit(BATCH)
+  if (readError) throw new Error(`shows prune failed: ${readError.message}`)
 
-  if (error) throw new Error(`shows prune failed: ${error.message}`)
-  return count ?? 0
+  const candidates = (old ?? []).map(row => row.id as string)
+  const logged = new Set<string>()
+  for (let i = 0; i < candidates.length; i += 100) {
+    const { data, error } = await admin
+      .from('logged_shows')
+      .select('artist_id')
+      .in('artist_id', candidates.slice(i, i + 100))
+    // If the logs can't be read, delete nothing rather than risk splitting a
+    // show: pruning is a tidy-up and tomorrow's run does it just as well.
+    if (error) throw new Error(`shows prune could not check logs: ${error.message}`)
+    for (const row of data ?? []) logged.add(row.artist_id as string)
+  }
+
+  const doomed = candidates.filter(id => !logged.has(id))
+  let removed = 0
+  for (let i = 0; i < doomed.length; i += 100) {
+    const { count, error } = await admin
+      .from('shows')
+      .delete({ count: 'exact' })
+      .in('id', doomed.slice(i, i + 100))
+      .neq('source', 'user')
+    if (error) throw new Error(`shows prune failed: ${error.message}`)
+    removed += count ?? 0
+  }
+  return removed
 }
 
 // -- User-submitted shows ----------------------------------------------------
@@ -801,15 +918,42 @@ export async function suggestValues(field: SuggestField, keyword: string, limit 
 // Every show already on a given date, for duplicate detection at submit time.
 // The date is exact where names are not, so it is the cheap way to narrow
 // before comparing artist and venue in JS.
-export async function showsOnDate(isoDate: string, from?: Coords | null): Promise<Show[]> {
+export async function showsOnDate(isoDate: string, from?: Coords | null, state?: string): Promise<Show[]> {
+  let query = supabase
+    .from('shows')
+    .select(SHOW_COLUMNS)
+    .eq('show_date', isoDate)
+    .order('id')
+    .limit(1000)
+  // One state's night, when the caller knows it: the whole country's night
+  // can exceed the 1,000-row cap on a busy Friday, which would leave the
+  // duplicate check comparing against an arbitrary sample.
+  if (state) query = query.eq('state', state)
+  const { data, error } = await query
+
+  if (error) throw new Error(`shows-on-date lookup failed: ${error.message}`)
+  return (data ?? []).map(row => toShow(row, from ?? undefined))
+}
+
+// The shows on one date within a box around a point, for the photo finder.
+// showsOnDate reads the whole country's night, which the 1,000-row cap
+// truncates arbitrarily on a busy Friday (the catalogue holds about 400 shows
+// a day on average), so the right room could be missing before any distance
+// was computed. Filtering by the box in SQL keeps the answer to the handful of
+// rows that matter. Rows with no coordinates never match, as in Near me.
+export async function showsOnDateNear(isoDate: string, centre: Coords, miles: number): Promise<Show[]> {
+  const box = boundingBox(centre, miles)
   const { data, error } = await supabase
     .from('shows')
     .select(SHOW_COLUMNS)
     .eq('show_date', isoDate)
+    .gte('lat', box.minLat).lte('lat', box.maxLat)
+    .gte('lng', box.minLng).lte('lng', box.maxLng)
+    .order('id')
     .limit(1000)
 
   if (error) throw new Error(`shows-on-date lookup failed: ${error.message}`)
-  return (data ?? []).map(row => toShow(row, from ?? undefined))
+  return (data ?? []).map(row => toShow(row, centre))
 }
 
 export interface UserShowInput {
@@ -819,6 +963,9 @@ export interface UserShowInput {
   state:   string
   isoDate: string
   userId:  string
+  // Where the room is, when it can be worked out (see /api/shows/submit).
+  lat?:    number | null
+  lng?:    number | null
 }
 
 // Inserted through the service role, like every other write to this table.
@@ -837,11 +984,14 @@ export async function insertUserShow(input: UserShowInput): Promise<Show> {
     state:        input.state,
     show_date:    input.isoDate,
     emoji:        '🎵',
-    // No coordinates: nothing here has been geocoded, and inventing a point
-    // would put the show into nearby searches it has no business being in.
-    // A null lat/lng already drops it from those - see lib/geo.ts.
-    lat:          null,
-    lng:          null,
+    // Only a point the catalogue already knows: the room's own coordinates
+    // from another show there, or failing that its city's centre (the same
+    // fallback Ticketmaster rows get). Nothing is geocoded, and with neither
+    // known it stays null, which drops it from nearby searches - see
+    // lib/geo.ts. Before this a hand-added show was never in Near me or the
+    // photo finder, though they are the shows no aggregator has.
+    lat:          input.lat ?? null,
+    lng:          input.lng ?? null,
     metro:        null,
     image_url:    null,
     submitted_by: input.userId,

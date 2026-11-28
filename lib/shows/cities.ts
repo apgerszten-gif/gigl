@@ -185,7 +185,7 @@ export const SYNC_CITIES: SyncCity[] = [
   { city: 'Winnipeg',         stateCode: 'MB', countryCode: 'CA', lat: 49.8623,   lng: -97.1317 },
   { city: 'Halifax',          stateCode: 'NS', countryCode: 'CA', lat: 44.6528,   lng: -63.5759 },
   { city: 'Hamilton',         stateCode: 'ON', countryCode: 'CA', lat: 43.2562,   lng: -79.8725 },
-  { city: 'London',           stateCode: 'ON', countryCode: 'CA', lat: 42.9892,   lng: -77.4166 },
+  { city: 'London',           stateCode: 'ON', countryCode: 'CA', lat: 42.9892,   lng: -81.2497 },
   { city: 'Ottawa',           stateCode: 'ON', countryCode: 'CA', lat: 45.4262,   lng: -75.6938 },
   { city: 'Toronto',          stateCode: 'ON', countryCode: 'CA', lat: 43.6469,   lng: -79.379 },
   { city: 'Montreal',         stateCode: 'QC', countryCode: 'CA', lat: 45.5105,   lng: -73.5634 },

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/apiAuth'
 import { nameKey } from '@/lib/nameKey'
 import { windowEndIso } from '@/lib/dates'
-import { insertUserShow, showsOnDate, suggestValues, type SuggestField } from '@/lib/shows/repository'
+import { findCities, insertUserShow, showsOnDate, suggestValues, venueCoords, type SuggestField } from '@/lib/shows/repository'
 
 // POST /api/shows/submit — add a show the catalogue doesn't have.
 //
@@ -125,13 +125,29 @@ export async function POST(req: NextRequest) {
     // the same act playing two venues in one city on one night is rare
     // enough not to design around, and the caller is shown the match either
     // way rather than being told no.
-    const sameDay = await showsOnDate(date)
-    const existing = sameDay.find(show => nameKey(show.artist) === nameKey(canonical))
+    //
+    // Compared within the state when it is known (two acts of one name on one
+    // night in different states are two shows, and the whole country's night
+    // can overrun the read cap), and against the support acts as well as the
+    // headliner: the person who saw the opener types the opener.
+    const sameDay = await showsOnDate(date, null, place.state || undefined)
+    const key = nameKey(canonical)
+    const existing = sameDay.find(show => nameKey(show.artist) === key || (show.support ?? []).some(act => nameKey(act) === key))
     if (existing) {
       return NextResponse.json(
         { error: 'That show is already listed.', show: existing },
         { status: 409 },
       )
+    }
+
+    // Where it is, if the catalogue knows: the room from another show there,
+    // else the city's centre. Best effort: a failure just leaves it unplaced.
+    let at: { lat: number; lng: number } | null = null
+    try {
+      at = await venueCoords(canonicalVenue, place.city, place.state)
+        ?? ((await findCities(`${place.city}, ${place.state}`))[0] ?? null)
+    } catch (err) {
+      console.error('shows/submit could not place the show:', err)
     }
 
     const show = await insertUserShow({
@@ -141,6 +157,8 @@ export async function POST(req: NextRequest) {
       state:   place.state,
       isoDate: date,
       userId,
+      lat: at?.lat ?? null,
+      lng: at?.lng ?? null,
     })
 
     return NextResponse.json({ show }, { status: 201 })
