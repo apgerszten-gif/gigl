@@ -12,7 +12,7 @@
 
 import { supabaseAdmin } from '../supabaseAdmin'
 
-export type SyncJob = 'sync-shows' | 'sync-unclassified'
+export type SyncJob = 'sync-shows' | 'sync-unclassified' | 'sync-sweep'
 
 const keyFor = (job: SyncJob) => `sync_status_${job}`
 

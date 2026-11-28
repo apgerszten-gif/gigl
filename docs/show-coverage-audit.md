@@ -15,7 +15,7 @@ A show reaches Gigl only if (1) a source lists it, (2) the nightly job asks the 
 | 1 | No record, heartbeat or alert for the nightly syncs | 2 | ✅ |
 | 2 | `sync-unclassified` throws away most of what it fetches | 2 | ✅ / 📋 |
 | 3 | Evening browse list hides tonight's shows (UTC "today") | 4 | ✅ |
-| 4 | Venues outside every city's name and 25-mile radius, and a wrong centroid | 1 | 🟡 |
+| 4 | Venues outside every city's name and 25-mile radius, and a wrong centroid | 1 | ✅ (sweep starts dry) |
 | 5 | Cancelled and vanished Ticketmaster shows stay loggable | 3 | 🟡 |
 | 6 | Photo finder samples 1,000 rows and ties at festivals | 4 | ✅ |
 | 7 | The same show under two ids; no de-duplication outside Wrapped | 3 | 📋 |
@@ -77,7 +77,7 @@ Also: `MAX_PAGES = 2` with a `date,asc` sort means New York (~2,000 Undefined ev
 
 **Also done.** A first page with `totalElements = 0` is now logged and listed in the summary (`emptyProbes`). The `cities.ts` header says a name mismatch "fails visibly", but a zero-event answer is not an error. Accented names (Montréal, Québec) are the likely silent case; **unverified**, since I could not query Ticketmaster.
 
-**Plan (📋).** (a) Add 20–40 individual cities from the list above: one request each a night, trivial against the 5,000/day quota (`CLAUDE.md`). (b) A state-wide sweep as a *separate* cron (about 8 states a night, rotating, month-sliced when a state exceeds 1,000), shipped dry-run first the way the venue sync was, to catch every venue not near a named city. Neither belongs in `sync-shows` while its time budget is unmeasured (gap 1). (c) `latlong` is, to my recollection, being superseded by `geoPoint` in Ticketmaster's docs: **unverified**, check before relying on it.
+**Done afterwards: `/api/cron/sync-sweep` (see `CLAUDE.md`).** It is the plan below, built: (a) and (b) as one separate job that starts in dry-run. Original plan: (a) Add 20–40 individual cities from the list above: one request each a night, trivial against the 5,000/day quota (`CLAUDE.md`). (b) A state-wide sweep as a *separate* cron (about 8 states a night, rotating, month-sliced when a state exceeds 1,000), shipped dry-run first the way the venue sync was, to catch every venue not near a named city. Neither belongs in `sync-shows` while its time budget is unmeasured (gap 1). (c) `latlong` is, to my recollection, being superseded by `geoPoint` in Ticketmaster's docs: **unverified**, check before relying on it.
 
 **Measure (needs the Ticketmaster key).** For each `stateCode`, page weekly windows, count `totalElements`, and count ids not in `shows`; and run a 25-mile `latlong` probe around each candidate town above.
 

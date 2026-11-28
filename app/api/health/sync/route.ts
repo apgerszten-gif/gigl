@@ -13,7 +13,7 @@ export const dynamic    = 'force-dynamic'
 export const fetchCache = 'default-no-store'
 
 const MAX_AGE_HOURS = 36
-const JOBS: SyncJob[] = ['sync-shows', 'sync-unclassified']
+const JOBS: SyncJob[] = ['sync-shows', 'sync-unclassified', 'sync-sweep']
 
 export async function GET() {
   try {
