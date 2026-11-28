@@ -191,3 +191,97 @@ export const SYNC_CITIES: SyncCity[] = [
   { city: 'Montreal',         stateCode: 'QC', countryCode: 'CA', lat: 45.5105,   lng: -73.5634 },
   { city: 'Quebec',           stateCode: 'QC', countryCode: 'CA', lat: 46.8133,   lng: -71.2142 },
 ]
+
+// ── Beyond the 148 ───────────────────────────────────────────────────────────
+// Used only by the sweep job (app/api/cron/sync-sweep), never by sync-shows,
+// whose time budget has no room for them (see its header). Everything above
+// is asked about by name and by a 25-mile radius around the centre, so a venue
+// in a town on nobody's list and farther than that from every centre was never
+// asked about. These are the ones that audit (docs/show-coverage-audit.md,
+// gap 4) found by geography: markets with no entry, and rooms and festival
+// grounds well outside the nearest one (Coachella, The Gorge, Bethel Woods,
+// Foxwoods, Mohegan Sun, Jiffy Lube Live).
+//
+// Unlike the list above, the centres here are civic centres, not the median of
+// real venue coordinates (that needs Ticketmaster's data, which wasn't
+// available when these were added), and the names are unchecked against how
+// Ticketmaster spells them. A city that returns nothing is logged as
+// `emptyProbes` in the job's report; the radius pass still covers it.
+export const EXTRA_CITIES: SyncCity[] = [
+  // Markets with no entry
+  { city: 'Myrtle Beach',   stateCode: 'SC', lat: 33.6891, lng: -78.8867 },
+  { city: 'Greensboro',     stateCode: 'NC', lat: 36.0726, lng: -79.7920 },
+  { city: 'Winston-Salem',  stateCode: 'NC', lat: 36.0999, lng: -80.2442 },
+  { city: 'Lincoln',        stateCode: 'NE', lat: 40.8136, lng: -96.7026 },
+  { city: 'Tallahassee',    stateCode: 'FL', lat: 30.4383, lng: -84.2807 },
+  { city: 'Pensacola',      stateCode: 'FL', lat: 30.4213, lng: -87.2169 },
+  { city: 'Fort Myers',     stateCode: 'FL', lat: 26.6406, lng: -81.8723 },
+  { city: 'Sarasota',       stateCode: 'FL', lat: 27.3364, lng: -82.5307 },
+  { city: 'Mobile',         stateCode: 'AL', lat: 30.6954, lng: -88.0399 },
+  { city: 'Huntsville',     stateCode: 'AL', lat: 34.7304, lng: -86.5861 },
+  { city: 'Shreveport',     stateCode: 'LA', lat: 32.5252, lng: -93.7502 },
+  { city: 'Lansing',        stateCode: 'MI', lat: 42.7325, lng: -84.5555 },
+  { city: 'Fort Wayne',     stateCode: 'IN', lat: 41.0793, lng: -85.1394 },
+  { city: 'South Bend',     stateCode: 'IN', lat: 41.6764, lng: -86.2520 },
+  { city: 'Cedar Rapids',   stateCode: 'IA', lat: 41.9779, lng: -91.6656 },
+  { city: 'Davenport',      stateCode: 'IA', lat: 41.5236, lng: -90.5776 },
+  { city: 'Peoria',         stateCode: 'IL', lat: 40.6936, lng: -89.5890 },
+  { city: 'Worcester',      stateCode: 'MA', lat: 42.2626, lng: -71.8023 },
+  { city: 'Springfield',    stateCode: 'MA', lat: 42.1015, lng: -72.5898 },
+  { city: 'Lancaster',      stateCode: 'PA', lat: 40.0379, lng: -76.3055 },
+  { city: 'Erie',           stateCode: 'PA', lat: 42.1292, lng: -80.0851 },
+  { city: 'Binghamton',     stateCode: 'NY', lat: 42.0987, lng: -75.9180 },
+  { city: 'Santa Fe',       stateCode: 'NM', lat: 35.6870, lng: -105.9378 },
+  { city: 'Waco',           stateCode: 'TX', lat: 31.5493, lng: -97.1467 },
+  { city: 'McAllen',        stateCode: 'TX', lat: 26.2034, lng: -98.2300 },
+  { city: 'Bakersfield',    stateCode: 'CA', lat: 35.3733, lng: -119.0187 },
+  { city: 'Stockton',       stateCode: 'CA', lat: 37.9577, lng: -121.2908 },
+  { city: 'Modesto',        stateCode: 'CA', lat: 37.6391, lng: -120.9969 },
+  { city: 'Ventura',        stateCode: 'CA', lat: 34.2746, lng: -119.2290 },
+  { city: 'Salem',          stateCode: 'OR', lat: 44.9429, lng: -123.0351 },
+  { city: 'Billings',       stateCode: 'MT', lat: 45.7833, lng: -108.5007 },
+  { city: 'Cheyenne',       stateCode: 'WY', lat: 41.1400, lng: -104.8202 },
+  // Destinations well outside the nearest metro
+  { city: 'Indio',          stateCode: 'CA', lat: 33.7206, lng: -116.2156 },
+  { city: 'George',         stateCode: 'WA', lat: 47.1008, lng: -119.9959 },
+  { city: 'Bethel',         stateCode: 'NY', lat: 41.6959, lng: -74.8795 },
+  { city: 'Uncasville',     stateCode: 'CT', lat: 41.4343, lng: -72.1090 },
+  { city: 'Mashantucket',   stateCode: 'CT', lat: 41.4720, lng: -71.9610 },
+  { city: 'Temecula',       stateCode: 'CA', lat: 33.4936, lng: -117.1484 },
+  { city: 'Napa',           stateCode: 'CA', lat: 38.2975, lng: -122.2869 },
+  { city: 'Bristow',        stateCode: 'VA', lat: 38.7237, lng: -77.5392 },
+  { city: 'The Woodlands',  stateCode: 'TX', lat: 30.1658, lng: -95.4613 },
+  // Canada
+  { city: 'Saskatoon',      stateCode: 'SK', countryCode: 'CA', lat: 52.1332, lng: -106.6700 },
+  { city: 'Regina',         stateCode: 'SK', countryCode: 'CA', lat: 50.4452, lng: -104.6189 },
+  { city: 'Kitchener',      stateCode: 'ON', countryCode: 'CA', lat: 43.4516, lng: -80.4925 },
+  { city: 'Kelowna',        stateCode: 'BC', countryCode: 'CA', lat: 49.8880, lng: -119.4960 },
+  { city: "St. John's",     stateCode: 'NL', countryCode: 'CA', lat: 47.5615, lng: -52.7126 },
+]
+
+// Every state and province, for the sweep's "all music events whose venue is
+// in this state" question, which needs no city and no coordinates and so
+// catches any venue the lists above missed, including ones Ticketmaster lists
+// without a location. Ordered by size, so that taking every third entry
+// (SWEEP_GROUPS) gives three roughly equal nights.
+export interface SweepRegion { stateCode: string; countryCode: 'US' | 'CA' }
+
+const us = (stateCode: string): SweepRegion => ({ stateCode, countryCode: 'US' })
+const ca = (stateCode: string): SweepRegion => ({ stateCode, countryCode: 'CA' })
+
+export const SWEEP_REGIONS: SweepRegion[] = [
+  us('CA'), us('TX'), us('FL'), us('NY'), us('PA'), us('IL'), us('OH'), us('GA'), us('NC'), us('MI'),
+  ca('ON'), us('NJ'), us('VA'), us('WA'), us('AZ'), us('MA'), us('TN'), us('IN'), us('MO'), us('MD'),
+  us('WI'), us('CO'), us('MN'), us('SC'), us('AL'), us('LA'), us('KY'), us('OR'), us('OK'), us('CT'),
+  ca('QC'), ca('BC'), ca('AB'), us('UT'), us('IA'), us('NV'), us('AR'), us('MS'), us('KS'), us('NM'),
+  us('NE'), us('ID'), us('WV'), us('HI'), us('NH'), us('ME'), us('MT'), us('RI'), us('DE'), us('SD'),
+  us('ND'), us('AK'), us('DC'), us('VT'), us('WY'), ca('MB'), ca('SK'), ca('NS'), ca('NB'), ca('NL'), ca('PE'),
+]
+
+// The sweep does one group a night, so every region is seen every
+// SWEEP_GROUPS nights. Three because a saved-show reminder treats a
+// Ticketmaster row not seen for more than three days before its date as
+// probably cancelled (lib/savedShows.ts, CANCELLED_AFTER_DAYS), and a row only
+// the sweep sees is refreshed no more often than this. Make it longer and
+// real shows would be flagged as cancelled.
+export const SWEEP_GROUPS = 3

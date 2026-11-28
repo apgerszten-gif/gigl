@@ -188,7 +188,7 @@ export interface SyncShow extends Show {
 // self-imposed one.
 export const TM_MAX_PAGE_SIZE = 200
 
-function toSyncShow(event: TMEvent, city: SyncCity): SyncShow {
+function toSyncShow(event: TMEvent, city: SyncCity, region = false): SyncShow {
   const base  = toShow(event)
   const venue = event._embedded?.venues?.[0]
   const rawLat = venue?.location?.latitude
@@ -203,9 +203,12 @@ function toSyncShow(event: TMEvent, city: SyncCity): SyncShow {
 
   return {
     ...base,
-    lat: Number.isFinite(lat) ? lat : city.lat,
-    lng: Number.isFinite(lng) ? lng : city.lng,
-    metro: `${city.city}, ${city.stateCode}`,
+    // A whole-state query has no metro centre to fall back on, and a venue
+    // with no coordinates must not be put at the middle of a state: a row with
+    // none is simply left out of Near me and the photo finder.
+    lat: Number.isFinite(lat) ? lat : region ? null : city.lat,
+    lng: Number.isFinite(lng) ? lng : region ? null : city.lng,
+    metro: region ? `State sweep ${city.stateCode}` : `${city.city}, ${city.stateCode}`,
     artistImage: pickImage(event._embedded?.attractions?.[0]?.images),
     cancelled: /^cancell?ed$/i.test(event.dates?.status?.code ?? ''),
   }
@@ -317,6 +320,10 @@ export interface FetchOptions {
   // at any radius. Running only one of them silently loses thousands of shows
   // either way; ids dedupe the large overlap.
   radiusMiles?: number
+  // Query a whole state or province instead of one city: every event whose
+  // venue is in `city.stateCode` (and `city.countryCode`), with no city name
+  // and no radius. Used by the state sweep, which passes a stand-in SyncCity.
+  region?: boolean
   // Ask for events Ticketmaster left without a category ("Undefined"
   // segment) instead of music. Many real concerts sit there, often ones it
   // takes in from partner ticketing (TicketWeb ids start Z7r9), alongside
@@ -330,7 +337,7 @@ export interface FetchOptions {
 // Ticketmaster's free tier allows 5 requests/sec and a loop in here would have
 // no view of the requests the other cities are making.
 export async function fetchCityShowsPage(city: SyncCity, page: number, options: FetchOptions = {}): Promise<CityPageResult> {
-  const { window, radiusMiles, unclassified } = options
+  const { window, radiusMiles, unclassified, region } = options
 
   const params = new URLSearchParams({
     apikey:             TICKETMASTER_API_KEY,
@@ -346,7 +353,10 @@ export async function fetchCityShowsPage(city: SyncCity, page: number, options: 
   if (unclassified) params.set('segmentName', 'Undefined')
   else params.set('classificationName', 'music')
 
-  if (radiusMiles) {
+  if (region) {
+    params.set('countryCode', city.countryCode ?? 'US')
+    params.set('stateCode',   city.stateCode)
+  } else if (radiusMiles) {
     // No countryCode: the filter is geographic, so a radius around Detroit or
     // Buffalo legitimately reaches into Ontario and those are real shows.
     params.set('latlong', `${city.lat},${city.lng}`)
@@ -363,7 +373,7 @@ export async function fetchCityShowsPage(city: SyncCity, page: number, options: 
     params.set('endDateTime',   `${window.to}T23:59:59Z`)
   }
 
-  const scopeLabel = radiusMiles ? `${city.city} r${radiusMiles}mi` : city.city
+  const scopeLabel = region ? `state ${city.stateCode}` : radiusMiles ? `${city.city} r${radiusMiles}mi` : city.city
   const whereLabel = window ? `${scopeLabel} ${window.from}..${window.to} p${page}` : `${scopeLabel} p${page}`
 
   let res: Response
@@ -386,7 +396,7 @@ export async function fetchCityShowsPage(city: SyncCity, page: number, options: 
 
   const data: TMEventSearchResponse = await res.json()
   return {
-    shows:         (data._embedded?.events ?? []).map(e => toSyncShow(e, city)),
+    shows:         (data._embedded?.events ?? []).map(e => toSyncShow(e, city, !!region)),
     totalPages:    data.page?.totalPages ?? 1,
     totalElements: data.page?.totalElements ?? 0,
   }
