@@ -19,6 +19,10 @@ import { artistHref } from '@/lib/showLinks'
 // Rows shown before "Show all".
 const PREVIEW = 5
 
+// A notification older than this is tucked behind its own "older" toggle,
+// closed until it's tapped, so the section is about what's recent.
+const OLD_AFTER_MS = 3 * 24 * 60 * 60 * 1000
+
 function timeAgo(iso: string): string {
   const mins = Math.floor((Date.now() - Date.parse(iso)) / 60000)
   if (mins < 1)  return 'Just now'
@@ -105,8 +109,15 @@ export function NotificationsView({ items, username, followed, onFollowBack, onO
   onOpenComments: (loggedShowId: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [showOlder, setShowOlder] = useState(false)
   const newCount = items.filter(item => item.unseen).length
-  const shown = expanded ? items : items.slice(0, PREVIEW)
+
+  // Split once per render. The list is newest-first (reminders, then the
+  // rest by time), but this doesn't depend on that order.
+  const cutoff = Date.now() - OLD_AFTER_MS
+  const recent = items.filter(item => Date.parse(item.at) >= cutoff)
+  const older  = items.filter(item => Date.parse(item.at) < cutoff)
+  const shown  = expanded ? recent : recent.slice(0, PREVIEW)
 
   return (
     <section className="space-y-3">
@@ -119,32 +130,75 @@ export function NotificationsView({ items, username, followed, onFollowBack, onO
         <p className="text-[13px] leading-snug text-ink-faint">
           Nothing yet. New followers, likes and comments on your logs, and reminders for shows you&apos;ve saved will show up here.
         </p>
+      ) : recent.length === 0 ? (
+        <p className="text-[13px] leading-snug text-ink-faint">Nothing in the last 3 days.</p>
       ) : (
-        <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
-          {shown.map((item, i) => (
-            <Row
-              key={item.key}
-              item={item}
-              index={i}
-              username={username}
-              followed={item.kind === 'follow' ? (followed[item.actor.id] ?? item.followingBack) : false}
-              onFollowBack={onFollowBack}
-              onOpenComments={onOpenComments}
-            />
-          ))}
-        </div>
+        <NotificationRows
+          rows={shown}
+          username={username}
+          followed={followed}
+          onFollowBack={onFollowBack}
+          onOpenComments={onOpenComments}
+        />
       )}
 
-      {items.length > PREVIEW && (
+      {recent.length > PREVIEW && (
         <button
           type="button"
           onClick={() => setExpanded(open => !open)}
           className={`${btnSecondary} w-full py-2.5 text-[11px]`}
         >
-          {expanded ? 'Show fewer' : `Show all ${items.length}`}
+          {expanded ? 'Show fewer' : `Show all ${recent.length}`}
         </button>
       )}
+
+      {older.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowOlder(open => !open)}
+            aria-expanded={showOlder}
+            className={`${btnSecondary} w-full py-2.5 text-[11px]`}
+          >
+            {showOlder ? 'Hide older' : `${older.length} older than 3 days`}
+          </button>
+          {showOlder && (
+            <NotificationRows
+              rows={older}
+              username={username}
+              followed={followed}
+              onFollowBack={onFollowBack}
+              onOpenComments={onOpenComments}
+            />
+          )}
+        </>
+      )}
     </section>
+  )
+}
+
+// One card of rows.
+function NotificationRows({ rows, username, followed, onFollowBack, onOpenComments }: {
+  rows:           Notification[]
+  username:       string | null
+  followed:       Record<string, boolean>
+  onFollowBack:   (person: NotificationPerson) => void
+  onOpenComments: (loggedShowId: string) => void
+}) {
+  return (
+    <div className="rounded-card border-1.5 border-ink bg-cream shadow-riso overflow-hidden">
+      {rows.map((item, i) => (
+        <Row
+          key={item.key}
+          item={item}
+          index={i}
+          username={username}
+          followed={item.kind === 'follow' ? (followed[item.actor.id] ?? item.followingBack) : false}
+          onFollowBack={onFollowBack}
+          onOpenComments={onOpenComments}
+        />
+      ))}
+    </div>
   )
 }
 
