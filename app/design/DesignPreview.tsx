@@ -553,8 +553,8 @@ function ProfileScreen() {
             <label className={`${inputBox} flex flex-1 min-w-0 items-center gap-2 px-3 py-2`}>
               <Search className="w-4 h-4 text-ink-muted flex-shrink-0" strokeWidth={1.75} />
               <input
-                placeholder="Search"
-                className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
+                placeholder="Search users"
+                className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-[13px] placeholder:text-ink-faint focus:outline-none"
               />
             </label>
             <div className="flex flex-shrink-0 items-center">

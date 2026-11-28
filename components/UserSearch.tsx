@@ -72,9 +72,12 @@ export function UserSearch({ trailing }: { trailing?: React.ReactNode }) {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder={trailing ? 'Search' : 'Search for other users'}
+            placeholder={trailing ? 'Search users' : 'Search for other users'}
             aria-label="Search for other users"
-            className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
+            // The typed text stays 16px (text-base), or iOS zooms the page when the
+          // field is tapped; only the placeholder is smaller, so it fits beside
+          // Followers and Following.
+          className="flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-[13px] placeholder:text-ink-faint focus:outline-none"
           />
         </label>
         {trailing}
